@@ -809,12 +809,13 @@ Model: **one resident process + many oneshot clients** — same idea as **`docke
 2. Start **one** resident: `bmxt` (or `bmxt repl`). Confirm `BMXt>` and that the localhost listener is up (`http://127.0.0.1:17653/`).
 3. Point the agent at the `bmxt` binary (e.g. `target/release/bmxt` or a PATH install).
 
-**Each LLM / tool turn** — run only `exec` (do **not** start another `bmxt` / `bmxt repl`):
+**Each LLM / tool turn** — run the **subcommand** `bmxt exec` as a normal oneshot shell command (do **not** start another `bmxt` / `bmxt repl`):
 
 ```bash
-bmxt exec -- 'sync -status'
-bmxt exec -- 'tab -list --peers'
-bmxt exec -- 'help'
+# Quote the grammar line so the shell does not treat `|` as a pipe.
+./path/to/bmxt exec -- 'sync -status'
+./path/to/bmxt exec -- 'tab -list --peers'
+./path/to/bmxt exec -- 'help'
 echo $?   # Profile exit: 0 success · 1 failure · 2 misuse · 127 unknown
 ```
 
@@ -824,13 +825,16 @@ echo $?   # Profile exit: 0 success · 1 failure · 2 misuse · 127 unknown
 | **stderr** | Diagnostics (usage, errors, “resident missing”) |
 | **exit** | Process status — same BMXt POSIX Profile as the extension |
 
+**Not the shell builtin `exec`:** Agents with `run_shell_command` (Gemini CLI, etc.) often refuse “exec” because they think it means attaching to an interactive TTY or replacing the shell process. **`bmxt exec` is unrelated** — it is a **CLI subcommand** that starts a **new short-lived process**, `POST`s `http://127.0.0.1:17653/v1/exec`, prints stdout/stderr, and exits. No stdin attach to the resident REPL is required. Always write the full argv (`bmxt exec -- '…'`), never bare shell `exec`.
+
 **Do not (common failure):**
 
 - Launch a **second** `bmxt` / `bmxt repl` from the agent — door bind fails with `Address already in use` (port **17653**), while the banner may still look “ready”.
-- Expect `| browse`, handshake ask, or zenity inside `exec` — NonInteractive refuses them (configure delivery / connection in the REPL first).
-- Assume cold-start self-contained peer bring-up inside one `exec` — that path is out of scope; keep the resident up.
+- Expect `| browse`, handshake ask, or zenity inside `bmxt exec` — NonInteractive refuses them (configure delivery / connection in the REPL first).
+- Assume cold-start self-contained peer bring-up inside one `bmxt exec` — that path is out of scope; keep the resident up.
+- Pass an unquoted `|` to the shell (`… | browse`) — bash looks for an external `browse` binary; quote the whole grammar line.
 
-**Tool-definition hint for agents:** “Resident `bmxt` is already running. Invoke only `bmxt exec -- '<line>'`. Never start `bmxt` or `bmxt repl`.”
+**Tool-definition hint for agents (copy-paste):** “Resident `bmxt` is already listening on 127.0.0.1:17653. For each browser/Family action, run exactly one shell command of the form `./path/to/bmxt exec -- '<grammar line>'` via your normal shell tool. This is the BMXt oneshot client (HTTP POST), **not** the shell builtin `exec`, and it does **not** attach to the resident process stdin. Never start `bmxt` or `bmxt repl`. Never use bare `exec`.”
 
 **Out of scope for this host:** `nav` / `dom` page overlays, settings picker browse / FSA, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI, true incremental chunk delivery over exec IPC. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§15.
 
@@ -2357,12 +2361,13 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 2. 常駐を **1 本**起動: `bmxt`（または `bmxt repl`）。`BMXt>` と localhost 待ち受け（`http://127.0.0.1:17653/`）を確認。
 3. エージェントに `bmxt` バイナリのパスを渡す（例: `target/release/bmxt`）。
 
-**LLM / ツールの各ターン** — **`exec` だけ**を呼ぶ（別の `bmxt` / `bmxt repl` を起動しない）:
+**LLM / ツールの各ターン** — サブコマンド **`bmxt exec`** を普通のワンショットシェルコマンドとして実行する（別の `bmxt` / `bmxt repl` を起動しない）:
 
 ```bash
-bmxt exec -- 'sync -status'
-bmxt exec -- 'tab -list --peers'
-bmxt exec -- 'help'
+# 文法行は必ず引用符で囲む（シェルが `|` をパイプと解釈しないように）。
+./path/to/bmxt exec -- 'sync -status'
+./path/to/bmxt exec -- 'tab -list --peers'
+./path/to/bmxt exec -- 'help'
 echo $?   # Profile exit: 0 成功 · 1 失敗 · 2 misuse · 127 不明コマンド
 ```
 
@@ -2372,13 +2377,16 @@ echo $?   # Profile exit: 0 成功 · 1 失敗 · 2 misuse · 127 不明コマ�
 | **stderr** | 診断（usage・エラー・「常駐なし」） |
 | **exit** | プロセス終了コード — 拡張と同じ BMXt POSIX Profile |
 
+**シェル組み込み `exec` ではない:** Gemini CLI などの `run_shell_command` は、「exec = 対話 TTY へのアタッチ／シェル置換」と誤解して拒否することがある。**`bmxt exec` は無関係** — **新しい短命プロセス**が `POST http://127.0.0.1:17653/v1/exec` し、stdout/stderr を出して終了する CLI サブコマンド。常駐 REPL の stdin に張り付く必要はない。必ずフル argv（`bmxt exec -- '…'`）を書き、裸のシェル `exec` は使わない。
+
 **やってはいけないこと（よくある失敗）:**
 
 - エージェントから **2 本目**の `bmxt` / `bmxt repl` を起動する — door が `Address already in use`（ポート **17653**）になり、バナーは「準備済み」に見えることがある。
-- `exec` 内で `| browse`・握手 ask・zenity を期待する — NonInteractive では拒否（配送・接続は REPL で事前設定）。
-- 1 回の `exec` でコールドスタートから peer まで自己完結させる — 対象外。常駐を上げたままにする。
+- `bmxt exec` 内で `| browse`・握手 ask・zenity を期待する — NonInteractive では拒否（配送・接続は REPL で事前設定）。
+- 1 回の `bmxt exec` でコールドスタートから peer まで自己完結させる — 対象外。常駐を上げたままにする。
+- 引用なしの `|` をシェルに渡す（`… | browse`）— bash が外部 `browse` を探しに行く。文法行全体を引用する。
 
-**エージェント向けツール定義のヒント:** 「常駐 `bmxt` は既に動いている。呼ぶのは `bmxt exec -- '<line>'` のみ。`bmxt` / `bmxt repl` は起動するな。」
+**エージェント向けツール定義のヒント（コピー用）:** 「常駐 `bmxt` は 127.0.0.1:17653 で待ち受け済み。ブラウザ／Family 操作のたびに、通常のシェルツールで `./path/to/bmxt exec -- '<文法行>'` をちょうど1回実行せよ。これは BMXt ワンショットクライアント（HTTP POST）であり、**シェル組み込みの `exec` ではない**。常駐プロセスの stdin にアタッチする必要もない。`bmxt` / `bmxt repl` は起動するな。裸の `exec` は使うな。」
 
 **この host の対象外:** `nav` / `dom` のページオーバーレイ、設定ピッカー browse / FSA、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI、exec IPC の真のインクリメンタル配信。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§15。
 

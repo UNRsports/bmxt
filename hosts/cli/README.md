@@ -92,6 +92,8 @@ bmxt exec -- 'help'          # local grammar; no peer required once door is up
 
 IPC: `POST http://127.0.0.1:17653/v1/exec` with `{ "line": "…" }` → `{ stdout, stderr, exitStatus }`.
 
+**Agents (Gemini CLI, etc.):** `bmxt exec` is a **CLI subcommand** (new process → HTTP POST), **not** the shell builtin `exec` and **not** an attach to the resident TTY. Use your normal shell tool with the full argv above. See root README **Using BMXtCLI with an LLM**.
+
 ## Out of scope (this host)
 
 - `nav` / `dom` page overlays
@@ -191,6 +193,8 @@ bmxt exec -- 'tab -list --peers'
 ```
 
 IPC: `POST http://127.0.0.1:17653/v1/exec`。
+
+**エージェント（Gemini CLI 等）:** `bmxt exec` は **CLI サブコマンド**（新プロセス → HTTP POST）であり、**シェル組み込み `exec` でも常駐 TTY へのアタッチでもない**。通常のシェルツールで上記のフル argv を実行すること。root README **BMXtCLI を LLM で使う** を参照。
 
 ## この host の対象外
 
