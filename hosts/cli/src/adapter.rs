@@ -171,7 +171,7 @@ impl<'a> CliHostAdapter<'a> {
         let producer_bundle = run_line(producer);
         match consumer {
             PipeConsumerClass::Browse => {
-                if self.mode == InteractionMode::NonInteractive {
+                if !self.mode.allows_interactive_ui() {
                     return Ok(self.refuse_interactive("cmd.cli.exec.browseForbidden"));
                 }
                 if is_setting_list_bundle(&producer_bundle) {
@@ -389,7 +389,7 @@ impl<'a> CliHostAdapter<'a> {
                 device_id,
                 ..
             } => {
-                if self.mode == InteractionMode::NonInteractive {
+                if !self.mode.allows_interactive_ui() {
                     return Ok(self.refuse_interactive("cmd.cli.exec.browseForbidden"));
                 }
                 if list_id == "setting" {
@@ -494,7 +494,7 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::SyncSetup => {
-                if self.mode == InteractionMode::NonInteractive {
+                if !self.mode.allows_interactive_ui() {
                     return Ok(self.refuse_interactive("cmd.cli.exec.handshakeForbidden"));
                 }
                 self.cfg.ensure_family()?;
@@ -505,7 +505,7 @@ impl<'a> CliHostAdapter<'a> {
             }
             UiAction::SyncPair { invite } => {
                 if invite.trim().is_empty() {
-                    if self.mode == InteractionMode::NonInteractive {
+                    if !self.mode.allows_interactive_ui() {
                         return Ok(self.refuse_interactive("cmd.cli.exec.handshakeForbidden"));
                     }
                     return Ok(RunOutcome::with_prefix(
@@ -536,7 +536,7 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::status(EXIT_MISUSE))
             }
             UiAction::SyncOffer => {
-                if self.mode == InteractionMode::NonInteractive {
+                if !self.mode.allows_interactive_ui() {
                     return Ok(self.refuse_interactive("cmd.cli.exec.handshakeForbidden"));
                 }
                 if let Some(client) = self.client {
@@ -551,7 +551,7 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::connected(client))
             }
             UiAction::SyncAnswer { code } | UiAction::SyncAccept { code } => {
-                if self.mode == InteractionMode::NonInteractive {
+                if !self.mode.allows_interactive_ui() {
                     return Ok(self.refuse_interactive("cmd.cli.exec.handshakeForbidden"));
                 }
                 if let Some(client) = self.client {

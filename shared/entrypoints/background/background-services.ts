@@ -15,6 +15,10 @@ import {
 import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
 import type { SessionPatch } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
 import type { RunCmdResult } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
+import {
+  EXIT_FAILURE,
+  EXIT_SUCCESS
+} from "../../lib/features/command-line/compound/exit-status.ts"
 import { displayTitle } from "../../lib/features/format/display-title"
 import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
 import { loadUiSettings } from "../../lib/features/setting/settings"
@@ -188,7 +192,7 @@ async function runCommandBody(
     moreExitStatus = dispatched.exitStatus
   } catch (e) {
     more.push(`error: ${e instanceof Error ? e.message : String(e)}`)
-    moreExitStatus = 1
+    moreExitStatus = EXIT_FAILURE
   }
 
   if (replaceLog.value) {
@@ -203,7 +207,9 @@ async function runCommandBody(
   patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
   if (more.length > 0) {
     const channel =
-      typeof moreExitStatus === "number" && moreExitStatus !== 0 ? "stderr" : "stdout"
+      typeof moreExitStatus === "number" && moreExitStatus !== EXIT_SUCCESS
+        ? "stderr"
+        : "stdout"
     patches.push({ type: "appendLog", sessionId, lines: more, channel })
   }
   return { ok: true, patches, closeWindow: exitOutcome.fullClose || undefined }

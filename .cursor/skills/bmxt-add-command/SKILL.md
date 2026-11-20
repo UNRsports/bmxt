@@ -47,9 +47,22 @@ Task progress:
 - [ ] New UiAction kinds (extend only): manifest uiActions[] + apply-ui-action.ts + codegen
 - [ ] New list/pipe kinds (extend only): vocabulary.ts + bmxt-rule.json + adapter/consumer
 - [ ] i18n EN+JA; README; _context/map_command.csv
+- [ ] BMXt POSIX Profile (todo §15): EXIT_* only · success→stdout / diag→stderr · Interactive-only UI · CLI via CommandIo · closed pipe consumer / bmxtRule
 - [ ] pnpm run build:wasm
-- [ ] pnpm run verify:manifest → verify:host-blind → check:generated → cargo test -p bmxt-core → tsc → test → build
+- [ ] pnpm run verify:manifest → verify:host-blind → check:generated → check:cli-command-io → cargo test -p bmxt-core → tsc → test → build
 ```
+
+## BMXt POSIX Profile gates (todo §15)
+
+When adding or changing commands / CLI host paths, keep the Profile mouth stable:
+
+1. **Exit:** use `EXIT_SUCCESS` / `EXIT_FAILURE` / `EXIT_MISUSE` / `EXIT_NOT_FOUND` only (TS `exit-status.ts`, Rust `bmxt_core::ir`).
+2. **Channels:** listings and success msgs → stdout; usage / parse / unknown / runtime → stderr (route by exit at the sink).
+3. **Interactive UI:** `| browse`, TUI pickers, handshake ask / zenity only under `InteractionMode::Interactive` (never on `bmxt exec` / NonInteractive).
+4. **CLI output:** command results through `CommandIo` — do not add `println!` / `eprintln!` on the adapter command path (`pnpm run check:cli-command-io`).
+5. **Pipes:** register closed consumers + `bmxtRule` kinds; unknown consumer → misuse (exit 2).
+
+Contract: `_context/cli-peer/CONTRACT.md` (Profile discipline).
 
 ## Typical flow
 

@@ -16,6 +16,13 @@ pub enum InteractionMode {
     NonInteractive,
 }
 
+impl InteractionMode {
+    /** EN: True when browse / TUI / handshake ask may run (todo §15.3). */
+    pub fn allows_interactive_ui(self) -> bool {
+        matches!(self, Self::Interactive)
+    }
+}
+
 /**
  * EN: Completion-buffer sink for one `run_line` (POSIX stdout/stderr lines).
  * Infrastructure logs must not use this — keep those on `eprintln!` / `repl_log`.
@@ -96,5 +103,11 @@ mod tests {
         assert_eq!(out.stdout, vec!["ok"]);
         assert_eq!(out.stderr, vec!["usage: x"]);
         assert_eq!(out.exit_status, EXIT_MISUSE);
+    }
+
+    #[test]
+    fn interactive_mode_allows_ui_only_when_interactive() {
+        assert!(InteractionMode::Interactive.allows_interactive_ui());
+        assert!(!InteractionMode::NonInteractive.allows_interactive_ui());
     }
 }

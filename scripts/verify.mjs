@@ -33,6 +33,7 @@ function runPnpm(scriptArgs) {
 runPnpm(["verify:manifest"])
 runPnpm(["check:no-fetch"])
 runPnpm(["check:generated"])
+runPnpm(["check:cli-command-io"])
 run("cargo", ["test", "-p", "bmxt-core"])
 runPnpm(["build:wasm"])
 run("pnpm", ["exec", "tsc", "--noEmit"])

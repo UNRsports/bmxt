@@ -824,12 +824,12 @@ BMXt grammar line
 
 **実装チェック（段階）**
 
-- [ ] **15.0 契約:** 本節 5 規律を `CONTRACT.md`（または Profile 節）に「追加時必須」として追記。skill `bmxt-add-command` へチェックリスト反映
-- [ ] **15.1 exit 定数:** ホスト／コマンド追加で生の `1`/`2`/`127` を避け `EXIT_*` のみ。既存の散在を棚卸し + unit
-- [ ] **15.2 チャネル振り分け:** 成功一覧は stdout・診断は stderr のゴールデン（拡張 + CLI）。集約経路以外からの「結果 print」を減らす
-- [ ] **15.3 Interactive ガード:** NonInteractive（`exec`）入口で browse / TUI / ask が起動しないことをテスト固定。新規対話 UI は `InteractionMode::Interactive` 分岐必須
-- [ ] **15.4 CLI `CommandIo`:** `hosts/cli/src/adapter.rs`（およびコマンド結果経路）で直 `println!`/`eprintln!` を禁止する CI grep または clippy 相当。インフラ用は allowlist
-- [ ] **15.5 パイプ閉じ語彙:** 未知 consumer → exit 2 の conformance 維持。新 consumer はレジストリ + `bmxtRule` kind のみ（skill / codegen と連携）
+- [x] **15.0 契約:** 本節 5 規律を `CONTRACT.md`（または Profile 節）に「追加時必須」として追記。skill `bmxt-add-command` へチェックリスト反映
+- [x] **15.1 exit 定数:** ホスト／コマンド追加で生の `1`/`2`/`127` を避け `EXIT_*` のみ。既存の散在を棚卸し + unit
+- [x] **15.2 チャネル振り分け:** 成功一覧は stdout・診断は stderr のゴールデン（拡張 + CLI）。集約経路以外からの「結果 print」を減らす
+- [x] **15.3 Interactive ガード:** NonInteractive（`exec`）入口で browse / TUI / ask が起動しないことをテスト固定。新規対話 UI は `InteractionMode::Interactive` 分岐必須
+- [x] **15.4 CLI `CommandIo`:** `hosts/cli/src/adapter.rs`（およびコマンド結果経路）で直 `println!`/`eprintln!` を禁止する CI grep または clippy 相当。インフラ用は allowlist
+- [x] **15.5 パイプ閉じ語彙:** 未知 consumer → exit 2 の conformance 維持。新 consumer はレジストリ + `bmxtRule` kind のみ（skill / codegen と連携）
 
 **スコープ外（本節）**
 

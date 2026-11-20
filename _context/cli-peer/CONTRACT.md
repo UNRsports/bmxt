@@ -65,6 +65,20 @@ Shared meaning for the **extension terminal** and **CLI** (`bmxt` / `bmxt exec`)
 
 Shared types: TS `command-output.ts` / `SegmentOutcome`; Rust `bmxt_core::CommandOutput`.
 
+## Profile discipline when adding commands (todo §15)
+
+Mandatory for new/changed commands and host paths. Not IEEE 1003.1 compliance — **BMXt Profile** only.
+
+| # | Rule | Enforcement |
+|---|------|-------------|
+| 1 | Exit status uses **core constants only** (`EXIT_SUCCESS` / `FAILURE` / `MISUSE` / `NOT_FOUND` = 0/1/2/127) | unit + conformance |
+| 2 | Success listings → **stdout**; usage / parse / unknown / runtime diagnostics → **stderr** | golden tests (exit-routed sinks) |
+| 3 | Interactive UI (`\| browse`, TUI, handshake ask / zenity) only when **`InteractionMode::Interactive`** | NonInteractive / `exec` tests |
+| 4 | CLI command results go through **`CommandIo`** — no direct `println!` / `eprintln!` on the adapter command path (infra logs allowlisted) | `pnpm run check:cli-command-io` |
+| 5 | Pipes use **closed consumers** + **`bmxtRule`** only; unknown consumer → exit **2** | registry + conformance |
+
+Skill: `.cursor/skills/bmxt-add-command` · checklist: `shared/manifest/templates/new-command.checklist.md`.
+
 ## `bmxt exec` IPC (todo §14)
 
 | Item | Value |
