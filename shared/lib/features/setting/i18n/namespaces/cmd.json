@@ -1120,12 +1120,20 @@
     "en": "localhost listener: auto-connected to {name}."
   },
   "cmd.cli.banner.familyReady": {
-    "ja": "BMXt CLI — Family 準備済み · 待ち受け :{port}",
-    "en": "BMXt CLI — Family ready · listening :{port}"
+    "ja": "BMXt CLI — Family 準備済み · サーバ待ち受け :{port}",
+    "en": "BMXt CLI — Family ready · server listening :{port}"
   },
   "cmd.cli.banner.familyReadyHint": {
-    "ja": "ブラウザで BMXt プロンプトを開くと自動接続します。フォールバック: sync -offer / sync -accept",
-    "en": "Open the BMXt prompt in a browser for auto-connect. Fallback: sync -offer / sync -accept"
+    "ja": "サーバあり: ブラウザ自動接続と bmxt exec をこのプロセスが受けます。フォールバック: sync -offer / sync -accept",
+    "en": "Server on: this process accepts browser auto-connect and bmxt exec. Fallback: sync -offer / sync -accept"
+  },
+  "cmd.cli.banner.familyReadyPeerOnly": {
+    "ja": "BMXt CLI — Family 準備済み · サーバなし（peer のみ）",
+    "en": "BMXt CLI — Family ready · no server (peer-only)"
+  },
+  "cmd.cli.banner.familyReadyPeerOnlyHint": {
+    "ja": "サーバなし: 自動接続と bmxt exec は :{port} 待ち受け中の他プロセスへ。このプロセスは sync -offer / sync -accept で peer 参加",
+    "en": "No server: auto-connect and bmxt exec go to the process listening on :{port}. Join peers here with sync -offer / sync -accept"
   },
   "cmd.cli.banner.editing": {
     "ja": "編集: 灰色ヒント · Tab で適用 · Enter で実行 · help · quit",
@@ -1160,12 +1168,28 @@
     "en": "[:{port} up] type at BMXt> (quit to stop)"
   },
   "cmd.cli.door.peerTunnelClosed": {
-    "ja": "ピア接続が閉じました（{detail}）。待ち受けは継続中です。",
-    "en": "Peer link closed ({detail}). Listener keeps running."
+    "ja": "ピア接続が閉じました（{detail}）。サーバ待ち受けは継続中です。",
+    "en": "Peer link closed ({detail}). Server listener keeps running."
+  },
+  "cmd.cli.door.peerTunnelClosedPeerOnly": {
+    "ja": "ピア接続が閉じました（{detail}）。このプロセスはサーバなし（peer のみ）のまま継続します。",
+    "en": "Peer link closed ({detail}). This process continues peer-only (no server)."
   },
   "cmd.cli.door.listening": {
-    "ja": "待ち受け開始: http://127.0.0.1:{port}/",
-    "en": "Listening on http://127.0.0.1:{port}/"
+    "ja": "サーバ待ち受け開始: http://127.0.0.1:{port}/",
+    "en": "Server listening on http://127.0.0.1:{port}/"
+  },
+  "cmd.cli.door.bindFailed": {
+    "ja": "サーバ待ち受け失敗: {error}",
+    "en": "Server listen failed: {error}"
+  },
+  "cmd.cli.door.peerOnlyMode": {
+    "ja": "このプロセスはサーバなし（peer のみ）。:{port} は他プロセスが占有中です。",
+    "en": "This process is peer-only (no server). :{port} is held by another process."
+  },
+  "cmd.cli.door.stopped": {
+    "ja": "サーバ待ち受け停止: {error}",
+    "en": "Server listener stopped: {error}"
   },
   "cmd.cli.status.bar": {
     "ja": ":{port} 稼働 · {peers} · quit",

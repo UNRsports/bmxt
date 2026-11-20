@@ -2,6 +2,7 @@
 //! JA: Family 認証付き自動接続（todo §11）と exec（todo §14）用 loopback HTTP 待ち受け。
 
 use std::net::SocketAddr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -26,6 +27,18 @@ use crate::msgs::t_cli;
 
 /// EN: Fixed loopback port shared with the extension (CONTRACT / todo §11).
 pub const DOOR_PORT: u16 = 17653;
+
+/// EN: True after this process successfully bound the localhost server door.
+/// JA: このプロセスが localhost サーバ door の bind に成功したら true。
+static DOOR_LISTENING: AtomicBool = AtomicBool::new(false);
+
+/**
+ * EN: Whether this process currently owns the server door (`:DOOR_PORT`).
+ * JA: このプロセスがサーバ door（`:DOOR_PORT`）を所有しているか。
+ */
+pub fn is_door_listening() -> bool {
+    DOOR_LISTENING.load(Ordering::SeqCst)
+}
 
 const DOOR_HELLO_TTL_MS: i64 = 60_000;
 const DOOR_HTML: &str = r#"<!DOCTYPE html>
@@ -103,10 +116,39 @@ struct ExecResponse {
 }
 
 /**
+ * EN: Try to become the localhost server. On bind failure, log peer-only mode (no panic).
+ * JA: localhost サーバ化を試行。bind 失敗時は peer のみモードをログ（パニックしない）。
+ * @returns true if this process owns the door after the call
+ */
+pub async fn try_spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> bool {
+    if is_door_listening() {
+        return true;
+    }
+    match spawn_door(cfg, hub).await {
+        Ok(()) => true,
+        Err(err) => {
+            let error_text = format!("{err:#}");
+            eprintln!(
+                "{}",
+                t_cli("cmd.cli.door.bindFailed", &[("error", error_text.as_str())])
+            );
+            eprintln!(
+                "{}",
+                t_cli(
+                    "cmd.cli.door.peerOnlyMode",
+                    &[("port", &DOOR_PORT.to_string())]
+                )
+            );
+            false
+        }
+    }
+}
+
+/**
  * EN: Bind 127.0.0.1 only and serve the localhost listener (does not block the REPL).
  * JA: 127.0.0.1 のみ bind し localhost 待ち受けを serve（REPL はブロックしない）。
  */
-pub async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
+async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
     cfg.require_family()?;
     let state = DoorState { cfg, hub };
     let cors = CorsLayer::new()
@@ -124,6 +166,7 @@ pub async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .map_err(|e| anyhow!("localhost listener bind {addr}: {e}"))?;
+    DOOR_LISTENING.store(true, Ordering::SeqCst);
     eprintln!(
         "{}",
         t_cli(
@@ -133,7 +176,12 @@ pub async fn spawn_door(cfg: CliConfig, hub: Arc<BusClient>) -> Result<()> {
     );
     tokio::spawn(async move {
         if let Err(err) = axum::serve(listener, app).await {
-            crate::repl_log::line(&format!("localhost listener stopped: {err}"));
+            DOOR_LISTENING.store(false, Ordering::SeqCst);
+            let error_text = format!("{err}");
+            crate::repl_log::line(&t_cli(
+                "cmd.cli.door.stopped",
+                &[("error", error_text.as_str())],
+            ));
         }
     });
     Ok(())

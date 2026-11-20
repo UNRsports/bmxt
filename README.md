@@ -27,6 +27,7 @@
   - [`bookmark`](#bookmark-command)
   - [`history`](#history-command)
   - [Terminal CLI peer (`hosts/cli`)](#terminal-cli-peer)
+  - [Using BMXtCLI with an LLM](#bmxt-cli-llm)
   - [`tab` (subcommands)](#tabs-man-tabs)
   - [Picker UI (side columns)](#picker-ui)
   - [Tab Picker (`tab -list | browse` / `tab -list -url | browse`)](#tabs-tab-picker)
@@ -791,14 +792,45 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **Cold start (same PC):** (1) join the same Family on CLI + browsers · (2) start `bmxt` · (3) open each BMXt prompt window → Family-authenticated auto-reconnect. Stop the process with REPL **`quit`** / **`exit`**.
 
-**LLM oneshot example** (resident already connected to a browser peer):
+<a id="bmxt-cli-llm"></a>
+
+#### Using BMXtCLI with an LLM
+
+Model: **one resident process + many oneshot clients** — same idea as **`docker exec`** against a running container (not `docker run` every time).
+
+| Role | Command | Binds `:17653`? |
+|------|---------|-----------------|
+| **Resident (server)** | `bmxt` or `bmxt repl` — start **once**, keep running | Yes (when Family is joined) |
+| **LLM / script (client)** | `bmxt exec -- '<grammar line>'` | **No** — `POST /v1/exec` only |
+
+**Setup (human or bootstrap, not per LLM turn):**
+
+1. Join the same Family on CLI and browsers; open a BMXt prompt window so a peer can auto-connect.
+2. Start **one** resident: `bmxt` (or `bmxt repl`). Confirm `BMXt>` and that the localhost listener is up (`http://127.0.0.1:17653/`).
+3. Point the agent at the `bmxt` binary (e.g. `target/release/bmxt` or a PATH install).
+
+**Each LLM / tool turn** — run only `exec` (do **not** start another `bmxt` / `bmxt repl`):
 
 ```bash
-bmxt &   # or: bmxt repl
 bmxt exec -- 'sync -status'
 bmxt exec -- 'tab -list --peers'
-echo $?  # Profile exit: 0 / 1 / 2 / 127
+bmxt exec -- 'help'
+echo $?   # Profile exit: 0 success · 1 failure · 2 misuse · 127 unknown
 ```
+
+| Channel | Meaning for the agent |
+|---------|------------------------|
+| **stdout** | Command result lines only |
+| **stderr** | Diagnostics (usage, errors, “resident missing”) |
+| **exit** | Process status — same BMXt POSIX Profile as the extension |
+
+**Do not (common failure):**
+
+- Launch a **second** `bmxt` / `bmxt repl` from the agent — door bind fails with `Address already in use` (port **17653**), while the banner may still look “ready”.
+- Expect `| browse`, handshake ask, or zenity inside `exec` — NonInteractive refuses them (configure delivery / connection in the REPL first).
+- Assume cold-start self-contained peer bring-up inside one `exec` — that path is out of scope; keep the resident up.
+
+**Tool-definition hint for agents:** “Resident `bmxt` is already running. Invoke only `bmxt exec -- '<line>'`. Never start `bmxt` or `bmxt repl`.”
 
 **Out of scope for this host:** `nav` / `dom` page overlays, settings picker browse / FSA, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI, true incremental chunk delivery over exec IPC. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§15.
 
@@ -1637,6 +1669,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [`bookmark`](#bookmark-command-ja)
   - [`history`](#history-command-ja)
   - [端末 CLI peer（`hosts/cli`）](#terminal-cli-peer-ja)
+  - [BMXtCLI を LLM で使う](#bmxt-cli-llm-ja)
   - [`tab`（サブコマンド）](#tabs-man-tabs-ja)
   - [ピッカー UI（横並び列）](#picker-ui-ja)
   - [タブピッカー（`tab -list | browse` / `tab -list -url | browse`）](#tabs-tab-picker-ja)
@@ -2307,14 +2340,45 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **コールドスタート（同一 PC）:** (1) CLI と各ブラウザで同じ Family に参加 · (2) `bmxt` 起動 · (3) 各 BMXt プロンプト窓を開く → Family 認証付き自動再接続。停止は REPL **`quit`** / **`exit`**。
 
-**LLM ワンショット例**（常駐がブラウザ peer と接続済み）:
+<a id="bmxt-cli-llm-ja"></a>
+
+#### BMXtCLI を LLM で使う
+
+モデルは **常駐 1 本 + ワンショット多数** — 稼働中コンテナへの **`docker exec`** と同型（毎回 `docker run` しない）。
+
+| 役割 | コマンド | `:17653` を bind するか |
+|------|----------|-------------------------|
+| **常駐（サーバ）** | `bmxt` または `bmxt repl` — **一度だけ**起動して維持 | する（Family 参加済み時） |
+| **LLM / スクリプト（クライアント）** | `bmxt exec -- '<文法行>'` | **しない** — `POST /v1/exec` のみ |
+
+**準備（人またはブートストラップ。LLM の毎ターンではない）:**
+
+1. CLI とブラウザで同じ Family に参加し、BMXt プロンプト窓を開いて peer がつながる状態にする。
+2. 常駐を **1 本**起動: `bmxt`（または `bmxt repl`）。`BMXt>` と localhost 待ち受け（`http://127.0.0.1:17653/`）を確認。
+3. エージェントに `bmxt` バイナリのパスを渡す（例: `target/release/bmxt`）。
+
+**LLM / ツールの各ターン** — **`exec` だけ**を呼ぶ（別の `bmxt` / `bmxt repl` を起動しない）:
 
 ```bash
-bmxt &   # または bmxt repl
 bmxt exec -- 'sync -status'
 bmxt exec -- 'tab -list --peers'
-echo $?  # Profile exit: 0 / 1 / 2 / 127
+bmxt exec -- 'help'
+echo $?   # Profile exit: 0 成功 · 1 失敗 · 2 misuse · 127 不明コマンド
 ```
+
+| チャネル | エージェント向けの意味 |
+|----------|------------------------|
+| **stdout** | コマンド結果行のみ |
+| **stderr** | 診断（usage・エラー・「常駐なし」） |
+| **exit** | プロセス終了コード — 拡張と同じ BMXt POSIX Profile |
+
+**やってはいけないこと（よくある失敗）:**
+
+- エージェントから **2 本目**の `bmxt` / `bmxt repl` を起動する — door が `Address already in use`（ポート **17653**）になり、バナーは「準備済み」に見えることがある。
+- `exec` 内で `| browse`・握手 ask・zenity を期待する — NonInteractive では拒否（配送・接続は REPL で事前設定）。
+- 1 回の `exec` でコールドスタートから peer まで自己完結させる — 対象外。常駐を上げたままにする。
+
+**エージェント向けツール定義のヒント:** 「常駐 `bmxt` は既に動いている。呼ぶのは `bmxt exec -- '<line>'` のみ。`bmxt` / `bmxt repl` は起動するな。」
 
 **この host の対象外:** `nav` / `dom` のページオーバーレイ、設定ピッカー browse / FSA、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI、exec IPC の真のインクリメンタル配信。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§15。
 

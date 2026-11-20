@@ -515,10 +515,12 @@ async fn dispatch_loop(
                 }
                 // EN: Only when peers drop while the REPL stays up — not on quit/exit.
                 if became_idle && !shutting_down {
-                    crate::repl_log::line(&t_cli(
-                        "cmd.cli.door.peerTunnelClosed",
-                        &[("detail", state.as_str())],
-                    ));
+                    let key = if crate::door::is_door_listening() {
+                        "cmd.cli.door.peerTunnelClosed"
+                    } else {
+                        "cmd.cli.door.peerTunnelClosedPeerOnly"
+                    };
+                    crate::repl_log::line(&t_cli(key, &[("detail", state.as_str())]));
                 }
                 if changed {
                     on_connected_set_changed(Arc::clone(&inner)).await;
