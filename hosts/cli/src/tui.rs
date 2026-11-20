@@ -12,6 +12,8 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph};
 use std::io::stdout;
 
+use crate::msgs::t_cli;
+
 /** EN: Tab list row tagged with the Family peer that owns the Chrome/Firefox inventory. */
 #[derive(Debug, Clone)]
 pub struct PeerTabRow {
@@ -38,13 +40,30 @@ pub fn run_demo_tui() -> Result<()> {
 /**
  * EN: Interactive list. Enter activates via `on_activate` but keeps the picker open.
  *     Esc/q closes explicitly (`Ok(())`). Window/group rows are not selectable.
+ *     `on_maybe_refresh` may return a new row snapshot (Family `tabs_changed`).
  * JA: 対話一覧。Enter で activate（picker は開いたまま）。Esc/q で明示的に閉じる。
+ *     `on_maybe_refresh` は Family `tabs_changed` 時に新しい行スナップショットを返す。
  */
-pub fn run_tab_picker<F>(rows: &[PeerTabRow], mut on_activate: F) -> Result<()>
+#[derive(Debug)]
+pub enum PickerRefresh {
+    Idle,
+    Updated(Vec<PeerTabRow>),
+    Failed(String),
+}
+
+pub fn run_tab_picker<F, R>(
+    initial_rows: Vec<PeerTabRow>,
+    mut on_activate: F,
+    mut on_maybe_refresh: R,
+) -> Result<()>
 where
     F: FnMut(&PickerSelection) -> Result<()>,
+    R: FnMut() -> PickerRefresh,
 {
-    let entries: Vec<PickerEntry> = rows.iter().filter_map(PickerEntry::from_peer_row).collect();
+    let mut entries: Vec<PickerEntry> = initial_rows
+        .iter()
+        .filter_map(PickerEntry::from_peer_row)
+        .collect();
     if entries.is_empty() {
         println!("(empty list)");
         return Ok(());
@@ -58,21 +77,26 @@ where
         state.select(Some(0));
         let mut filter = String::new();
         let mut searching = false;
-        let mut status = String::from("↑↓ move · / filter · Enter activate · q/Esc close");
+        let mut status = t_cli("cmd.cli.picker.help", &[]);
 
         loop {
-            let filtered: Vec<usize> = entries
-                .iter()
-                .enumerate()
-                .filter(|(_, e)| {
-                    if filter.is_empty() {
-                        true
-                    } else {
-                        e.label.to_lowercase().contains(&filter.to_lowercase())
-                    }
-                })
-                .map(|(i, _)| i)
-                .collect();
+            match on_maybe_refresh() {
+                PickerRefresh::Idle => {}
+                PickerRefresh::Updated(new_rows) => {
+                    let keep = selected_tab_key(&entries, &state, &filter);
+                    entries = new_rows
+                        .iter()
+                        .filter_map(PickerEntry::from_peer_row)
+                        .collect();
+                    restore_selection(&mut state, &entries, &filter, keep.as_ref());
+                    status = t_cli("cmd.cli.picker.refreshed", &[]);
+                }
+                PickerRefresh::Failed(detail) => {
+                    status = format!("refresh error: {detail} · q/Esc close");
+                }
+            }
+
+            let filtered = filtered_indices(&entries, &filter);
 
             if let Some(sel) = state.selected() {
                 if filtered.is_empty() {
@@ -188,6 +212,57 @@ where
     disable_raw_mode()?;
     stdout().execute(LeaveAlternateScreen)?;
     result
+}
+
+fn filtered_indices(entries: &[PickerEntry], filter: &str) -> Vec<usize> {
+    entries
+        .iter()
+        .enumerate()
+        .filter(|(_, e)| {
+            if filter.is_empty() {
+                true
+            } else {
+                e.label.to_lowercase().contains(&filter.to_lowercase())
+            }
+        })
+        .map(|(i, _)| i)
+        .collect()
+}
+
+fn selected_tab_key(
+    entries: &[PickerEntry],
+    state: &ListState,
+    filter: &str,
+) -> Option<(String, i64)> {
+    let filtered = filtered_indices(entries, filter);
+    let fi = state.selected()?;
+    let entry_idx = *filtered.get(fi)?;
+    let tab = entries.get(entry_idx)?.tab.as_ref()?;
+    Some((tab.peer_device_id.clone(), tab.tab_id))
+}
+
+fn restore_selection(
+    state: &mut ListState,
+    entries: &[PickerEntry],
+    filter: &str,
+    keep: Option<&(String, i64)>,
+) {
+    let filtered = filtered_indices(entries, filter);
+    if filtered.is_empty() {
+        state.select(None);
+        return;
+    }
+    if let Some((peer, tab_id)) = keep {
+        for (fi, entry_idx) in filtered.iter().enumerate() {
+            if let Some(tab) = &entries[*entry_idx].tab {
+                if &tab.peer_device_id == peer && tab.tab_id == *tab_id {
+                    state.select(Some(fi));
+                    return;
+                }
+            }
+        }
+    }
+    state.select(Some(0));
 }
 
 struct PickerEntry {

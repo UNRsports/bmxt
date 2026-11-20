@@ -698,11 +698,11 @@ BMXt grammar line
 
 **実装チェック（段階）**
 
-- [ ] **13.0 契約:** 本節 · stdout/stderr/exit 表 · 非対話時のチャネル規則 · 「完了バッファで足りる／インクリメンタルは後日」を `CONTRACT.md` に固定
-- [ ] **13.1 拡張:** セグメント完了時は stdout/stderr/exit を一次情報にする · `appendLogLines` / `SessionPatch` でチャネルを落とさない · `lines` は表示投影のまま
-- [ ] **13.2 CLI:** コマンド出力をバッファ集約してから sink · REPL=`Interactive` · インフラログとコマンド stderr を分離（§14 の NonInteractive 前提）
-- [ ] **13.3 conformance:** 成功一覧 → stdout・exit 0 / usage・parse → stderr・exit 2 / 未知 → 127 / 失敗で stdout を汚さない、を拡張 unit + CLI 側で検証
-- [ ] **13.4 ドキュメント:** README BMXt POSIX Profile に「CLI も同一意味」· 本節と §14 の前後関係を明記
+- [x] **13.0 契約:** 本節 · stdout/stderr/exit 表 · 非対話時のチャネル規則 · 「完了バッファで足りる／インクリメンタルは後日」を `CONTRACT.md` に固定
+- [x] **13.1 拡張:** セグメント完了時は stdout/stderr/exit を一次情報にする · `appendLogLines` / `SessionPatch` でチャネルを落とさない · `lines` は表示投影のまま
+- [x] **13.2 CLI:** コマンド出力をバッファ集約してから sink · REPL=`Interactive` · インフラログとコマンド stderr を分離（§14 の NonInteractive 前提）
+- [x] **13.3 conformance:** 成功一覧 → stdout・exit 0 / usage・parse → stderr・exit 2 / 未知 → 127 / 失敗で stdout を汚さない、を拡張 unit + CLI 側で検証
+- [x] **13.4 ドキュメント:** README BMXt POSIX Profile に「CLI も同一意味」· 本節と §14 の前後関係を明記
 
 **手元スモーク**
 
@@ -771,11 +771,11 @@ BMXt grammar line
 
 **実装チェック（段階）**
 
-- [ ] **14.0 契約:** 本節 · IPC 形（HTTP on door vs UDS）· 認証 · タイムアウト · 非対話エラー表を `CONTRACT.md` / 本節に固定（§13.0 の I/O 表を参照）
-- [ ] **14.1 常駐側:** 待ち受けまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
-- [ ] **14.2 クライアント:** `bmxt exec -- '…'` · 未常駐時は分かりやすい失敗 · exit 伝播
-- [ ] **14.3 非対話ガード:** handshake ask / GUI pick を `exec` 経路で起動しない · i18n msgs
-- [ ] **14.4 ドキュメント:** `hosts/cli/README.md` · root Terminal CLI · LLM 利用例（接続済み前提）
+- [x] **14.0 契約:** 本節 · IPC 形（HTTP on door vs UDS）· 認証 · タイムアウト · 非対話エラー表を `CONTRACT.md` / 本節に固定（§13.0 の I/O 表を参照）
+- [x] **14.1 常駐側:** 待ち受けまたは専用 endpoint で「1 行実行 → 結果 + exit」を受け付け（既存 hub / adapter 再利用）
+- [x] **14.2 クライアント:** `bmxt exec -- '…'` · 未常駐時は分かりやすい失敗 · exit 伝播
+- [x] **14.3 非対話ガード:** handshake ask / GUI pick を `exec` 経路で起動しない · i18n msgs
+- [x] **14.4 ドキュメント:** `hosts/cli/README.md` · root Terminal CLI · LLM 利用例（接続済み前提）
 - [ ] **14.5（任意）:** stdin 複数行バッチ · JSON 結果ラッパ · `-c` 別名
 
 **手元スモーク**
@@ -787,6 +787,57 @@ BMXt grammar line
 - [ ] 不正行で misuse 相当の exit になる
 
 **参照:** §10 · §11 · §12 · §13 · `hosts/cli/` · `hosts/cli/src/adapter.rs` · `_context/cli-peer/CONTRACT.md`
+
+### 15. BMXt POSIX Profile — 追加時の規格強制（ゲート）
+
+**前提:** §13（I/O 契約）· §14（`bmxt exec`）でホスト横断の **口**（stdout / stderr / exit）は揃っている。本節は、今後のコマンド・機能追加が契約から外れないよう **機械チェック／経路集約で守らせる**。
+
+**目標:** 「新機能を書けば自動で Profile 準拠」までは求めないが、逸脱を CI / conformance / lint で検知できる状態にする。IEEE 1003.1 準拠ではなく **BMXt Profile の規律維持**。
+
+**製品方針（決定済み）**
+
+| # | 規律 | 強制の強さ（現実解） |
+|---|------|----------------------|
+| 1 | **exit は core 定数のみ**（`0/1/2/127` · TS `exit-status.ts` / Rust `bmxt_core::ir::EXIT_*`） | 高 — マジックナンバー禁止 + unit/conformance |
+| 2 | **成功行 → stdout、usage/error → stderr** | 中〜高 — 集約経路で exit により振り分け + ゴールデン。文言スクレイプの完全禁止はしない |
+| 3 | **対話 UI は Interactive のみ**（`\| browse` · TUI · handshake ask / zenity） | 高 — `InteractionMode` ガードを入口に集約（§14 NonInteractive 既存） |
+| 4 | **CLI コマンド出力は `CommandIo` のみ**（adapter 経路の直 `println!` / `eprintln!` 禁止。インフラログは `repl_log` 等に限定） | 高 — `hosts/cli` の lint / CI grep |
+| 5 | **パイプは閉じた consumer / `bmxtRule` のみ**（未知 consumer は misuse、勝手な FD パイプは作らない） | 高 — レジストリ + conformance 強化 |
+
+**アーキテクチャ（要約）**
+
+```
+新コマンド / 変更
+  → bmxt-core（exit 定数 · DispatchBundle）
+  → ホスト: stdout/stderr 振り分け（SegmentOutcome / CommandIo）
+  → 対話入口: InteractionMode ガード
+  → CI: Profile conformance · CLI print grep · pipe registry
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `shared/crates/bmxt-core` · `exit-status.ts` | exit SoT |
+| `command-output.ts` · `CommandIo` · `classify-outcome.ts` | チャネル振り分け |
+| `hosts/cli/src/adapter.rs` · `command_io.rs` | Interactive / NonInteractive · 直 print 禁止対象 |
+| `pipe/consumers/` · `bmxt-core` pipe_consumer | 閉じた consumer |
+| `tests/.../posix-profile.test.ts` · `hosts/cli` posix_io tests · verify/CI | ゲート |
+
+**実装チェック（段階）**
+
+- [x] **15.0 契約:** 本節 5 規律を `CONTRACT.md`（または Profile 節）に「追加時必須」として追記。skill `bmxt-add-command` へチェックリスト反映
+- [x] **15.1 exit 定数:** ホスト／コマンド追加で生の `1`/`2`/`127` を避け `EXIT_*` のみ。既存の散在を棚卸し + unit
+- [x] **15.2 チャネル振り分け:** 成功一覧は stdout・診断は stderr のゴールデン（拡張 + CLI）。集約経路以外からの「結果 print」を減らす
+- [x] **15.3 Interactive ガード:** NonInteractive（`exec`）入口で browse / TUI / ask が起動しないことをテスト固定。新規対話 UI は `InteractionMode::Interactive` 分岐必須
+- [x] **15.4 CLI `CommandIo`:** `hosts/cli/src/adapter.rs`（およびコマンド結果経路）で直 `println!`/`eprintln!` を禁止する CI grep または clippy 相当。インフラ用は allowlist
+- [x] **15.5 パイプ閉じ語彙:** 未知 consumer → exit 2 の conformance 維持。新 consumer はレジストリ + `bmxtRule` kind のみ（skill / codegen と連携）
+
+**スコープ外（本節）**
+
+- 真のインクリメンタル配信（§13 後日）
+- 全コマンドの Writer フレームワーク大改装
+- OS パス redirect / 外部プロセス / POSIX shell 互換
+
+**参照:** §13 · §14 · plan `posix_i_o_foundation` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md` · `tests/unit/features/command-line/conformance/posix-profile.test.ts`
 
 ---
 

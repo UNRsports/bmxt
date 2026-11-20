@@ -116,7 +116,9 @@ bmxt-backup-*.zip
 # --- Rust / Cargo（wasm 含む。再現可能なビルドツリー）---
 **/target/
 
-# Copied by build:wasm for the extension package (canonical: shared/lib/wasm/bmxt-core/)
+# build:wasm outputs (pnpm run build:wasm; source of truth: shared/crates/bmxt-core/)
+/shared/lib/wasm/bmxt-core/
+# Copied by build:wasm for the extension package
 /shared/public/bmxt_core_bg.wasm
 
 

@@ -15,6 +15,10 @@ import {
 import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
 import type { SessionPatch } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
 import type { RunCmdResult } from "../../lib/features/bmxt-window/terminal-sessions/session-patches"
+import {
+  EXIT_FAILURE,
+  EXIT_SUCCESS
+} from "../../lib/features/command-line/compound/exit-status.ts"
 import { displayTitle } from "../../lib/features/format/display-title"
 import { ensureBmxtCore, runDispatch } from "../../lib/features/bmxt-core"
 import { loadUiSettings } from "../../lib/features/setting/settings"
@@ -157,7 +161,13 @@ async function runCommandBody(
         {
           type: "appendLog",
           sessionId,
-          lines: [`> ${trimmed}`, `error: ${e instanceof Error ? e.message : String(e)}`]
+          lines: [`> ${trimmed}`]
+        },
+        {
+          type: "appendLog",
+          sessionId,
+          lines: [`error: ${e instanceof Error ? e.message : String(e)}`],
+          channel: "stderr"
         }
       ]
     }
@@ -165,22 +175,24 @@ async function runCommandBody(
 
   const replaceLog = { value: false }
   const more: string[] = []
+  let moreExitStatus: number | undefined
   try {
-    more.push(
-      ...(await dispatch(
-        trimmed,
-        sessionId,
-        sessionOrderLength,
-        patches,
-        exitOutcome,
-        localeOverride,
-        hostKind,
-        sender,
-        replaceLog
-      ))
+    const dispatched = await dispatch(
+      trimmed,
+      sessionId,
+      sessionOrderLength,
+      patches,
+      exitOutcome,
+      localeOverride,
+      hostKind,
+      sender,
+      replaceLog
     )
+    more.push(...dispatched.lines)
+    moreExitStatus = dispatched.exitStatus
   } catch (e) {
     more.push(`error: ${e instanceof Error ? e.message : String(e)}`)
+    moreExitStatus = EXIT_FAILURE
   }
 
   if (replaceLog.value) {
@@ -194,7 +206,11 @@ async function runCommandBody(
 
   patches.push({ type: "appendLog", sessionId, lines: [`> ${trimmed}`] })
   if (more.length > 0) {
-    patches.push({ type: "appendLog", sessionId, lines: more })
+    const channel =
+      typeof moreExitStatus === "number" && moreExitStatus !== EXIT_SUCCESS
+        ? "stderr"
+        : "stdout"
+    patches.push({ type: "appendLog", sessionId, lines: more, channel })
   }
   return { ok: true, patches, closeWindow: exitOutcome.fullClose || undefined }
 }
@@ -209,13 +225,16 @@ async function dispatch(
   hostKind: BmxtHostKind = "popup",
   sender?: chrome.runtime.MessageSender,
   replaceLog?: { value: boolean }
-): Promise<string[]> {
+): Promise<{ lines: string[]; exitStatus?: number }> {
   const locale =
     localeOverride ?? (await loadUiSettings()).locale
   setRunLocale(locale)
   const bundle = runDispatch(line, locale)
   if (bundle.ty === "lines") {
-    return bundle.lines ?? []
+    return {
+      lines: bundle.lines ?? [],
+      exitStatus: bundle.exitStatus
+    }
   }
   const ctx: DispatchHostContext = {
     enqueueSessionPatch: (patch) => {
@@ -256,7 +275,11 @@ async function dispatch(
     commandSessionId: sessionId,
     uiLocale: locale
   }
-  return applyHostEffects(ctx, bundle.effects ?? [])
+  const effectLines = await applyHostEffects(ctx, bundle.effects ?? [])
+  return {
+    lines: effectLines,
+    exitStatus: bundle.exitStatus
+  }
 }
 
 async function listWindows(): Promise<string[]> {

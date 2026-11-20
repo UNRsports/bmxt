@@ -29,6 +29,7 @@
     "verify:wasm-boundary": "node scripts/verify-wasm-boundary.mjs",
     "check:generated": "node scripts/check-generated.mjs",
     "check:no-fetch": "node scripts/check-no-fetch.mjs",
+    "check:cli-command-io": "node scripts/check-cli-command-io.mjs",
     "sync:completion-fallback": "pnpm run codegen",
     "sync:effect-types": "pnpm run codegen",
     "sync:generated-ts": "pnpm run codegen",

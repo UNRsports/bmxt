@@ -1,19 +1,25 @@
 mod adapter;
 mod bus;
+mod command_io;
 mod config;
 mod connect;
 mod door;
+mod exec_client;
 mod handshake;
 mod handshake_delivery;
 mod mesh_plan;
 mod msgs;
+mod open_payload;
 mod paste;
+#[cfg(test)]
+mod posix_io_tests;
 mod repl_log;
 mod shell;
 mod tui;
 mod ui_settings_host;
 
 use std::path::PathBuf;
+use std::process::ExitCode;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -21,6 +27,7 @@ use clap::{Parser, Subcommand};
 
 use crate::adapter::CliHostAdapter;
 use crate::bus::BusClient;
+use crate::command_io::{CommandIo, InteractionMode};
 use crate::config::CliConfig;
 use crate::msgs::t_cli;
 use crate::shell::{PromptShell, ReadOutcome};
@@ -75,10 +82,16 @@ enum Commands {
     },
     /// Open TUI demo without a live session
     Tui,
+    /// One-shot grammar line against a resident `bmxt` / `bmxt repl` (todo §14)
+    Exec {
+        /// EN: Grammar tokens after `--` (joined with spaces). If empty, read one stdin line.
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        line: Vec<String>,
+    },
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<ExitCode> {
     let cli = Cli::parse();
     let mut cfg = CliConfig::load_or_create()?;
     if let Err(err) = ui_settings_host::bootstrap_locale() {
@@ -88,6 +101,7 @@ async fn main() -> Result<()> {
     match cli.command {
         None | Some(Commands::Repl) => {
             command_repl(&mut cfg, None).await?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::Status) => {
             println!("deviceId:    {}", cfg.device_id);
@@ -113,24 +127,29 @@ async fn main() -> Result<()> {
                 "localhost:   http://127.0.0.1:{}/ (Family-authenticated listener; when Family joined)",
                 door::DOOR_PORT
             );
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncSetup) => {
             cfg.ensure_family()?;
             let invite = handshake::print_invite(&cfg)?;
             println!("{}", msgs::t_cli("cmd.cli.handshake.familyReady", &[]));
             handshake_delivery::deliver_outbound_code(&mut cfg, "invite", &invite)?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncPair { invite }) => {
             handshake::apply_invite(&mut cfg, &invite)?;
             println!("Joined Family {}", cfg.family_id.as_deref().unwrap_or(""));
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncOffer { to }) => {
             let client = connect::connect_as_offer(&mut cfg, to).await?;
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncAnswer { offer_code }) => {
             let client = connect::connect_as_answer(&mut cfg, &offer_code).await?;
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::SyncConnect { offer, to }) => {
             cfg.require_family()?;
@@ -140,30 +159,48 @@ async fn main() -> Result<()> {
                 connect::connect_as_answer_interactive(&mut cfg).await?
             };
             command_repl(&mut cfg, Some(Arc::new(client))).await?;
+            Ok(ExitCode::SUCCESS)
         }
         Some(Commands::TabList { .. }) => {
-            return Err(anyhow!(
+            Err(anyhow!(
                 "tab-list requires a live session — use: bmxt sync-connect --offer, then `tab -list`"
-            ));
+            ))
         }
         Some(Commands::Tui) => {
             tui::run_demo_tui()?;
+            Ok(ExitCode::SUCCESS)
+        }
+        Some(Commands::Exec { line }) => {
+            let grammar = exec_client::resolve_exec_line(&line)?;
+            exec_client::run_exec(&grammar).await
         }
     }
-    Ok(())
 }
 
-async fn ensure_hub(cfg: &CliConfig, seed: Option<Arc<BusClient>>) -> Result<Option<Arc<BusClient>>> {
+/// EN: Hub boot result — whether this process owns the localhost server door.
+/// JA: ハブ起動結果 — このプロセスが localhost サーバ door を所有するか。
+struct HubBoot {
+    hub: Option<Arc<BusClient>>,
+    door_listening: bool,
+}
+
+async fn ensure_hub(cfg: &CliConfig, seed: Option<Arc<BusClient>>) -> Result<HubBoot> {
     if let Some(hub) = seed {
-        if cfg.family_id.is_some() && cfg.seed_b64.is_some() {
-            if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&hub)).await {
-                eprintln!("localhost listener: {err:#}");
-            }
-        }
-        return Ok(Some(hub));
+        let door_listening = if cfg.family_id.is_some() && cfg.seed_b64.is_some() {
+            door::try_spawn_door(cfg.clone(), Arc::clone(&hub)).await
+        } else {
+            false
+        };
+        return Ok(HubBoot {
+            hub: Some(hub),
+            door_listening,
+        });
     }
     if cfg.family_id.is_none() || cfg.seed_b64.is_none() {
-        return Ok(None);
+        return Ok(HubBoot {
+            hub: None,
+            door_listening: false,
+        });
     }
     let (family_id, _) = cfg.require_family()?;
     let hub = Arc::new(
@@ -174,37 +211,59 @@ async fn ensure_hub(cfg: &CliConfig, seed: Option<Arc<BusClient>>) -> Result<Opt
         )
         .await,
     );
-    if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&hub)).await {
-        eprintln!("localhost listener: {err:#}");
-    }
-    Ok(Some(hub))
+    let door_listening = door::try_spawn_door(cfg.clone(), Arc::clone(&hub)).await;
+    Ok(HubBoot {
+        hub: Some(hub),
+        door_listening,
+    })
 }
 
-async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Result<()> {
-    let mut hub = ensure_hub(cfg, seed).await?;
-    let has_peers = match &hub {
+/**
+ * EN: Print REPL role banner — server vs peer-only must be obvious in the log.
+ * JA: REPL 役割バナー — サーバ／peer のみがログで一目で分かるようにする。
+ */
+async fn print_startup_banner(hub: Option<&Arc<BusClient>>, door_listening: bool) {
+    let has_peers = match hub {
         Some(h) => !h.list_connected().await.is_empty(),
         None => false,
     };
-    if has_peers {
-        println!("{}", t_cli("cmd.cli.banner.connected", &[]));
-        println!("{}", t_cli("cmd.cli.banner.connectedHint", &[]));
-    } else if hub.is_some() {
-        println!(
-            "{}",
-            t_cli(
-                "cmd.cli.banner.familyReady",
-                &[("port", &door::DOOR_PORT.to_string())]
-            )
-        );
-        println!("{}", t_cli("cmd.cli.banner.familyReadyHint", &[]));
-        println!("{}", t_cli("cmd.cli.banner.editing", &[]));
-    } else {
+    if hub.is_none() {
         println!("{}", t_cli("cmd.cli.banner.noFamily", &[]));
         println!("{}", t_cli("cmd.cli.banner.noFamilyHint", &[]));
         println!("{}", t_cli("cmd.cli.banner.noFamilyNext", &[]));
         println!("{}", t_cli("cmd.cli.banner.editing", &[]));
+        return;
     }
+    let port = door::DOOR_PORT.to_string();
+    if door_listening {
+        println!(
+            "{}",
+            t_cli("cmd.cli.banner.familyReady", &[("port", port.as_str())])
+        );
+        println!("{}", t_cli("cmd.cli.banner.familyReadyHint", &[]));
+    } else {
+        println!("{}", t_cli("cmd.cli.banner.familyReadyPeerOnly", &[]));
+        println!(
+            "{}",
+            t_cli(
+                "cmd.cli.banner.familyReadyPeerOnlyHint",
+                &[("port", port.as_str())]
+            )
+        );
+    }
+    if has_peers {
+        println!("{}", t_cli("cmd.cli.banner.connected", &[]));
+        println!("{}", t_cli("cmd.cli.banner.connectedHint", &[]));
+    } else {
+        println!("{}", t_cli("cmd.cli.banner.editing", &[]));
+    }
+}
+
+async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Result<()> {
+    let boot = ensure_hub(cfg, seed).await?;
+    let mut hub = boot.hub;
+    let mut door_listening = boot.door_listening;
+    print_startup_banner(hub.as_ref(), door_listening).await;
     let mut shell = PromptShell::open()?;
     // EN: Async bus/listener logs use ExternalPrinter so BMXt> + caret redraw after each line.
     if let Err(err) = shell.install_repl_log_printer() {
@@ -277,11 +336,16 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
             shell.remember(trimmed);
             if hub.is_none() {
                 match ensure_hub(cfg, None).await {
-                    Ok(Some(h)) => hub = Some(h),
-                    Ok(None) => {
-                        eprintln!("error: join a Family first (sync -setup / sync -pair)");
-                        continuation = None;
-                        continue;
+                    Ok(boot) => {
+                        if boot.hub.is_none() {
+                            eprintln!("error: join a Family first (sync -setup / sync -pair)");
+                            continuation = None;
+                            continue;
+                        }
+                        if boot.door_listening {
+                            door_listening = true;
+                        }
+                        hub = boot.hub;
                     }
                     Err(err) => {
                         eprintln!("error: {err:#}");
@@ -336,6 +400,8 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
             cfg: &mut *cfg,
             client: hub.as_ref().map(|h| h.as_ref()),
             setting_draft: &mut setting_draft,
+            mode: InteractionMode::Interactive,
+            io: CommandIo::new(),
         };
         match adapter.run_line(&line).await {
             Ok(outcome) => {
@@ -343,25 +409,33 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
                     // EN: Adapter may still return a fresh hub from older paths — prefer shared.
                     if hub.is_none() {
                         let arc = Arc::new(c);
-                        if let Err(err) = door::spawn_door(cfg.clone(), Arc::clone(&arc)).await {
-                            eprintln!("localhost listener: {err:#}");
+                        if door::try_spawn_door(cfg.clone(), Arc::clone(&arc)).await {
+                            door_listening = true;
                         }
                         hub = Some(arc);
+                        print_startup_banner(hub.as_ref(), door_listening).await;
                     }
                     println!("Connected. Prompt is BMXt> — try `sync -status` / `tab -list`.");
                 }
                 // EN: Family may have been created by sync -setup / -pair in this line.
                 if hub.is_none() && cfg.family_id.is_some() && cfg.seed_b64.is_some() {
                     match ensure_hub(cfg, None).await {
-                        Ok(Some(h)) => {
-                            hub = Some(h);
-                            println!(
-                                "localhost listener listening on http://127.0.0.1:{}/",
-                                door::DOOR_PORT
-                            );
+                        Ok(boot) => {
+                            if boot.door_listening {
+                                door_listening = true;
+                            }
+                            hub = boot.hub;
+                            if hub.is_some() {
+                                print_startup_banner(hub.as_ref(), door_listening).await;
+                            }
                         }
-                        Ok(None) => {}
-                        Err(err) => eprintln!("localhost listener: {err:#}"),
+                        Err(err) => eprintln!(
+                            "{}",
+                            t_cli(
+                                "cmd.cli.door.bindFailed",
+                                &[("error", &format!("{err:#}"))]
+                            )
+                        ),
                     }
                 }
                 continuation = outcome.prompt_prefix;

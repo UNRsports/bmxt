@@ -45,95 +45,95 @@ pub fn save_committed(settings: &UiSettings) -> Result<()> {
     Ok(())
 }
 
-pub fn print_setting_list(settings: &UiSettings, cfg: &crate::config::CliConfig) {
-    println!("{}", t_cli("setting.list.notice.showing", &[]));
-    println!("{}", t_cli("setting.list.notice.useBrowse", &[]));
-    println!("{}", t_cli("cmd.cli.setting.useSetSave", &[]));
-    for line in format_setting_list_lines(settings) {
-        println!("{line}");
-    }
-    let delivery = cfg
-        .handshake_delivery
-        .as_deref()
-        .unwrap_or("ask");
+/** EN: Format `setting -list` lines for the command I/O sink (no direct print). */
+pub fn format_setting_list_for_cli(
+    settings: &UiSettings,
+    cfg: &crate::config::CliConfig,
+) -> Vec<String> {
+    let mut lines = Vec::new();
+    lines.push(t_cli("setting.list.notice.showing", &[]));
+    lines.push(t_cli("setting.list.notice.useBrowse", &[]));
+    lines.push(t_cli("cmd.cli.setting.useSetSave", &[]));
+    lines.extend(format_setting_list_lines(settings));
+    let delivery = cfg.handshake_delivery.as_deref().unwrap_or("ask");
     let ticket_dir = cfg
         .handshake_ticket_dir
         .as_deref()
         .unwrap_or("(default ~/.config/bmxt)");
-    println!("handshake-delivery\t{delivery}");
-    println!("handshake-ticket-dir\t{ticket_dir}");
+    lines.push(format!("handshake-delivery\t{delivery}"));
+    lines.push(format!("handshake-ticket-dir\t{ticket_dir}"));
+    lines
 }
 
 /**
  * EN: CLI-only sync prefs on `CliConfig` (immediate save; not UI settings draft).
  * JA: CLI 専用の sync 設定（即時保存。UI settings 下書きではない）。
  */
+/**
+ * EN: Apply CLI-only sync pref. `Ok(None)` = not a sync key.
+ * `Ok(Some(lines))` = applied; lines are stdout feedback for the command sink.
+ */
 pub fn try_apply_cli_sync_setting(
     cfg: &mut crate::config::CliConfig,
     key: &str,
     value: &str,
-) -> Result<Option<()>> {
+) -> Result<Option<Vec<String>>> {
     let k = key.trim().to_ascii_lowercase();
     match k.as_str() {
         "handshake-delivery" => {
-            match crate::handshake_delivery::set_delivery_mode(cfg, value)? {
+            let line = match crate::handshake_delivery::set_delivery_mode(cfg, value)? {
                 crate::handshake_delivery::DeliverySettingResult::AskNextTime => {
-                    println!("{}", t_cli("cmd.cli.handshake.deliveryAskNext", &[]));
+                    t_cli("cmd.cli.handshake.deliveryAskNext", &[])
                 }
-                crate::handshake_delivery::DeliverySettingResult::Mode(mode) => {
-                    println!(
-                        "{}",
-                        t_cli(
-                            "cmd.cli.handshake.deliveryRemembered",
-                            &[(
-                                "mode",
-                                crate::handshake_delivery::delivery_token(mode)
-                            )]
-                        )
-                    );
-                }
-            }
-            Ok(Some(()))
+                crate::handshake_delivery::DeliverySettingResult::Mode(mode) => t_cli(
+                    "cmd.cli.handshake.deliveryRemembered",
+                    &[(
+                        "mode",
+                        crate::handshake_delivery::delivery_token(mode),
+                    )],
+                ),
+            };
+            Ok(Some(vec![line]))
         }
         "handshake-ticket-dir" => {
             let dir = crate::handshake_delivery::set_ticket_dir(cfg, value)?;
-            println!(
-                "{}",
-                t_cli(
-                    "cmd.cli.handshake.ticketDirRemembered",
-                    &[("dir", &dir.display().to_string())]
-                )
-            );
-            Ok(Some(()))
+            Ok(Some(vec![t_cli(
+                "cmd.cli.handshake.ticketDirRemembered",
+                &[("dir", &dir.display().to_string())],
+            )]))
         }
         _ => Ok(None),
     }
 }
 
+/**
+ * EN: Patch draft. Returns `(ok, stdout_lines, stderr_lines)`.
+ * JA: 下書きを更新。戻り値は `(ok, stdout 行, stderr 行)`。
+ */
 pub fn apply_set_to_draft(
     draft: &mut Option<UiSettings>,
     committed: &UiSettings,
     key: &str,
     value: &str,
-) -> Result<bool> {
+) -> Result<(bool, Vec<String>, Vec<String>)> {
     let patch = match setting_set_patch_from_args(key, value) {
         Some(p) => p,
         None => {
-            println!(
-                "{}",
-                t_cli("setting.cui.setUnknown", &[("key", key)])
-            );
-            return Ok(false);
+            return Ok((
+                false,
+                Vec::new(),
+                vec![t_cli("setting.cui.setUnknown", &[("key", key)])],
+            ));
         }
     };
     let target = draft.get_or_insert_with(|| committed.clone());
     apply_setting_set_patch(target, &patch);
-    println!(
-        "{}",
-        t_cli(
+    Ok((
+        true,
+        vec![t_cli(
             "setting.cui.setApplied",
-            &[("key", key), ("value", value)]
-        )
-    );
-    Ok(true)
+            &[("key", key), ("value", value)],
+        )],
+        Vec::new(),
+    ))
 }

@@ -54,7 +54,7 @@ Same grammar as the extension (`bmxt-core`):
 7. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a Rust line editor:
    - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`) · **Tab** applies · **Enter** runs
    - Tab after `-list` offers `| browse`…; after a typed `|`, Tab completes `browse` / `close` / …
-   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates on the owning peer, stays open until q/Esc)
+   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates on the owning peer, stays open until q/Esc; **live refresh** on Family `tabs_changed`)
    - **`quit` / `exit`** ends the `bmxt` process (peer drop while the REPL stays up only prints a “listener keeps running” notice)
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - First peer: `sync -offer` / `sync -accept` (or `bmxt sync-connect`); extra peers join via mesh
@@ -73,7 +73,28 @@ Same grammar as the extension (`bmxt-core`):
 | `shared/crates/bmxt-core` | Shared command grammar (`default-features = false` for CLI) |
 | `shared/crates/bmxt-ui-settings` | CLI `settings.json` v2 load/save/normalize |
 
-Contract: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md). Product checklist: `_context/todo.md` §10 / §12. Root overview: [Terminal CLI peer](../../README.md#terminal-cli-peer).
+Contract: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md). Product checklist: `_context/todo.md` §10 / §12–§14. Root overview: [Terminal CLI peer](../../README.md#terminal-cli-peer).
+
+## POSIX I/O + `bmxt exec` (todo §13 / §14)
+
+Same **BMXt POSIX Profile** as the extension: stdout = results, stderr = diagnostics, exit = `0` / `1` / `2` / `127` (completion buffer). REPL is **Interactive**; `exec` is **NonInteractive** (no ask / zenity / `| browse`).
+
+```bash
+# Terminal A — resident (Family joined → door on :17653)
+bmxt
+
+# Terminal B — oneshot (LLM / scripts)
+bmxt exec -- 'sync -status'
+bmxt exec -- 'tab -list --peers'
+bmxt exec -- 'tab -send <deviceId> https://example.com --group MyGroup'
+bmxt exec -- 'help'          # local grammar; no peer required once door is up
+# no resident → stderr + exit 1 (does not hang)
+# `--close` on CLI is skipped (no local browser tabs); remote open still runs
+```
+
+IPC: `POST http://127.0.0.1:17653/v1/exec` with `{ "line": "…" }` → `{ stdout, stderr, exitStatus }`.
+
+**Agents (Gemini CLI, etc.):** `bmxt exec` is a **CLI subcommand** (new process → HTTP POST), **not** the shell builtin `exec` and **not** an attach to the resident TTY. Use your normal shell tool with the full argv above. See root README **Using BMXtCLI with an LLM**.
 
 ## Out of scope (this host)
 
@@ -82,6 +103,7 @@ Contract: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md)
 - Native messaging / CDP / Playwright
 - Public STUN/TURN on the default path
 - Replacing the extension’s in-page `RTCPeerConnection`
+- True incremental chunk delivery over exec IPC (buffered oneshot only)
 
 ---
 
@@ -141,7 +163,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 7. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ Rust 行編集:
    - **↑↓** 履歴 · **灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）· **Tab** で適用 · **Enter** で実行
    - `-list` 後の Tab で `| browse` 等、既に `|` を打った右辺では `browse` / `close` 等を補完
-   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で所有 peer へ activate、q/Esc まで開いたまま）
+   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で所有 peer へ activate、q/Esc まで開いたまま。Family `tabs_changed` で**ライブ更新**）
    - **`quit` / `exit`** で `bmxt` プロセス終了（REPL 継続中のピア切断時のみ「待ち受け継続」案内）
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - 最初の peer: `sync -offer` / `sync -accept`（または `bmxt sync-connect`）。追加 peer はメッシュ
@@ -160,7 +182,22 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 | `shared/crates/bmxt-core` | 共有コマンド文法（CLI は `default-features = false`） |
 | `shared/crates/bmxt-ui-settings` | CLI `settings.json` v2 の load/save/normalize |
 
-契約: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md)。製品チェックリスト: `_context/todo.md` §10 / §12。概要: [端末 CLI peer](../../README.md#terminal-cli-peer-ja)。
+契約: [`_context/cli-peer/CONTRACT.md`](../../_context/cli-peer/CONTRACT.md)。製品チェックリスト: `_context/todo.md` §10 / §12–§14。概要: [端末 CLI peer](../../README.md#terminal-cli-peer-ja)。
+
+## POSIX I/O + `bmxt exec`（todo §13 / §14）
+
+拡張と同じ **BMXt POSIX Profile**（stdout=結果 · stderr=診断 · exit=`0`/`1`/`2`/`127` · 完了バッファ）。REPL は **Interactive**、`exec` は **NonInteractive**（ask / zenity / `| browse` 禁止）。
+
+```bash
+bmxt
+bmxt exec -- 'sync -status'
+bmxt exec -- 'tab -list --peers'
+bmxt exec -- 'tab -send <deviceId> https://example.com --group MyGroup'
+```
+
+IPC: `POST http://127.0.0.1:17653/v1/exec`。CLI の `--close` はローカルタブがないため無視（相手側 open は実行）。
+
+**エージェント（Gemini CLI 等）:** `bmxt exec` は **CLI サブコマンド**（新プロセス → HTTP POST）であり、**シェル組み込み `exec` でも常駐 TTY へのアタッチでもない**。通常のシェルツールで上記のフル argv を実行すること。root README **BMXtCLI を LLM で使う** を参照。
 
 ## この host の対象外
 
@@ -169,3 +206,4 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 - ネイティブメッセージング / CDP / Playwright
 - 既定経路での公開 STUN/TURN
 - 拡張のページ内 `RTCPeerConnection` の置き換え
+- exec IPC の真のインクリメンタル配信（バッファ・ワンショットのみ）

@@ -50,7 +50,8 @@ export function packageFirefoxAmoSources() {
     "--exclude=.cursor",
     "--exclude=shared/public/background-services.js",
     "--exclude=shared/public/background-services.mjs",
-    "--exclude=shared/public/bmxt_core_bg.wasm"
+    "--exclude=shared/public/bmxt_core_bg.wasm",
+    "--exclude=shared/lib/wasm/bmxt-core"
   ]
 
   const result = spawnSync(

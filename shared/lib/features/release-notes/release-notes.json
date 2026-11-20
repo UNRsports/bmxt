@@ -1,14 +1,10 @@
 {
-  "0.9.4": {
+  "0.9.5": {
     "ja": [
-      "処理結果にアイコンを表示するように修正",
-      "UIの細部動作見直し",
-      "内部のコマンド処理仕様を見直し"
+      "UIの細部動作と内部のコマンドや連携処理の仕様を見直し"
     ],
     "en": [
-      "Fixed processing results to display icons",
-      "Reviewed UI detail behavior",
-      "Reviewed internal command processing specifications"
+      ""
     ]
   }
 }

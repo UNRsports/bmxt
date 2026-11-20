@@ -63,6 +63,19 @@ Task progress:
 - [ ] Same verify chain as above
 ```
 
+## BMXt POSIX Profile gates (todo §15 — required)
+
+```
+Task progress:
+- [ ] Exit status uses EXIT_* constants only (0/1/2/127) — no magic numbers in new code
+- [ ] Success / list output → stdout; usage / error / unknown → stderr
+- [ ] Any picker / browse / ask / zenity path is Interactive-only (CLI: InteractionMode)
+- [ ] CLI host changes: command I/O via CommandIo (pnpm run check:cli-command-io)
+- [ ] New pipe consumer (if any): registry + bmxtRule acceptsKinds; unknown → exit 2
+```
+
+Contract: `_context/cli-peer/CONTRACT.md` · skill `bmxt-add-command`.
+
 ## Scaffold
 
 ```bash

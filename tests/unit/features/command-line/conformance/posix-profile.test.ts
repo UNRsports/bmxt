@@ -4,7 +4,11 @@
 import { before, describe, it } from "node:test"
 import assert from "node:assert/strict"
 import { ensureBmxtCoreForTests } from "../../../../../shared/lib/features/bmxt-core/test-ensure-wasm.ts"
-import { segmentFailure, segmentSuccess } from "../../../../../shared/lib/features/command-line/compound/classify-outcome.ts"
+import {
+  segmentFailure,
+  segmentOutcomeFromExitStatus,
+  segmentSuccess
+} from "../../../../../shared/lib/features/command-line/compound/classify-outcome.ts"
 import {
   EXIT_FAILURE,
   EXIT_MISUSE,
@@ -27,6 +31,7 @@ import {
   parseRedirects
 } from "../../../../../shared/lib/features/command-line/commands/parse-redirect.ts"
 import { CLOSE_ACCEPTS_BMXT_RULE_KINDS, isClosePipeConsumer } from "../../../../../shared/lib/features/command-line/pipe/consumers/close-match.ts"
+import { classifyPipeConsumer } from "../../../../../shared/lib/features/command-line/pipe/consumers/classify.ts"
 import { bmxtRuleStreamAcceptsKinds } from "../../../../../shared/lib/features/command-line/pipe/consumers/stream-accepts-kinds.ts"
 import { bmxtRuleStreamFromListResult } from "../../../../../shared/lib/features/bmxt-rule/adapters/from-list-result.ts"
 import { LIST_OUTPUT_SCHEMA, type ListResult } from "../../../../../shared/lib/features/command-line/list-output/types.ts"
@@ -39,6 +44,13 @@ before(() => {
 })
 
 describe("BMXt POSIX Profile — exit status (P1)", () => {
+  it("keeps core exit constant table (todo §15.1)", () => {
+    assert.equal(EXIT_SUCCESS, 0)
+    assert.equal(EXIT_FAILURE, 1)
+    assert.equal(EXIT_MISUSE, 2)
+    assert.equal(EXIT_NOT_FOUND, 127)
+  })
+
   it("maps codes to profile statuses", () => {
     assert.equal(exitStatusForCode("ok"), EXIT_SUCCESS)
     assert.equal(exitStatusForCode("runtime"), EXIT_FAILURE)
@@ -73,6 +85,17 @@ describe("BMXt POSIX Profile — stdout/stderr (P3)", () => {
       text: "usage: tab -list",
       channel: "stderr"
     })
+  })
+
+  it("keeps failure diagnostics off stdout when exitStatus is stamped", () => {
+    const misuse = segmentOutcomeFromExitStatus(["usage: tab -list"], EXIT_MISUSE)
+    assert.deepEqual(misuse.stdout, [])
+    assert.deepEqual(misuse.stderr, ["usage: tab -list"])
+    assert.equal(misuse.exitStatus, EXIT_MISUSE)
+
+    const unknown = segmentOutcomeFromExitStatus(["unknown command: xyz"], EXIT_NOT_FOUND)
+    assert.deepEqual(unknown.stdout, [])
+    assert.equal(unknown.exitStatus, EXIT_NOT_FOUND)
   })
 })
 
@@ -120,6 +143,13 @@ describe("BMXt POSIX Profile — pipe consumers (P4)", () => {
     }
     const sessionStream = bmxtRuleStreamFromListResult(sessions)
     assert.equal(bmxtRuleStreamAcceptsKinds(sessionStream, CLOSE_ACCEPTS_BMXT_RULE_KINDS), false)
+  })
+
+  it("rejects unknown pipe consumers (closed vocabulary · todo §15.5)", () => {
+    assert.equal(classifyPipeConsumer("browse")?.id, "browse")
+    assert.equal(classifyPipeConsumer("close")?.id, "close")
+    assert.equal(classifyPipeConsumer("not-a-real-consumer"), null)
+    assert.equal(classifyPipeConsumer("cat"), null)
   })
 })
 
