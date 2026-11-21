@@ -1,0 +1,159 @@
+# EN: Build bmxt on Linux / macOS / Windows and attach assets to a GitHub Release
+#     when a cli-v* tag is pushed. Binaries are never committed to the repo.
+# JA: cli-v* タグ push 時に Linux / macOS / Windows で bmxt をビルドし
+#     GitHub Release に添付する。バイナリはリポジトリにコミットしない。
+name: Release BMXtCLI
+
+on:
+  push:
+    tags:
+      - "cli-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing cli-v* tag to rebuild and (re)attach (e.g. cli-v0.1.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-cli-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build-${{ matrix.asset }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: bmxt-linux-x86_64
+            bin_name: bmxt
+          - os: macos-latest
+            asset: bmxt-macos-aarch64
+            bin_name: bmxt
+          - os: windows-latest
+            asset: bmxt-windows-x86_64.exe
+            bin_name: bmxt.exe
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          case "${TAG}" in
+            cli-v*)
+              ;;
+            *)
+              echo "Tag must start with cli-v (got: ${TAG})" >&2
+              exit 1
+              ;;
+          esac
+          VERSION="${TAG#cli-v}"
+          if [ -z "${VERSION}" ]; then
+            echo "Empty version after cli-v" >&2
+            exit 1
+          fi
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check hosts/cli Cargo.toml version matches tag
+        shell: bash
+        run: |
+          CARGO_VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' hosts/cli/Cargo.toml | head -n 1)"
+          EXPECTED="${{ steps.tag.outputs.version }}"
+          if [ "${CARGO_VERSION}" != "${EXPECTED}" ]; then
+            echo "hosts/cli/Cargo.toml version=${CARGO_VERSION} != tag version=${EXPECTED}" >&2
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux C toolchain (ring / webrtc)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Build release binary
+        run: cargo build --release -p bmxt-cli
+
+      - name: Stage asset
+        shell: bash
+        run: |
+          SRC="target/release/${{ matrix.bin_name }}"
+          if [ ! -f "${SRC}" ]; then
+            echo "Missing binary: ${SRC}" >&2
+            exit 1
+          fi
+          cp "${SRC}" "${{ matrix.asset }}"
+          ls -la "${{ matrix.asset }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: publish-github-release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve release tag
+        id: tag
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Build SHA256SUMS.txt
+        working-directory: dist
+        shell: bash
+        run: |
+          ls -la
+          sha256sum bmxt-linux-x86_64 bmxt-macos-aarch64 bmxt-windows-x86_64.exe > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: BMXtCLI ${{ steps.tag.outputs.tag }}
+          body: |
+            Prebuilt **`bmxt`** binaries for this tag (Linux x86_64, macOS aarch64, Windows x86_64).
+
+            Verify downloads with **`SHA256SUMS.txt`** (see README **BMXtCLI GitHub Releases**).
+            Binaries are unsigned; Gatekeeper / SmartScreen may warn on first run.
+          files: |
+            dist/bmxt-linux-x86_64
+            dist/bmxt-macos-aarch64
+            dist/bmxt-windows-x86_64.exe
+            dist/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          generate_release_notes: false

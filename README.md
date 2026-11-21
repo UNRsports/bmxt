@@ -28,6 +28,7 @@
   - [`history`](#history-command)
   - [Terminal CLI peer (`hosts/cli`)](#terminal-cli-peer)
   - [Using BMXtCLI with an LLM](#bmxt-cli-llm)
+  - [BMXtCLI GitHub Releases (prebuilt binaries + checksums)](#bmxt-cli-releases)
   - [`tab` (subcommands)](#tabs-man-tabs)
   - [Picker UI (side columns)](#picker-ui)
   - [Tab Picker (`tab -list | browse` / `tab -list -url | browse`)](#tabs-tab-picker)
@@ -789,6 +790,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **Tab picker** | `tab -list --peers \| browse` opens a ratatui picker. **Enter** activates on the owning peer (ids are per-browser); picker **stays open** until **q** / **Esc**. Open picker **follows Family `tabs_changed`** (same `first: "tab"` rule as the extension) and re-fetches the list while preserving selection when possible. |
 | **Mesh** | First peer via localhost listener or manual connection setup; additional Family peers join over in-band mesh (CLI acts as introducer; tab ops are not hub-relayed). |
 | **Build** | `cargo build -p bmxt-cli` → `target/debug/bmxt` (release: `cargo build --release -p bmxt-cli`). |
+| **Prebuilt** | GitHub Releases tagged **`cli-v*`** — see **[BMXtCLI GitHub Releases](#bmxt-cli-releases)** (binaries + `SHA256SUMS.txt`). |
 
 **Cold start (same PC):** (1) join the same Family on CLI + browsers · (2) start `bmxt` · (3) open each BMXt prompt window → Family-authenticated auto-reconnect. Stop the process with REPL **`quit`** / **`exit`**.
 
@@ -838,6 +840,96 @@ echo $?   # Profile exit: 0 success · 1 failure · 2 misuse · 127 unknown
 **Tool-definition hint for agents (copy-paste):** “Resident `bmxt` is already listening on 127.0.0.1:17653. For each browser/Family action, run exactly one shell command of the form `./path/to/bmxt exec -- '<grammar line>'` via your normal shell tool. This is the BMXt oneshot client (HTTP POST), **not** the shell builtin `exec`, and it does **not** attach to the resident process stdin. Never start `bmxt` or `bmxt repl`. Never use bare `exec`.”
 
 **Out of scope for this host:** `nav` / `dom` page overlays, settings picker browse / FSA, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI, true incremental chunk delivery over exec IPC. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§15.
+
+<a id="bmxt-cli-releases"></a>
+
+#### BMXtCLI GitHub Releases (prebuilt binaries + checksums)
+
+Public maintainer / user manual for shipping and verifying the **`bmxt`** terminal peer. Binaries are **not** committed to git; they are attached only to [GitHub Releases](https://github.com/UNRsports/bmxt/releases). Workflow: [`.github/workflows/release-cli.yml`](.github/workflows/release-cli.yml).
+
+**Native per OS:** `bmxt` is a Rust native binary (ELF / Mach-O / PE). A Linux build does **not** run on macOS or Windows. Pick the asset that matches your OS and CPU.
+
+##### Release assets
+
+| Asset | Platform |
+|-------|----------|
+| `bmxt-linux-x86_64` | Linux x86_64 (glibc) |
+| `bmxt-macos-aarch64` | macOS Apple Silicon |
+| `bmxt-windows-x86_64.exe` | Windows x86_64 |
+| `SHA256SUMS.txt` | SHA-256 digests for every binary asset above |
+
+Example download URL (replace the version):
+
+`https://github.com/UNRsports/bmxt/releases/download/cli-v0.1.0/bmxt-linux-x86_64`
+
+There is no stable “latest binary” URL for a named asset; use the Releases page or a versioned URL. Out of scope for now: Linux aarch64, macOS Intel (Rosetta covers many Intel Macs), code signing / notarization.
+
+##### Download and install (users)
+
+1. Open the latest **`cli-v*`** release on [Releases](https://github.com/UNRsports/bmxt/releases).
+2. Download the matching binary **and** `SHA256SUMS.txt` from the **same** release.
+3. Verify the checksum (next subsection), then make the file executable and put it on `PATH` if you want:
+
+```bash
+# Linux / macOS (example)
+chmod +x bmxt-linux-x86_64
+mv bmxt-linux-x86_64 ~/.local/bin/bmxt   # or any directory on PATH
+bmxt --help
+```
+
+On Windows, rename `bmxt-windows-x86_64.exe` to `bmxt.exe` if you prefer, and place it on `PATH`.
+
+**Unsigned binaries:** builds are not Apple-notarized or Authenticode-signed. macOS Gatekeeper or Windows SmartScreen may warn on first run; allow the file only if you obtained it from this repository’s Releases and the checksum matches.
+
+##### Checksums (what and why)
+
+A **checksum** is a fingerprint of the file bytes (here **SHA-256**). The same file always yields the same digest; any change yields a different digest.
+
+`SHA256SUMS.txt` lets you confirm that the file you downloaded is **byte-identical** to the asset CI attached to that release (corruption or substitution). It does **not** by itself prove the publisher is trustworthy — download **both** the binary and `SHA256SUMS.txt` from the official Releases page for that tag.
+
+**Verify (Linux):**
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+# or check one file:
+sha256sum bmxt-linux-x86_64
+# compare the printed digest to the matching line in SHA256SUMS.txt
+```
+
+**Verify (macOS):**
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+# or:
+shasum -a 256 bmxt-macos-aarch64
+```
+
+**Verify (Windows, PowerShell):**
+
+```powershell
+Get-FileHash .\bmxt-windows-x86_64.exe -Algorithm SHA256
+# Compare Hash to the matching line in SHA256SUMS.txt
+```
+
+##### Maintainer publish procedure
+
+Tags use the prefix **`cli-v*`** so CLI releases stay independent of extension store tags. The semver after `cli-v` must equal **`version`** in [`hosts/cli/Cargo.toml`](hosts/cli/Cargo.toml) (CI checks this).
+
+1. Bump `version` in `hosts/cli/Cargo.toml` (e.g. `0.1.0` → `0.1.1`).
+2. Commit on the branch you intend to ship from (usually `main`).
+3. Create an annotated tag and push it:
+
+```bash
+git tag -a cli-v0.1.0 -m "BMXtCLI 0.1.0"
+git push origin cli-v0.1.0
+```
+
+4. GitHub Actions workflow **Release BMXtCLI** builds on `ubuntu-latest`, `macos-latest`, and `windows-latest`, then publishes a Release for that tag with the three binaries and `SHA256SUMS.txt`.
+5. Spot-check the Release page: asset names, `SHA256SUMS.txt` lines, and a quick `bmxt --help` / smoke on at least one OS.
+
+Do **not** commit `target/release/bmxt` (or platform copies) into the repository. Do **not** put store credentials (`SUBMIT_KEYS`) or signing secrets into this workflow.
+
+Manual re-run: Actions → **Release BMXtCLI** → **Run workflow** (same tag / `workflow_dispatch` as configured in the YAML).
 
 <a id="picker-ui"></a>
 
@@ -1675,6 +1767,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [`history`](#history-command-ja)
   - [端末 CLI peer（`hosts/cli`）](#terminal-cli-peer-ja)
   - [BMXtCLI を LLM で使う](#bmxt-cli-llm-ja)
+  - [BMXtCLI GitHub Releases（プレビルドバイナリ + チェックサム）](#bmxt-cli-releases-ja)
   - [`tab`（サブコマンド）](#tabs-man-tabs-ja)
   - [ピッカー UI（横並び列）](#picker-ui-ja)
   - [タブピッカー（`tab -list | browse` / `tab -list -url | browse`）](#tabs-tab-picker-ja)
@@ -2342,6 +2435,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 | **タブ picker** | `tab -list --peers \| browse` で ratatui picker。**Enter** で所有 peer へ activate（tab id はブラウザごと）。**q** / **Esc** まで開いたまま。開中は Family **`tabs_changed`**（拡張と同じ `first: "tab"`）で一覧を再取得し、可能なら選択位置を維持。 |
 | **メッシュ** | 最初の peer は待ち受けまたは手動握手。以降は in-band メッシュ（CLI は紹介役。タブ操作のハブ中継はしない）。 |
 | **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`。 |
+| **プレビルド** | GitHub Releases の **`cli-v*`** — **[BMXtCLI GitHub Releases](#bmxt-cli-releases-ja)**（バイナリ + `SHA256SUMS.txt`）。 |
 
 **コールドスタート（同一 PC）:** (1) CLI と各ブラウザで同じ Family に参加 · (2) `bmxt` 起動 · (3) 各 BMXt プロンプト窓を開く → Family 認証付き自動再接続。停止は REPL **`quit`** / **`exit`**。
 
@@ -2391,6 +2485,96 @@ echo $?   # Profile exit: 0 成功 · 1 失敗 · 2 misuse · 127 不明コマ�
 **エージェント向けツール定義のヒント（コピー用）:** 「常駐 `bmxt` は 127.0.0.1:17653 で待ち受け済み。ブラウザ／Family 操作のたびに、通常のシェルツールで `./path/to/bmxt exec -- '<文法行>'` をちょうど1回実行せよ。これは BMXt ワンショットクライアント（HTTP POST）であり、**シェル組み込みの `exec` ではない**。常駐プロセスの stdin にアタッチする必要もない。`bmxt` / `bmxt repl` は起動するな。裸の `exec` は使うな。」
 
 **この host の対象外:** `nav` / `dom` のページオーバーレイ、設定ピッカー browse / FSA、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI、exec IPC の真のインクリメンタル配信。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§15。
+
+<a id="bmxt-cli-releases-ja"></a>
+
+#### BMXtCLI GitHub Releases（プレビルドバイナリ + チェックサム）
+
+端末 peer **`bmxt`** を GitHub で配布・検証するための公開マニュアル（メンテ／利用者共通）。バイナリは **git にコミットしない**。[GitHub Releases](https://github.com/UNRsports/bmxt/releases) のアセットとしてだけ公開する。ワークフロー: [`.github/workflows/release-cli.yml`](.github/workflows/release-cli.yml)。
+
+**OS ごとネイティブ:** `bmxt` は Rust ネイティブバイナリ（ELF / Mach-O / PE）。Linux 向けビルドを macOS / Windows では実行できない。OS と CPU に合うアセットを選ぶこと。
+
+##### リリースアセット
+
+| アセット | 対象 |
+|----------|------|
+| `bmxt-linux-x86_64` | Linux x86_64（glibc） |
+| `bmxt-macos-aarch64` | macOS Apple Silicon |
+| `bmxt-windows-x86_64.exe` | Windows x86_64 |
+| `SHA256SUMS.txt` | 上記バイナリの SHA-256 ダイジェスト一覧 |
+
+ダウンロード URL 例（バージョンを差し替え）:
+
+`https://github.com/UNRsports/bmxt/releases/download/cli-v0.1.0/bmxt-linux-x86_64`
+
+名前付きアセット向けの「常に最新」固定 URL はない。Releases ページかバージョン付き URL を使う。初回スコープ外: Linux aarch64、macOS Intel（Rosetta で足りる想定）、コード署名 / notarization。
+
+##### ダウンロードと配置（利用者）
+
+1. [Releases](https://github.com/UNRsports/bmxt/releases) で最新の **`cli-v*`** を開く。
+2. 合うバイナリと **`SHA256SUMS.txt` を同じ Release から** 両方ダウンロードする。
+3. 次節でチェックサムを照合したうえで、実行権限を付け必要なら `PATH` へ置く:
+
+```bash
+# Linux / macOS（例）
+chmod +x bmxt-linux-x86_64
+mv bmxt-linux-x86_64 ~/.local/bin/bmxt   # または PATH 上の任意の場所
+bmxt --help
+```
+
+Windows では `bmxt-windows-x86_64.exe` を `bmxt.exe` にリネームしてもよい。`PATH` 上に置く。
+
+**未署名:** Apple notarize / Authenticode 署名はしていない。初回実行で macOS Gatekeeper や Windows SmartScreen が警告することがある。本リポジトリの Releases から取得し、チェックサムが一致する場合にのみ許可すること。
+
+##### チェックサム（概念と理由）
+
+**チェックサム**はファイルのバイト列から計算した指紋（ここでは **SHA-256**）。同一ファイルなら毎回同じ値、1 バイトでも変われば別の値になる。
+
+`SHA256SUMS.txt` により、ダウンロードしたファイルが **その Release に CI が添付したアセットとバイト一致**かを確認できる（破損や差し替えの検出）。作者の善意そのものは証明しない — **同じタグの公式 Releases からバイナリと SUMS の両方を取る**ことが前提。
+
+**検証（Linux）:**
+
+```bash
+sha256sum -c SHA256SUMS.txt --ignore-missing
+# または 1 ファイルだけ:
+sha256sum bmxt-linux-x86_64
+# 表示されたダイジェストを SHA256SUMS.txt の該当行と照合
+```
+
+**検証（macOS）:**
+
+```bash
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+# または:
+shasum -a 256 bmxt-macos-aarch64
+```
+
+**検証（Windows · PowerShell）:**
+
+```powershell
+Get-FileHash .\bmxt-windows-x86_64.exe -Algorithm SHA256
+# Hash を SHA256SUMS.txt の該当行と比較
+```
+
+##### メンテ用公開手順
+
+タグ接頭辞は **`cli-v*`**（拡張のストア用タグと分離）。`cli-v` の直後の semver は [`hosts/cli/Cargo.toml`](hosts/cli/Cargo.toml) の **`version`** と一致させる（CI が検査する）。
+
+1. `hosts/cli/Cargo.toml` の `version` を上げる（例: `0.1.0` → `0.1.1`）。
+2. 出荷するブランチ（通常 `main`）にコミットする。
+3. annotated タグを切って push する:
+
+```bash
+git tag -a cli-v0.1.0 -m "BMXtCLI 0.1.0"
+git push origin cli-v0.1.0
+```
+
+4. GitHub Actions の **Release BMXtCLI** が `ubuntu-latest` / `macos-latest` / `windows-latest` でビルドし、そのタグの Release に 3 バイナリ + `SHA256SUMS.txt` を添付する。
+5. Release ページでアセット名・`SHA256SUMS.txt`・少なくとも 1 OS で `bmxt --help` / スモークを確認する。
+
+`target/release/bmxt`（や OS 別コピー）をリポジトリへコミットしない。このワークフローにストア認証（`SUBMIT_KEYS`）や署名鍵を載せない。
+
+手動再実行: Actions → **Release BMXtCLI** → **Run workflow**（YAML の `workflow_dispatch` 設定に従う）。
 
 <a id="picker-ui-ja"></a>
 
