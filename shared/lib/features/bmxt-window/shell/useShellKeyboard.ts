@@ -500,7 +500,7 @@ export function useShellKeyboard(options: UseShellKeyboardOptions) {
 
       if (e.key === "Tab") {
         // EN: Tab is completion-only in the prompt — never move browser/page focus
-        //     (critical for the float iframe, which would otherwise tab out to the host page).
+        //     (never move browser/page focus from the prompt textarea).
         e.preventDefault()
         if (options.getPromptLockedPrefix()) {
           return

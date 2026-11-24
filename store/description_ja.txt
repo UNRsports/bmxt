@@ -69,7 +69,6 @@ https://github.com/UNRsports/bmxt/issues
 ・小さい画面／スマートフォン向けレイアウトの調整
 
 0.8.0：
-・サイト内フロート・プロンプトとポップアップ窓の併用
 ・picker を browse に、tabs を tab に改名
 ・back / reload / close などの直接タブ操作
 ・nav の識別ラベルと属性ジャンプ

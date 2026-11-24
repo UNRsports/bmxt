@@ -6,7 +6,7 @@
  */
 
 /**
- * EN: Verify this JS realm can own RTCPeerConnection (prompt / float page).
+ * EN: Verify this JS realm can own RTCPeerConnection (prompt page).
  *     No side effects — background hosts are intentionally not created.
  * JA: この JS レルムが RTCPeerConnection を持てるか確認するだけ。
  *     副作用なし（バックグラウンド宿主は作らない）。

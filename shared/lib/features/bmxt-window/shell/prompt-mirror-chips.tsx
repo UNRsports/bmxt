@@ -107,7 +107,7 @@ function PromptTabChipRow(props: {
 
 /**
  * EN: Render the prompt mirror with `#t:<id>` chips — one single-line chip row per tab
- *     (block-per-line) so the float never overflows horizontally.
+ *     (block-per-line) so the chip row never overflows horizontally.
  */
 export function renderPromptMirrorLine(
   line: string,

@@ -24,7 +24,7 @@ export type UseTutorialRuntimeOptions = {
   promptLine: string
   tokenPicker: TokenPickerObservationInput
   tabsPickerOpen: boolean
-  /** EN: When false, skip first-run auto-start (e.g. float host). */
+  /** EN: When false, skip first-run auto-start (e.g. nav overlay active). */
   enableFirstRunAutoStart: boolean
 }
 

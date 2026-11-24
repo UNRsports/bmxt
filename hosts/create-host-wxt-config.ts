@@ -152,12 +152,6 @@ export function createHostWxtConfig(browser: HostBrowser) {
       ],
       content_security_policy: hostContentSecurityPolicy(browser),
       commands: hostCommands(browser),
-      web_accessible_resources: [
-        {
-          resources: ["bmxt-float.html"],
-          matches: ["https://*/*"]
-        }
-      ],
       action: {
         default_icon: hostIcons
       },

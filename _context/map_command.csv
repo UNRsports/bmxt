@@ -120,12 +120,11 @@ tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | …
 （内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3
 （内部）,search-page-picker,,,,lib/features/search/search-page-matches-list-field.ts + search-entries + use-search-picker-results-open-tab-nav + page-dom scroll helpers,"`--page` ヒットの `pageMatchesJson` 受け渡しとピッカーからのページ内ジャンプ／タブ遷移を改善。",0.8.4
 （内部）,page-scripting-host-permissions,,,,lib/features/page-scripting/ + lib/features/extension-permissions/http-host-access.ts + wxt.config.ts host_permissions,"必須 `https://*/*` host_permissions。install/update 時に既存 https タブへ CS 再注入（ページリロード不要）。`ensurePageContentScript` / `isScriptablePageUrl`。",0.8.5
-（内部）,https-only-in-page,,,,lib/features/url/is-scriptable-page-url.ts + nav/float/dom/search --page/snapshot,"ページ内操作（nav / float / dom / search --page / snapshot）は https のみ。http の開く・一覧・照合はホスト権限不要。",0.8.5
-（内部）,trusted-ui-sender,,,,lib/features/extension-permissions/trusted-ui-sender.ts + entrypoints/background/message-bridge.ts,"特権メッセージ `RUN_CMD` / `NAV_CONTROL` は `bmxt.html` / `bmxt-float.html` からのみ受理（CS・他拡張拒否）。",0.8.5
+（内部）,https-only-in-page,,,,lib/features/url/is-scriptable-page-url.ts + nav/dom/search --page/snapshot,"ページ内操作（nav / dom / search --page / snapshot）は https のみ。http の開く・一覧・照合はホスト権限不要。",0.8.5
+（内部）,trusted-ui-sender,,,,lib/features/extension-permissions/trusted-ui-sender.ts + entrypoints/background/message-bridge.ts,"特権メッセージ `RUN_CMD` / `NAV_CONTROL` は `bmxt.html` からのみ受理（CS・他拡張拒否）。",0.8.5
 （内部）,inter-command-vocabulary,,,,lib/features/command-line/inter-command/,"閉じたコマンド間語彙の索引。DispatchBundle チャネル、LIST_KIND_TO_BMXT_RULE_KIND、preferredCommandAddPath。テンプレート: manifest/templates/。",語彙再利用優先。0.8.0 規格化
 （内部）,job-runner,,,,lib/features/job/,JobRunner per scope（search-list/dom-list/run-cmd/tab-picker-refresh）。,
 （内部）,terminal-session-state,,,,lib/features/bmxt-window/terminal-sessions/,UI が session 正本。SW は SessionPatch[] のみ。,
-（内部）,bmxt-float,,,,lib/features/bmxt-float/ + entrypoints/bmxt-float/,"サイト内フロート・プロンプト（`hostKind=float`）。ショートカット `toggle-bmxt-float`（既定 Shift+Alt+F）。`SESSION_CLEAR` の `host`: popup|float|all。ポップアップ閉鎖は float を消さない。コマンド履歴（`bmxt_cmd_history`）のみ popup と共有。",0.8.0
 （内部）,detail-bar-ctrl-c,,,,lib/features/bmxt-window/detail-bar-focus.ts + use-detail-bar-keyboard.ts,"詳細バー上 **Ctrl+C**: picker 系は browse 列クローズ、nav は disarm（`close-nav-from-detail-bar.ts`）。",0.8.0
 （内部）,host-ui,,,,lib/features/setting/host-ui-mode.ts + lib/features/bmxt-window/extra-keys/,"`hostUiMode` auto|desktop|mobile（`bmxt_ui_settings_v1`）。`resolveHostUiFormFactor` + Android 検出。**mobile**: ExtraKeys・候補タップ確定・外タップ dismiss。**desktop**: 0.8.0 相当のキーボード中心候補閉じ。",0.8.2
 （内部）,build-toolchain,,,,wxt.config.ts / entrypoints/,"WXT + pnpm。TypeScript 6。build:wasm。CSP wasm-unsafe-eval。",0.8.0 TypeScript 6

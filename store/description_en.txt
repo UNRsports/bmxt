@@ -69,7 +69,6 @@ Launch with the `launch-bmxt` shortcut (default Shift+Alt+C), then try `tutorial
 - UI adjustments for smaller screens / phone-sized layouts
 
 0.8.0:
-- In-tab float prompt alongside the popup window
 - Renamed picker command to browse; renamed tabs to tab
 - Direct tab commands (back, reload, close, and related)
 - Nav identity label and incremental attribute jump

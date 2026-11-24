@@ -40,7 +40,6 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | 領域 | 確認 |
 |------|------|
 | nav | HUD / 属性ジャンプ / typing · Alt ON/OFF |
-| float | デュアルホスト・handoff・ショートカット |
 | 独立動詞 | `back` / `forward` / `reload` / `close`（裸 + `tab -list \| …` + `#t:… \| …`） |
 | `tab:` チップ | 複数選択 → パイプ |
 | compound / pipe | `&&` `\|\|` `;` と `|` の併用・短絡 |
@@ -57,7 +56,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 |------|------|
 | host | 必須 `host_permissions`: `https://*/*` のみ（`<all_urls>` / 平文 `http://*/*` にはしない。タブ open・履歴・BM の http URL は従来どおり） |
 | 注入 | `ensurePageContentScript` + `onInstalled` で既存タブへ manifest CS を `executeScript({ files })` |
-| CS | `bmxt-nav-overlay.content` を再注入時に冪等化（二重 listener / float 防止） |
+| CS | `bmxt-nav-overlay.content` を再注入時に冪等化（overlay 二重防止） |
 | UX | `shell.reloadHint` / `error.reloadHint` をリロード誘導から具体失敗理由へ |
 | 審査 | 外部通信なし + 横断ページ操作の正当性を justification に明記 |
 
@@ -69,21 +68,21 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 **権限縮小・SW 区画（実装済み）**
 
 - [x] ページ内操作を https のみ（`host_permissions` / CS / `isScriptablePageUrl`）
-- [x] `RUN_CMD` / `NAV_CONTROL` は `bmxt.html` / `bmxt-float.html` のみ（`trusted-ui-sender`）
+- [x] `RUN_CMD` / `NAV_CONTROL` は `bmxt.html` のみ（`trusted-ui-sender`）
 
 **実装チェック**
 
 - [x] host `wxt.config` / `hosts/create-host-wxt-config.ts`: https を必須 `host_permissions` へ
 - [x] `shared/lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
-- [x] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
+- [x] 呼び出し側で ensure リトライ: nav · dom · page-extract · search CS パス
 - [x] `onInstalled`（install / update）で open tabs へ bulk reinject
 - [x] content script 冪等化
 - [x] i18n / optional-host 文言更新 / README 更新
 
 **手元スモーク**
 
-- [ ] 拡張をリロードしたあと、**ページ非リロード**で float / nav / `search -list --page` / `dom -list` が動く
-- [ ] 二重注入しても overlay / float が二重にならない
+- [ ] 拡張をリロードしたあと、**ページ非リロード**で nav / `search -list --page` / `dom -list` が動く
+- [ ] 二重注入しても overlay が二重にならない
 - [ ] `chrome://` 等は従来どおり拒否
 
 ### E. Chrome + Firefox 共有リポジトリ（§5.3–5.6 — 実装済み）
@@ -851,7 +850,7 @@ BMXt grammar line
 | §11 | 旧プレフィックス `picker`/`browse <list>` 時代。**`| browse` に置換**（本 Active 1） |
 | §12 | nav インクリメンタル — 実装済・スモークは Active 3 |
 | §13–14 | WASM prompt / complete SoT |
-| §15 | float ホスト — 実装済・スモークは Active 3 |
+| §15 | float ホスト — 廃止（Phase 3 ドキュメント整理済み） |
 | §16 | `tab -back` 等 → **§18 で独立 first に置換済み** |
 | §17 | Host IR bmxt-host/2（当時 Phases A–E・完了） |
 | §18–19 | `back`/`forward`/`reload`/`close` + `tab:` チップ — 実装済・スモークは Active 3 |

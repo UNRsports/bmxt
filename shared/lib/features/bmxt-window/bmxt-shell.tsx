@@ -101,7 +101,6 @@ import {
   useNavMode,
   type NavPositionsByTab
 } from "../nav"
-import { patchFloatBrowseStateForTab } from "../bmxt-float/float-browse-state-storage"
 import { ModeStatusBarStack } from "./mode-status-bar-stack"
 import {
   activateModeToolbar,
@@ -176,15 +175,9 @@ type Props = {
     channel?: import("../command-line/command-output.ts").LogChannel
   ) => void | Promise<void>
   sessionOrderLength: number
-  /** EN: popup vs in-page float — drives `exit` host policy. */
+  /** EN: Which UI document is running commands (`exit` host policy). */
   hostKind?: import("./bmxt-host-kind").BmxtHostKind
-  /** EN: Hosting tab id when `hostKind` is float (browse-state persistence). */
-  floatTabId?: number | null
-  /** EN: Restored nav overlay ON after float remount. */
-  restoredNavActive?: boolean
   processUiReady?: boolean
-  /** EN: Float — flush sessions/browse before `close` removes the host tab. */
-  flushFloatPersist?: () => Promise<void>
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
@@ -227,10 +220,7 @@ export function BmxtShell({
   appendLogLines: appendLogLinesProp,
   sessionOrderLength,
   hostKind = "popup",
-  floatTabId = null,
-  restoredNavActive = false,
   processUiReady = true,
-  flushFloatPersist: flushFloatPersistProp,
   applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
@@ -438,35 +428,6 @@ export function BmxtShell({
   }, [appendLogLines, endCommandBusy, jobRunner, uiSettings.locale])
 
   const [navActive, setNavActive] = useState(false)
-  const [navActivePersistReady, setNavActivePersistReady] = useState(hostKind !== "float")
-  const floatNavActiveRestoredRef = useRef(false)
-  useEffect(() => {
-    if (hostKind !== "float") {
-      return
-    }
-    if (!processUiReady) {
-      // EN: Allow another restore after float re-hydrate (sessions → browse).
-      floatNavActiveRestoredRef.current = false
-      setNavActivePersistReady(false)
-      return
-    }
-    if (floatNavActiveRestoredRef.current) {
-      return
-    }
-    floatNavActiveRestoredRef.current = true
-    if (restoredNavActive) {
-      setNavActive(true)
-    }
-    // EN: Gate persist until restore applied — otherwise initial false wipes nav ON across remount.
-    setNavActivePersistReady(true)
-  }, [hostKind, processUiReady, restoredNavActive])
-
-  useEffect(() => {
-    if (hostKind !== "float" || floatTabId === null || !processUiReady || !navActivePersistReady) {
-      return
-    }
-    void patchFloatBrowseStateForTab(floatTabId, { navActive })
-  }, [floatTabId, hostKind, navActive, navActivePersistReady, processUiReady])
 
   const [translateEnabled, setTranslateEnabled] = useState(false)
   const [translatePairId, setTranslatePairId] = useState<TranslationPairId>(
@@ -738,7 +699,7 @@ export function BmxtShell({
       }
     },
     uiLocale: uiSettings.locale,
-    hostTabId: hostKind === "float" ? floatTabId : null
+    hostTabId: null
   })
 
   const navTextSelDone = navTextSelPhase === "done"
@@ -1112,12 +1073,6 @@ export function BmxtShell({
     submitConstructedLine
   })
 
-  const flushFloatPersist = useCallback(async () => {
-    if (flushFloatPersistProp) {
-      await flushFloatPersistProp()
-    }
-  }, [flushFloatPersistProp])
-
   const { submitLine } = useCommandDispatch({
     sessionId,
     sessionOrderLength,
@@ -1149,7 +1104,6 @@ export function BmxtShell({
     translatePairIdRef,
     promptLine,
     syncPromptDom,
-    flushFloatPersist,
     allowEmptyFirstPickerSyncRef,
     imeTokenPickerDismissedRef,
     tabPressSeqRef,

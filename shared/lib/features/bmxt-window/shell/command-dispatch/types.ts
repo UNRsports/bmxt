@@ -11,7 +11,7 @@ import type { CommandBusyProgress, CommandBusyToken } from "../command-busy"
 export type CommandDispatchDeps = {
   sessionId: string
   sessionOrderLength: number
-  /** EN: Which UI document is running the command (`exit` closes popup vs hides float). */
+  /** EN: Which UI document is running the command (`exit` policy). */
   hostKind: BmxtHostKind
   applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
   mode: "normal" | "isearch"
@@ -42,8 +42,6 @@ export type CommandDispatchDeps = {
   promptLine: () => string
   /** EN: Keep the textarea DOM in sync with lineRef (confirm / clear). */
   syncPromptDom: (line: string, cursor: number) => void
-  /** EN: Float only — flush sessions/browse to session storage before tab close. */
-  flushFloatPersist: () => Promise<void>
   allowEmptyFirstPickerSyncRef: React.MutableRefObject<boolean>
   imeTokenPickerDismissedRef: React.MutableRefObject<boolean>
   tabPressSeqRef: React.MutableRefObject<number>

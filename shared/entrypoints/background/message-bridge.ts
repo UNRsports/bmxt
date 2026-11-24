@@ -1,9 +1,9 @@
 /**
  * EN: Always-on RUN_CMD / NAV_CONTROL bridge while background-services.js loads.
- *     Privileged messages: same-extension `bmxt.html` / `bmxt-float.html` only
+ *     Privileged messages: same-extension `bmxt.html` only
  *     (`chrome-extension:` / `moz-extension:` via extension-url + trusted-ui-sender).
  * JA: background-services 読込中も RUN_CMD / NAV_CONTROL を受け付ける。
- *     特権メッセージは同一拡張の bmxt.html / bmxt-float.html のみ（拡張 URL ヘルパ）。
+ *     特権メッセージは同一拡張の bmxt.html のみ（拡張 URL ヘルパ）。
  */
 
 import { isTrustedBmxtUiSender } from "../../lib/features/extension-permissions/trusted-ui-sender"
