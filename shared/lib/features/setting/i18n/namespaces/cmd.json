@@ -448,12 +448,12 @@
     "en": "       setting -list | browse     — open settings picker column"
   },
   "cmd.setting.usage.line3": {
-    "ja": "       setting -set <key> <value> — 下書きへ反映（locale / edit-picker / prompt-fire / …）",
-    "en": "       setting -set <key> <value> — apply to draft (locale / edit-picker / prompt-fire / …)"
+    "ja": "       setting -set <key> <value> — 即保存（locale / fg / size / prompt-fire / …）",
+    "en": "       setting -set <key> <value> — save immediately (locale / fg / size / prompt-fire / …)"
   },
   "cmd.setting.usage.line4": {
-    "ja": "       setting -save | setting -cancel — 下書きを保存 / 破棄して列を閉じる",
-    "en": "       setting -save | setting -cancel — save / discard draft and close column"
+    "ja": "       setting -save | setting -cancel — 設定列を閉じる（互換エイリアス）",
+    "en": "       setting -save | setting -cancel — close settings column (compat aliases)"
   },
   "cmd.setting.usage.line5": {
     "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
@@ -1204,12 +1204,12 @@
     "en": "offline · quit"
   },
   "cmd.cli.setting.browseUnsupported": {
-    "ja": "error: CLI では `setting -list | browse` は未対応です。`setting -set` / `setting -save` を使うか、拡張の BMXt 窓で設定してください。",
-    "en": "error: `setting -list | browse` is not supported on CLI. Use `setting -set` / `setting -save`, or change settings in the BMXt browser window."
+    "ja": "error: CLI では `setting -list | browse` は未対応です。`setting -set` を使うか、拡張の BMXt 窓で設定してください。",
+    "en": "error: `setting -list | browse` is not supported on CLI. Use `setting -set`, or change settings in the BMXt browser window."
   },
   "cmd.cli.setting.useSetSave": {
-    "ja": "変更: setting -set <key> <value> → setting -save（破棄: setting -cancel）",
-    "en": "Change: setting -set <key> <value> → setting -save (discard: setting -cancel)"
+    "ja": "変更: setting -set <key> <value>（即保存）",
+    "en": "Change: setting -set <key> <value> (saves immediately)"
   },
   "cmd.cli.setting.noDraft": {
     "ja": "error: 保存する下書きがありません。先に `setting -set <key> <value>` を実行してください。",
@@ -1614,5 +1614,9 @@
   "cmd.history.usage.line4": {
     "ja": "  履歴 DB への書き戻しは不可。restore は一覧読み込みまたは BM 化。",
     "en": "  History DB rewrite is unsupported; restore loads a list or creates bookmarks."
+  },
+  "cmd.cli.setting.useSet": {
+    "ja": "変更: setting -set <key> <value>（即保存）",
+    "en": "Change: setting -set <key> <value> (saves immediately)"
   }
 }

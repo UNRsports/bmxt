@@ -36,9 +36,11 @@ Constants: `settings-bundle-layout.ts` (`EXTERNAL_SETTINGS_BUNDLE_DIR`, known im
 
 **Load:** External bundle if readable → else `bmxt_ui_settings_v1` → normalize partial objects.
 
-**Save (`> save setting`):** Write full bundle to disk (external mode) + update `bmxt_ui_settings_v1`.
+**Immediate commit:** Each validated picker apply, zip import, storage-reload, reset, or `setting -set` calls `replaceUiSettings` (writes `bmxt_ui_settings_v1` and, in external mode, the full settings bundle). There is no draft → save batch; `setting -save` / `-cancel` only close the column.
 
-**Export (zip) / Import:** Same layout as external directory via `buildUiSettingsStorageEntries` / `parseSettingsExportJson`.
+**Export (zip) / Import:** Same layout as external directory via `buildUiSettingsStorageEntries` / `parseSettingsExportJson`. Import persists immediately.
+
+**Note:** External mode may rewrite the full bundle (including background images) on every apply.
 
 ## Backward compatibility rules
 

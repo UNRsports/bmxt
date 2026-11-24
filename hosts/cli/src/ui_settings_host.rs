@@ -53,7 +53,7 @@ pub fn format_setting_list_for_cli(
     let mut lines = Vec::new();
     lines.push(t_cli("setting.list.notice.showing", &[]));
     lines.push(t_cli("setting.list.notice.useBrowse", &[]));
-    lines.push(t_cli("cmd.cli.setting.useSetSave", &[]));
+    lines.push(t_cli("cmd.cli.setting.useSet", &[]));
     lines.extend(format_setting_list_lines(settings));
     let delivery = cfg.handshake_delivery.as_deref().unwrap_or("ask");
     let ticket_dir = cfg
@@ -107,12 +107,11 @@ pub fn try_apply_cli_sync_setting(
 }
 
 /**
- * EN: Patch draft. Returns `(ok, stdout_lines, stderr_lines)`.
- * JA: 下書きを更新。戻り値は `(ok, stdout 行, stderr 行)`。
+ * EN: Patch and persist immediately. Clears any leftover process draft.
+ * JA: パッチを即永続化。プロセス内の旧下書きがあれば破棄する。
  */
-pub fn apply_set_to_draft(
+pub fn apply_set_and_save(
     draft: &mut Option<UiSettings>,
-    committed: &UiSettings,
     key: &str,
     value: &str,
 ) -> Result<(bool, Vec<String>, Vec<String>)> {
@@ -126,8 +125,10 @@ pub fn apply_set_to_draft(
             ));
         }
     };
-    let target = draft.get_or_insert_with(|| committed.clone());
-    apply_setting_set_patch(target, &patch);
+    let mut settings = load_committed()?;
+    apply_setting_set_patch(&mut settings, &patch);
+    save_committed(&settings)?;
+    *draft = None;
     Ok((
         true,
         vec![t_cli(

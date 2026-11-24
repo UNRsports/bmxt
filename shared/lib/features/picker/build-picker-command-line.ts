@@ -149,10 +149,12 @@ export function buildDomJumpCommandLine(
   return parts.join(" ")
 }
 
+/** EN: Compat alias — settings commit on apply; this only closes the column. */
 export function buildSettingSaveCommandLine(): string {
-  return "setting -save"
+  return "setting -exit -list"
 }
 
+/** EN: Compat alias — no draft to discard; closes the column. */
 export function buildSettingCancelCommandLine(): string {
-  return "setting -cancel"
+  return "setting -exit -list"
 }

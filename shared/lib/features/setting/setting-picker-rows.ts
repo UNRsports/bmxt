@@ -79,8 +79,6 @@ export type SettingPickerRowId =
   | "locale-en"
   | "reset-yes"
   | "reset-no"
-  | "save"
-  | "cancel"
 
 export type SettingPickerRow = {
   id: SettingPickerRowId
@@ -725,14 +723,6 @@ export function buildSettingPickerRows(
     {
       id: "import",
       line: tSetting("setting.picker.main.import", locale)
-    },
-    {
-      id: "save",
-      line: tSetting("setting.picker.main.save", locale)
-    },
-    {
-      id: "cancel",
-      line: tSetting("setting.picker.main.cancel", locale)
     }
   )
 

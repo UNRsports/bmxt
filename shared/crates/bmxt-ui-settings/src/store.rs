@@ -32,6 +32,7 @@ pub fn settings_from_file(file: SettingsFileV2) -> Result<UiSettings, StoreError
         file.host_ui_mode.as_deref(),
         extra_keys_as_str(&file.extra_keys_mode),
         file.ime_candidate_help,
+        file.prompt_fire,
         file.search_legend_mode.as_deref(),
         file.appearance.as_ref(),
     ))
@@ -45,6 +46,7 @@ pub fn settings_to_file(settings: &UiSettings) -> SettingsFileV2 {
         host_ui_mode: Some(settings.host_ui_mode.clone()),
         extra_keys_mode: None,
         ime_candidate_help: Some(settings.ime_candidate_help),
+        prompt_fire: Some(settings.prompt_fire),
         search_legend_mode: Some(settings.search_legend_mode.clone()),
         appearance: Some(settings.appearance.clone()),
     }
@@ -89,10 +91,12 @@ pub fn format_setting_list_lines(settings: &UiSettings) -> Vec<String> {
     } else {
         "off"
     };
+    let prompt_fire = if settings.prompt_fire { "on" } else { "off" };
     vec![
         format!("locale\t{}", settings.locale),
         format!("edit-picker\t{edit_picker}"),
         format!("ime-candidate-help\t{ime}"),
+        format!("prompt-fire\t{prompt_fire}"),
         format!("search-legend\t{}", settings.search_legend_mode),
         format!("host-ui\t{}", settings.host_ui_mode),
     ]

@@ -4,8 +4,6 @@ import { buildSettingPickerRows } from "./setting-picker-rows.ts"
 import type { UiLocale } from "./locale.ts"
 import type { UiSettings } from "./settings.ts"
 
-const PLAIN_LIST_EXCLUDED_ROW_IDS = new Set(["save", "cancel"])
-
 export function buildSettingListResult(
   uiSettings: UiSettings,
   locale: UiLocale
@@ -20,7 +18,7 @@ export function buildSettingListResult(
     uiSettings.imeCandidateHelp,
     uiSettings.promptFire,
     uiSettings.searchLegendMode
-  ).filter((row) => !PLAIN_LIST_EXCLUDED_ROW_IDS.has(row.id))
+  )
   const records: ListRecord[] = rows.map((row) => ({
     kind: "setting.field",
     fields: {

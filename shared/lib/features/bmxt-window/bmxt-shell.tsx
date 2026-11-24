@@ -969,10 +969,9 @@ export function BmxtShell({
     sessionId,
     uiLocale: uiSettings.locale,
     appendLogLines,
-    closeSettingPickerColumn,
     setSettingListPicker,
     settingListPickerRef,
-    submitConstructedLine: submitConstructedLineEarly
+    replaceUiSettingsState
   })
 
   useEffect(() => {

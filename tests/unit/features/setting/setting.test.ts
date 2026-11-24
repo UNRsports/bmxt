@@ -10,6 +10,7 @@ import {
   parseSettingListLine
 } from "../../../../shared/lib/features/setting/setting-list-picker-input.ts"
 import {
+  applySettingDraftPatchToSettings,
   createSettingListPickerState,
   settingPickerApplyDraftToMain,
   settingPickerUpdateDraft
@@ -252,6 +253,36 @@ describe("setting list picker draft", () => {
     assert.deepEqual(settingSetPatchFromArgs("prompt-fire", "on"), { promptFire: true })
     assert.deepEqual(settingSetPatchFromArgs("prompt-fire", "off"), { promptFire: false })
     assert.equal(settingSetPatchFromArgs("prompt-fire", "maybe"), null)
+  })
+  it("setting -set appearance scalars validate and clear", () => {
+    assert.deepEqual(settingSetPatchFromArgs("fg", "#abc"), { appearance: { fg: "#aabbcc" } })
+    assert.deepEqual(settingSetPatchFromArgs("bg-color", "default"), {
+      appearance: { bgColor: null }
+    })
+    assert.deepEqual(settingSetPatchFromArgs("size", "14"), {
+      appearance: { fontSize: "14px" }
+    })
+    assert.deepEqual(settingSetPatchFromArgs("picker-fg", "#112233"), {
+      picker: { fg: "#112233" }
+    })
+    assert.equal(settingSetPatchFromArgs("fg", "red"), null)
+    assert.equal(settingSetPatchFromArgs("size", "99"), null)
+  })
+  it("applySettingDraftPatchToSettings merges appearance without mutating input", () => {
+    const committed = {
+      locale: "ja" as const,
+      hostUiMode: "auto" as const,
+      imeCandidateHelp: true,
+      promptFire: false,
+      searchLegendMode: "text" as const,
+      appearance: testAppearance({ fg: "#111111" })
+    }
+    const next = applySettingDraftPatchToSettings(committed, {
+      appearance: { fg: "#abcdef", searchHitHighlightBg: "#ffc9dd" }
+    })
+    assert.equal(committed.appearance.fg, "#111111")
+    assert.equal(next.appearance.fg, "#abcdef")
+    assert.equal(next.appearance.searchHitHighlightBg, "#ffc9dd")
   })
   it("maps search-legend to searchLegend view", () => {
     assert.equal(settingMainRowTargetView("search-legend"), "searchLegend")

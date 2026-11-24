@@ -27,7 +27,7 @@ use crate::ui_settings_host;
 pub struct CliHostAdapter<'a> {
     pub cfg: &'a mut CliConfig,
     pub client: Option<&'a BusClient>,
-    /// EN: In-memory `setting -set` draft until `-save` / `-cancel`.
+    /// EN: Legacy draft slot (cleared on `-set` / `-save` / `-cancel`; no longer used for edits).
     pub setting_draft: &'a mut Option<UiSettings>,
     /// EN: Interactive REPL vs NonInteractive `bmxt exec`.
     pub mode: InteractionMode,
@@ -365,12 +365,8 @@ impl<'a> CliHostAdapter<'a> {
             } => {
                 if list_id == "setting" {
                     let committed = ui_settings_host::load_committed()?;
-                    let view = self
-                        .setting_draft
-                        .as_ref()
-                        .unwrap_or(&committed);
                     self.io.extend_stdout(ui_settings_host::format_setting_list_for_cli(
-                        view, self.cfg,
+                        &committed, self.cfg,
                     ));
                     return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
@@ -423,13 +419,8 @@ impl<'a> CliHostAdapter<'a> {
                     self.io.extend_stdout(lines);
                     return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
-                let committed = ui_settings_host::load_committed()?;
-                let (ok, stdout, stderr) = ui_settings_host::apply_set_to_draft(
-                    self.setting_draft,
-                    &committed,
-                    &key,
-                    &value,
-                )?;
+                let (ok, stdout, stderr) =
+                    ui_settings_host::apply_set_and_save(self.setting_draft, &key, &value)?;
                 self.io.extend_stdout(stdout);
                 self.io.extend_stderr(stderr);
                 Ok(RunOutcome::status(if ok {
@@ -439,17 +430,14 @@ impl<'a> CliHostAdapter<'a> {
                 }))
             }
             UiAction::SettingSave => {
-                let Some(draft) = self.setting_draft.take() else {
-                    self.err(t_cli("cmd.cli.setting.noDraft", &[]));
-                    return Ok(RunOutcome::status(EXIT_MISUSE));
-                };
-                ui_settings_host::save_committed(&draft)?;
-                self.out(t_cli("setting.picker.saved", &[]));
+                // EN: Compat close alias — settings already persist on each `-set` / picker apply.
+                *self.setting_draft = None;
+                self.out(t_cli("setting.picker.closed", &[]));
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::SettingCancel => {
                 *self.setting_draft = None;
-                self.out(t_cli("setting.picker.cancelled", &[]));
+                self.out(t_cli("setting.picker.closed", &[]));
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::SyncStatus => {

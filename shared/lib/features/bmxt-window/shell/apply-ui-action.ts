@@ -76,8 +76,7 @@ import { runJumpTargetAction } from "../../command-line/pipe/consumers/jump-from
 import {
   applySettingCancelCui,
   applySettingSaveCui,
-  applySettingSetCui,
-  ensureSettingDraftState
+  applySettingSetCui
 } from "../../setting/setting-cui-apply"
 import {
   exportBookmarkBackup,
@@ -433,12 +432,10 @@ function applySettingSave(ctx: CommandDispatchContext): boolean {
       ctx.deps.settingListPickerRef.current,
       ctx.locale,
       ctx.deps.replaceUiSettingsState,
-      (locale) => tSetting("setting.picker.saved", locale),
+      (locale) => tSetting("setting.picker.closed", locale),
       (locale) => tSetting("setting.storage.externalWriteFailed", locale)
     )
-    if (result.ok) {
-      ctx.deps.closeSettingPickerColumn()
-    }
+    ctx.deps.closeSettingPickerColumn()
     await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
     ctx.deps.focusPrompt()
   })()
@@ -450,15 +447,9 @@ async function applySettingSaveSegment(ctx: CommandDispatchContext): Promise<Seg
     ctx.deps.settingListPickerRef.current,
     ctx.locale,
     ctx.deps.replaceUiSettingsState,
-    (locale) => tSetting("setting.picker.saved", locale),
+    (locale) => tSetting("setting.picker.closed", locale),
     (locale) => tSetting("setting.storage.externalWriteFailed", locale)
   )
-  if (!result.ok) {
-    return segmentFailure("runtime", [
-      tSetting("setting.cui.pickerRequired", ctx.locale),
-      ...result.lines
-    ])
-  }
   ctx.deps.closeSettingPickerColumn()
   return segmentSuccess(result.lines)
 }
@@ -467,7 +458,7 @@ function applySettingCancel(ctx: CommandDispatchContext): boolean {
   finishCommand(ctx)
   const result = applySettingCancelCui(
     ctx.deps.settingListPickerRef.current,
-    tSetting("setting.picker.cancelled", ctx.locale)
+    tSetting("setting.picker.closed", ctx.locale)
   )
   ctx.deps.closeSettingPickerColumn()
   void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
@@ -478,7 +469,7 @@ function applySettingCancel(ctx: CommandDispatchContext): boolean {
 async function applySettingCancelSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
   const result = applySettingCancelCui(
     ctx.deps.settingListPickerRef.current,
-    tSetting("setting.picker.cancelled", ctx.locale)
+    tSetting("setting.picker.closed", ctx.locale)
   )
   ctx.deps.closeSettingPickerColumn()
   return segmentSuccess(result.lines)
@@ -490,22 +481,23 @@ function applySettingSet(
   value: string
 ): boolean {
   finishCommand(ctx)
-  const base = ensureSettingDraftState(
-    ctx.deps.settingListPickerRef.current,
-    ctx.deps.uiSettings
-  )
-  const result = applySettingSetCui(
-    base,
-    key,
-    value,
-    tSetting("setting.cui.setUnknown", ctx.locale, { key }),
-    tSetting("setting.cui.setApplied", ctx.locale, { key, value })
-  )
-  if (result.ok && result.nextDraft) {
-    ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
-  }
-  void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
-  ctx.deps.focusPrompt()
+  void (async () => {
+    const result = await applySettingSetCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.uiSettings,
+      key,
+      value,
+      ctx.deps.replaceUiSettingsState,
+      tSetting("setting.cui.setUnknown", ctx.locale, { key }),
+      tSetting("setting.cui.setApplied", ctx.locale, { key, value }),
+      tSetting("setting.storage.externalWriteFailed", ctx.locale)
+    )
+    if (result.ok && result.nextDraft) {
+      ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+    }
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
   return true
 }
 
@@ -514,21 +506,22 @@ async function applySettingSetSegment(
   key: string,
   value: string
 ): Promise<SegmentOutcome> {
-  const base = ensureSettingDraftState(
+  const result = await applySettingSetCui(
     ctx.deps.settingListPickerRef.current,
-    ctx.deps.uiSettings
-  )
-  const result = applySettingSetCui(
-    base,
+    ctx.deps.uiSettings,
     key,
     value,
+    ctx.deps.replaceUiSettingsState,
     tSetting("setting.cui.setUnknown", ctx.locale, { key }),
-    tSetting("setting.cui.setApplied", ctx.locale, { key, value })
+    tSetting("setting.cui.setApplied", ctx.locale, { key, value }),
+    tSetting("setting.storage.externalWriteFailed", ctx.locale)
   )
-  if (!result.ok || result.nextDraft === undefined) {
+  if (!result.ok) {
     return segmentFailure("usage", result.lines)
   }
-  ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  if (result.nextDraft) {
+    ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  }
   return segmentSuccess(result.lines)
 }
 

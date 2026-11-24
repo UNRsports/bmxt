@@ -288,7 +288,8 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
 | `setting -list` | Plain list of current UI settings (locale, appearance, storage mode summary) |
-| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, **Family sync** display name + setup guide, export/import zip); appearance/locale apply after **`> save setting`**; sync/storage/snapshot actions apply immediately |
+| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, **Family sync** display name + setup guide, export/import zip); **each apply saves immediately** |
+| `setting -set <key> <value>` | Save one setting immediately (locale / appearance scalars / toggles; images stay picker-only) |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows **setting** snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
@@ -618,32 +619,33 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **j
 
 <a id="setting"></a>
 
-### `setting` (`setting -list` / `setting -exit -list`)
+### `setting` (`setting -list` / `setting -set` / `setting -exit -list`)
 
-UI locale and **terminal + picker appearance** are edited in a dedicated **settings picker** side column. **Default persistence** is **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`lib/features/extension-storage/keys.ts`). **Optional external storage** uses the File System Access API (user-chosen folder); mode is stored in **`bmxt_ui_settings_storage_v1`**. The Service Worker **`run`** for **`setting`** prints usage only; open/close and all edits are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**.
+UI locale and **terminal + picker appearance** are edited in a dedicated **settings picker** side column or via **`setting -set`**. **Default persistence** is **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`lib/features/extension-storage/keys.ts`). **Optional external storage** uses the File System Access API (user-chosen folder); mode is stored in **`bmxt_ui_settings_storage_v1`**. The Service Worker **`run`** for **`setting`** prints usage only; open/close and all edits are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**.
 
 | Input | Effect |
 |-------|--------|
-| Bare **`setting`** + **Enter** | Prints usage and restores **`setting `** (continuation). Tab completes **`-list`** / **`-exit`** (then **`-list`** for exit). |
+| Bare **`setting`** + **Enter** | Prints usage and restores **`setting `** (continuation). Tab completes **`-list`** / **`-set`** / **`-exit`** (then **`-list`** for exit). |
 | **`setting -list`** + **Enter** | **Plain** list of current UI settings (`setting.field` rows via **`-list` registry**). |
-| **`setting -list | browse`** + **Enter** | Opens the **setting** picker column with a draft copy of current settings. |
-| **`setting -exit -list`** + **Enter** | Closes the setting picker column in this session (does not write storage). |
+| **`setting -list | browse`** + **Enter** | Opens the **setting** picker column (mirror of committed settings). |
+| **`setting -set <key> <value>`** + **Enter** | Validates and **saves immediately** (locale / toggles / appearance scalars; images stay picker-only). |
+| **`setting -save`** / **`setting -cancel`** | Compat aliases: close the settings column only (nothing left to discard). |
+| **`setting -exit -list`** + **Enter** | Closes the setting picker column in this session. |
 
-**Draft, preview, commit**
+**Immediate commit**
 
-- Edits in the picker update a **draft** only. The live BMXt UI keeps the **last saved** settings until you commit.
-- The **Preview** panel at the bottom of the picker reflects the draft (split **Terminal** / **Picker** panes when **`edit-picker: on`**).
-- **`> save setting`** — writes draft to **`bmxt_ui_settings_v1`**, and to the **external settings bundle** when external mode is on; applies immediately.
-- **`> cancel setting`** — discards the draft and restores values from storage.
+- Each validated picker apply (choice, Enter on edit, image import/clear, reset, zip import, storage-reload) writes **`bmxt_ui_settings_v1`** and, in external mode, the **settings bundle**, then updates the live UI.
+- Inline color/font typing buffers in **`editDraft`** until Enter validates; partial hex is preview-only and is not written on every keystroke.
+- The **Preview** panel shows the current (committed) appearance, plus in-progress edit preview while typing.
 
 **Storage (internal vs external)**
 
 | Mode | Behavior |
 |------|----------|
 | **Extension internal** (default) | Settings live only in **`bmxt_ui_settings_v1`**. No File System Access API. |
-| **External folder** | User picks a parent directory once. BMXt reads/writes a **settings bundle** under that parent (see below). **`bmxt_ui_settings_v1`** is still updated on every save (cache + background locale). On startup, load prefers the external bundle when readable; otherwise falls back to internal storage. |
+| **External folder** | User picks a parent directory once. BMXt reads/writes a **settings bundle** under that parent (see below). **`bmxt_ui_settings_v1`** is still updated on every apply (cache + background locale). On startup, load prefers the external bundle when readable; otherwise falls back to internal storage. |
 
-**Picker rows (storage):** **storage** — choose internal or external; when external is active, **storage-pick-dir** (change folder) and **storage-reload** (load bundle into draft preview). Switching storage mode commits immediately (not draft-only). **No new manifest permission** — folder access is granted at runtime via the browser picker.
+**Picker rows (storage):** **storage** — choose internal or external; when external is active, **storage-pick-dir** (change folder) and **storage-reload** (load bundle and save). Switching storage mode commits immediately. **No new manifest permission** — folder access is granted at runtime via the browser picker.
 
 **Backup bundle format (zip export/import and external directory)**
 
@@ -657,8 +659,8 @@ bmxt-ui-settings/          ← subdirectory under the picked parent (or the pick
 ```
 
 - **export** — downloads a zip with the same files (portable backup).
-- **import** — reads a zip into the picker **draft** (commit with **`> save setting`**).
-- **External save** — writes the same files into the bundle directory; removes stale `background-image.*` / `picker-background-image.*` files when images are cleared or replaced.
+- **import** — reads a zip and **saves immediately**.
+- **External save** — writes the same files into the bundle directory on each apply; removes stale `background-image.*` / `picker-background-image.*` files when images are cleared or replaced.
 
 **Backward compatibility**
 
@@ -681,14 +683,13 @@ When changing UI settings shape or on-disk format in a release:
 | **host-ui** | **`auto`** (default) — install/runtime detect (**Android → mobile**, else desktop); **`desktop`** / **`mobile`** — force layout. **mobile** (since **0.8.2**): soft key bar; prompt candidate menus support tap-to-select and outside-tap dismiss. **desktop**: keyboard-centric candidate close (**Esc** / **↑** at top), matching **0.8.0** |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
 | **fg (picker)**, … | Shown only when **`edit-picker: on`**; override picker column theme (unset fields inherit global) |
-| **reset-default** | Confirm, then reset appearance draft to defaults |
+| **reset-default** | Confirm, then reset appearance to defaults and save |
 | **storage** | **Internal** (default) or **external folder** (File System Access API); see **Storage** above |
 | **storage-pick-dir** | (External mode) Re-pick the parent folder for the bundle |
-| **storage-reload** | (External mode) Load bundle (`settings.json` + images) into draft preview |
+| **storage-reload** | (External mode) Load bundle (`settings.json` + images) and save |
 | **snapshot storage** | **Bundled with settings** (default) or **Obsidian vault** (File System Access API); **snapshot-vault-pick-dir** re-picks the vault when vault mode is active |
 | **export** | Download zip (`settings.json` v2 + `background-image.*`; optional `picker-background-image.*` when set) |
-| **import** | Load zip into draft (commit with **`> save setting`**) |
-| **`> save setting`** / **`> cancel setting`** | Commit or discard draft |
+| **import** | Load zip and save immediately |
 
 **Appearance rules**
 
@@ -700,7 +701,7 @@ When changing UI settings shape or on-disk format in a release:
 | Key | Main list | Choice sub-lists (language, size, …) | Detail / edit (fg, colors, font) |
 |-----|-----------|--------------------------------------|----------------------------------|
 | **↑** / **↓** | Move highlight | Move highlight (current value pre-highlighted) | — |
-| **→** / **Enter** | Enter sub-view or run immediate action (export/import) | Apply choice to draft + return to main | Start inline edit |
+| **→** / **Enter** | Enter sub-view or run immediate action (export/import) | Apply choice (save) + return to main | Start inline edit / Enter saves |
 | **←** / **Esc** | — | Back to main | Cancel edit, or back to main |
 | **Enter** (editing) | — | — | Apply typed value to draft preview |
 | **Esc** (column) | Return focus to **prompt** (column stays open) | | |
@@ -785,7 +786,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **Peer drop vs exit** | Last peer tunnel closes while the REPL stays up → i18n “peer closed; listener keeps running” (`LANG=ja*` → Japanese). **`quit` / `exit` / EOF** ends the **`bmxt` process** (no “still listening” claim). |
 | **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). |
 | **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; OSC-8 `file://` when supported. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
-| **UI settings / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json` (export v2 layout). Locale: committed → env → `en`. REPL: `setting -list` / `-set` / `-save` / `-cancel` (todo §12). `| browse` for settings is CLI-only unsupported. |
+| **UI settings / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json` (export v2 layout). Locale: committed → env → `en`. REPL: `setting -list` / `-set` (immediate save); `-save` / `-cancel` close aliases (todo §12). `| browse` for settings is CLI-only unsupported. |
 | **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `sync -ping <deviceId>`, URL open on a peer. |
 | **Line editor / Tab** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. After a list producer `-list`, Tab offers **`\| browse`** (and other pipe consumers). After a typed **`\|`**, Tab completes bare consumer names (`browse`, `close`, …). |
 | **Tab picker** | `tab -list --peers \| browse` opens a ratatui picker. **Enter** activates on the owning peer (ids are per-browser); picker **stays open** until **q** / **Esc**. Open picker **follows Family `tabs_changed`** (same `first: "tab"` rule as the extension) and re-fetches the list while preserving selection when possible. |
@@ -1016,7 +1017,7 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 
 **Settings picker column (`setting -list | browse`)**
 
-- Draft / preview / **`> save setting`** / **`> cancel setting`** — see **[`setting`](#setting)**.
+- Immediate commit on apply; preview mirrors committed settings — see **[`setting`](#setting)**.
 - **`Esc`** at the column top level returns to the **prompt** (column stays open); **`setting -exit -list`** closes it.
 - Keyboard: **`useSettingPickerKeyboard`** (`lib/features/setting/use-setting-picker-keyboard.ts`); not the plain-list `/` / `n` / `N` model.
 
@@ -2022,7 +2023,8 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
 | `setting -list` | 現在の UI 設定をプレーン一覧 |
-| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・**Family sync** 表示名＋セットアップ案内・zip 入出力）。外観／言語は **`> save setting`** で確定。sync／storage／snapshot 操作は即時適用 |
+| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・**Family sync** 表示名＋セットアップ案内・zip 入出力）。**適用のたびに即保存** |
+| `setting -set <key> <value>` | 設定を1件即保存（locale／外観スカラー／トグル。画像はピッカーのみ） |
 | `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は **setting** の snapshot 保存先設定に従う |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |
@@ -2264,32 +2266,33 @@ Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性
 
 <a id="setting-ja"></a>
 
-### `setting`（`setting -list` / `setting -exit -list`）
+### `setting`（`setting -list` / `setting -set` / `setting -exit -list`）
 
-UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の **設定ピッカー**列で編集します。**既定の永続化**は **`chrome.storage.local`** の **`bmxt_ui_settings_v1`**（`lib/features/extension-storage/keys.ts`）。**任意の外部保存**は File System Access API（ユーザーが選んだフォルダ）；モードは **`bmxt_ui_settings_storage_v1`** に保存。Service Worker の **`setting`** **`run`** は利用案内のみ；開閉と編集はすべて **`bmxt-shell.tsx`** が **`RUN_CMD`** より前に処理します。
+UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の **設定ピッカー**列または **`setting -set`** で編集します。**既定の永続化**は **`chrome.storage.local`** の **`bmxt_ui_settings_v1`**（`lib/features/extension-storage/keys.ts`）。**任意の外部保存**は File System Access API（ユーザーが選んだフォルダ）；モードは **`bmxt_ui_settings_storage_v1`** に保存。Service Worker の **`setting`** **`run`** は利用案内のみ；開閉と編集はすべて **`bmxt-shell.tsx`** が **`RUN_CMD`** より前に処理します。
 
 | 入力 | 動作 |
 |------|------|
-| 単独 **`setting`** + **Enter** | 利用案内を表示し、**`setting `** に復帰（continuation）。Tab 補完は **`-list`** / **`-exit`**（exit は続けて **`-list`**）。 |
+| 単独 **`setting`** + **Enter** | 利用案内を表示し、**`setting `** に復帰（continuation）。Tab 補完は **`-list`** / **`-set`** / **`-exit`**（exit は続けて **`-list`**）。 |
 | **`setting -list`** + **Enter** | 現在 UI 設定の **プレーン一覧**（**`-list` レジストリ**の `setting.field` 行）。 |
-| **`setting -list | browse`** + **Enter** | 現在設定の **draft** を持った **setting** ピッカー列を開く。 |
-| **`setting -exit -list`** + **Enter** | 当該セッションの設定ピッカー列を閉じる（storage には書かない）。 |
+| **`setting -list | browse`** + **Enter** | **setting** ピッカー列を開く（committed 設定のミラー）。 |
+| **`setting -set <key> <value>`** + **Enter** | 検証のうえ **即保存**（locale／トグル／外観スカラー。画像はピッカーのみ）。 |
+| **`setting -save`** / **`setting -cancel`** | 互換エイリアス: 設定列を閉じるのみ（破棄する下書きなし）。 |
+| **`setting -exit -list`** + **Enter** | 当該セッションの設定ピッカー列を閉じる。 |
 
-**draft・プレビュー・確定**
+**即時確定**
 
-- ピッカー内の変更は **draft** のみ更新。ライブ UI は **`> save setting`** まで **最後に保存した**設定のまま。
-- ピッカー下部の **Preview** が draft を反映（**`edit-picker: on`** 時は **Terminal** / **Picker** を分割表示）。
-- **`> save setting`** — draft を **`bmxt_ui_settings_v1`** に書き込み、外部モード時は**設定バンドル**にも書き込み、即時反映。
-- **`> cancel setting`** — draft を破棄し storage の値に戻す。
+- ピッカーでの検証済み適用（選択、編集 Enter、画像取込／削除、reset、zip import、storage-reload）のたびに **`bmxt_ui_settings_v1`**（外部モード時は設定バンドルも）へ書き込み、ライブ UI を更新する。
+- 色／フォントのインライン入力は **`editDraft`** にバッファし、Enter で検証してから保存。途中の hex はプレビューのみで、キー入力ごとに書かない。
+- 下部 **Preview** は現在の（committed）外観と、編集中のプレビューを表示。
 
 **保存先（拡張機能内／外部）**
 
 | モード | 動作 |
 |--------|------|
 | **拡張機能内**（既定） | 設定は **`bmxt_ui_settings_v1`** のみ。File System Access API は使わない。 |
-| **外部フォルダ** | ユーザーが親フォルダを一度選択。BMXt はその下の**設定バンドル**を読み書き（下記）。**`bmxt_ui_settings_v1`** も save のたびに更新（キャッシュ＋バックグラウンドの locale）。起動時は外部バンドルを優先読み込み；読めないときは内部にフォールバック。 |
+| **外部フォルダ** | ユーザーが親フォルダを一度選択。BMXt はその下の**設定バンドル**を読み書き（下記）。**`bmxt_ui_settings_v1`** も適用のたびに更新（キャッシュ＋バックグラウンドの locale）。起動時は外部バンドルを優先読み込み；読めないときは内部にフォールバック。 |
 
-**ピッカー行（storage）:** **storage** — 拡張機能内／外部を選択；外部有効時は **storage-pick-dir**（フォルダ選び直し）、**storage-reload**（バンドルを draft プレビューに読み込み）。保存先の切り替えは**即時確定**（draft 待ちではない）。**manifest 権限の追加なし** — フォルダアクセスはブラウザのピッカーでランタイム許可。
+**ピッカー行（storage）:** **storage** — 拡張機能内／外部を選択；外部有効時は **storage-pick-dir**（フォルダ選び直し）、**storage-reload**（バンドルを読み込み保存）。保存先の切り替えは即時確定。**manifest 権限の追加なし** — フォルダアクセスはブラウザのピッカーでランタイム許可。
 
 **バックアップバンドル形式（zip export/import と外部ディレクトリ共通）**
 
@@ -2303,8 +2306,8 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 ```
 
 - **export** — 同じファイル構成の zip をダウンロード（ポータブルバックアップ）。
-- **import** — zip をピッカー **draft** に読み込み（**`> save setting`** で確定）。
-- **外部 save** — バンドルディレクトリに同じファイルを書き込み；画像削除・差し替え時は古い `background-image.*` / `picker-background-image.*` を削除。
+- **import** — zip を読み込み **即保存**。
+- **外部 save** — 適用のたびにバンドルディレクトリへ同じファイルを書き込み；画像削除・差し替え時は古い `background-image.*` / `picker-background-image.*` を削除。
 
 **後方互換**
 
@@ -2327,14 +2330,13 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 | **host-ui** | **`auto`**（既定）— インストール／実行時判定（**Android → mobile**、それ以外は desktop）；**`desktop`** / **`mobile`** — 強制切替。**mobile**（**0.8.2** 以降）: 補助キーバー、プロンプト候補のタップ確定／外タップで閉じる。**desktop**: **0.8.0** 相当のキーボード中心（**Esc** / 先頭で **↑**） |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
 | **fg (picker)** など | **`edit-picker: on`** のみ表示；ピッカー列の上書き（未設定は全体を継承） |
-| **reset-default** | 確認後、外観 draft を既定に戻す |
+| **reset-default** | 確認後、外観を既定に戻して保存 |
 | **storage** | **拡張機能内**（既定）または**外部フォルダ**（File System Access API）；**保存先** 参照 |
 | **storage-pick-dir** | （外部モード）バンドル用の親フォルダを選び直す |
-| **storage-reload** | （外部モード）バンドル（`settings.json` + 画像）を draft プレビューに読み込む |
+| **storage-reload** | （外部モード）バンドル（`settings.json` + 画像）を読み込み保存 |
 | **snapshot 保存先** | **設定と同梱**（既定）または **Obsidian Vault**（File System Access API）；Vault モード時は **snapshot-vault-pick-dir** で Vault を選び直す |
 | **export** | zip ダウンロード（`settings.json` v2 + `background-image.*`；設定時は `picker-background-image.*` も） |
-| **import** | zip を draft に読み込み（**`> save setting`** で確定） |
-| **`> save setting`** / **`> cancel setting`** | 確定／破棄 |
+| **import** | zip を読み込み即保存 |
 
 **外観のルール**
 
@@ -2346,14 +2348,14 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 | キー | メイン一覧 | 選択サブ一覧（言語・サイズ等） | 詳細／編集（fg・色・font） |
 |------|-----------|------------------------------|---------------------------|
 | **↑** / **↓** | ハイライト移動 | ハイライト移動（現在値を事前ハイライト） | — |
-| **→** / **Enter** | サブ画面へ／即時実行（export/import） | 選択を draft に反映してメインへ | インライン編集開始 |
+| **→** / **Enter** | サブ画面へ／即時実行（export/import） | 選択を保存してメインへ | インライン編集開始／Enter で保存 |
 | **←** / **Esc** | — | メインへ戻る | 編集キャンセルまたはメインへ |
-| **Enter**（編集中） | — | — | 入力値を draft プレビューに反映 |
+| **Enter**（編集中） | — | — | 入力値を検証して保存 |
 | **Esc**（列） | **プロンプト**へ（列は開いたまま） | | |
 
-色（hex）は編集中にリアルタイムプレビュー。
+色（hex）は編集中にリアルタイムプレビュー（未確定のキー入力はストレージへ書かない）。
 
-**実装:** **`lib/features/setting/`**（`settings.ts`、`appearance.ts`、`apply-appearance.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`、`settings-storage-config.ts`、`setting-picker-*.tsx`）、ピッカースロット **`setting`**（**`lib/features/side-picker/`**）、配線は **`bmxt-shell.tsx`** と **`useSettingPickerShell.ts`**。
+**実装:** **`lib/features/setting/`**（`settings.ts`、`setting-cui-apply.ts`、`appearance.ts`、`apply-appearance.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`、`settings-storage-config.ts`、`setting-picker-*.tsx`）、ピッカースロット **`setting`**（**`lib/features/side-picker/`**）、配線は **`bmxt-shell.tsx`** と **`useSettingPickerShell.ts`**。
 
 <a id="session-ja"></a>
 
@@ -2431,7 +2433,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 | **ピア切断と終了** | REPL 継続中に最後のピアが切れたときのみ「ピア切断・待ち受け継続」案内（`LANG=ja*` なら日本語）。**`quit` / `exit` / EOF** で **`bmxt` プロセス自体が終了**（「待ち受け継続」は出さない）。 |
 | **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。 |
 | **握手ファイル** | `~/.config/bmxt/` の offer/answer JSON。OSC-8 `file://` 対応時あり。`@path.json` 推奨。 |
-| **UI 設定 / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`（export v2 同形）。locale: committed → env → `en`。REPL: `setting -list` / `-set` / `-save` / `-cancel`（todo §12）。設定の `| browse` は CLI 非対応。 |
+| **UI 設定 / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`（export v2 同形）。locale: committed → env → `en`。REPL: `setting -list` / `-set`（即保存）；`-save` / `-cancel` は閉じる互換エイリアス（todo §12）。設定の `| browse` は CLI 非対応。 |
 | **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `sync -ping`。 |
 | **行編集 / Tab** | rustyline · 灰色ヒント · Tab / Enter。list プロデューサーの `-list` 後は **`\| browse`** 等を候補化。既に **`\|`** を打った右辺では `browse` / `close` など consumer 名を補完。 |
 | **タブ picker** | `tab -list --peers \| browse` で ratatui picker。**Enter** で所有 peer へ activate（tab id はブラウザごと）。**q** / **Esc** まで開いたまま。開中は Family **`tabs_changed`**（拡張と同じ `first: "tab"`）で一覧を再取得し、可能なら選択位置を維持。 |
@@ -2661,7 +2663,7 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 
 **設定ピッカー列（`setting -list | browse`）**
 
-- draft / プレビュー / **`> save setting`** / **`> cancel setting`** — **[`setting`](#setting-ja)** 参照。
+- 適用時に即保存；プレビューは committed 設定のミラー — **[`setting`](#setting-ja)** 参照。
 - 列最上位の **`Esc`** は **プロンプト**へ（列は開いたまま）。閉じるは **`setting -exit -list`**。
 - キー配信は **`useSettingPickerKeyboard`**（`lib/features/setting/use-setting-picker-keyboard.ts`）。search/dom の `/` / `n` / `N` モデルとは別。
 

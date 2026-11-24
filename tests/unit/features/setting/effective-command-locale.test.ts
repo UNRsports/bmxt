@@ -18,8 +18,8 @@ describe("effectiveCommandLocale", () => {
     assert.equal(effectiveCommandLocale({ ...baseSettings, locale: "en" }, null), "en")
   })
 
-  it("prefers setting picker draft locale", () => {
-    const picker = {
+  it("prefers open picker mirror locale (stays synced after immediate commit)", () => {
+    const picker: SettingListPickerState = {
       draft: {
         locale: "en",
         hostUiMode: "auto",
@@ -29,9 +29,9 @@ describe("effectiveCommandLocale", () => {
         appearance: baseSettings.appearance
       },
       view: "main",
-      editing: null,
+      editing: false,
       editDraft: ""
-    } as SettingListPickerState
+    }
     assert.equal(effectiveCommandLocale(baseSettings, picker), "en")
   })
 })

@@ -77,9 +77,9 @@ translate,-setting,--ja-en,none,,translate -setting --ja-en,ペア ja-en。UiAct
 translate,-setting,--en-ja,none,,translate -setting --en-ja,ペア en-ja。UiAction pair=en-ja。,
 setting,,,,,setting …,単独 `setting` + Enter: msgs + promptPrefix `setting `。第二候補に `help`。,
 setting,-list,,none,,setting -list,プレーン `setting.field`（読み取り専用・案内付き。locale / appearance / **host-ui** / storage 等）。ピッカーは `setting -list | browse`。,0.8.2: host-ui（auto|desktop|mobile）
-setting,-set,,rest,,setting -set <key> <value>,UiAction `setting_set`。下書きへ locale / edit-picker / ime-candidate-help / prompt-fire / search-legend / host-ui。,§7 CUI
-setting,-save,,none,,setting -save,UiAction `setting_save`。下書きを永続化して列を閉じる。ピッカー Save 行も同コマンドを submit。,§7
-setting,-cancel,,none,,setting -cancel,UiAction `setting_cancel`。下書き破棄して列を閉じる。,§7
+setting,-set,,rest,,setting -set <key> <value>,UiAction `setting_set`。即永続化（locale / edit-picker / ime-candidate-help / prompt-fire / search-legend / host-ui / fg / bg-color / size / font / search-*-highlight / picker-*）。画像はピッカーのみ。,§7 CUI immediate
+setting,-save,,none,,setting -save,UiAction `setting_save`。互換: 設定列を閉じるのみ（変更は適用時に既に保存済み）。,§7
+setting,-cancel,,none,,setting -cancel,UiAction `setting_cancel`。互換: 設定列を閉じるのみ（破棄する下書きなし）。,§7
 setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,
 snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapshot `。,
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,

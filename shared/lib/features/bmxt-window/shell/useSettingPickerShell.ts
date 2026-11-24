@@ -7,10 +7,12 @@ import {
   type SettingPickerRow
 } from "../../setting/setting-picker-rows"
 import {
-  settingPickerApplyDraftToMain,
+  applySettingDraftPatchToSettings,
   settingPickerGoToView,
+  type SettingDraftPatch,
   type SettingListPickerState
 } from "../../setting/setting-list-picker-state"
+import { commitUiSettings } from "../../setting/setting-cui-apply"
 import { migrateSnapshotsToExternalBundleWithLog } from "../../snapshot/snapshot-external-migration"
 import { migrateSnapshotsToVaultWithLog } from "../../snapshot/snapshot-vault-migration"
 import { loadSnapshotStorageConfig } from "../../snapshot/snapshot-storage-config"
@@ -44,7 +46,6 @@ export type UseSettingPickerShellOptions = {
   sessionId: string
   uiLocale: UiSettings["locale"]
   appendLogLines: (lines: string[]) => void | Promise<void>
-  closeSettingPickerColumn: () => void
   setSettingListPicker: (
     sessionId: string,
     value:
@@ -53,7 +54,7 @@ export type UseSettingPickerShellOptions = {
       | ((prev: SettingListPickerState | null) => SettingListPickerState | null)
   ) => void
   settingListPickerRef: React.MutableRefObject<SettingListPickerState | null>
-  submitConstructedLine: (line: string) => void
+  replaceUiSettingsState: (settings: UiSettings) => void
 }
 
 /** EN: Setting list picker row actions, edit apply, and state updates. */
@@ -65,6 +66,57 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
     [options]
   )
 
+  const commitPatchAndMirror = useCallback(
+    async (
+      current: SettingListPickerState,
+      patch: SettingDraftPatch,
+      returnToMain: boolean
+    ): Promise<{ externalWriteFailed: boolean }> => {
+      const nextSettings = applySettingDraftPatchToSettings(current.draft, patch)
+      const { settings, externalWriteFailed } = await commitUiSettings(
+        nextSettings,
+        options.replaceUiSettingsState
+      )
+      const mirrored = returnToMain
+        ? settingPickerGoToView("main", { ...current, draft: settings })
+        : { ...current, draft: settings, editing: false, editDraft: "" }
+      options.setSettingListPicker(options.sessionId, mirrored)
+      return { externalWriteFailed }
+    },
+    [options]
+  )
+
+  const commitFullSettings = useCallback(
+    async (
+      current: SettingListPickerState,
+      nextSettings: UiSettings
+    ): Promise<{ externalWriteFailed: boolean }> => {
+      const { settings, externalWriteFailed } = await commitUiSettings(
+        nextSettings,
+        options.replaceUiSettingsState
+      )
+      options.setSettingListPicker(
+        options.sessionId,
+        settingPickerGoToView("main", { ...current, draft: settings })
+      )
+      return { externalWriteFailed }
+    },
+    [options]
+  )
+
+  const appendExternalFailedIfNeeded = useCallback(
+    async (logPrefix: string, externalWriteFailed: boolean) => {
+      if (!externalWriteFailed) {
+        return
+      }
+      await options.appendLogLines([
+        logPrefix,
+        tSetting("setting.storage.externalWriteFailed", options.uiLocale)
+      ])
+    },
+    [options]
+  )
+
   const onSettingPickerRowAction = useCallback(
     async (row: SettingPickerRow, index: number) => {
       const logPrefix = "setting -list"
@@ -72,110 +124,128 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
       if (!current) {
         return
       }
-      if (row.id === "save") {
-        options.submitConstructedLine("setting -save")
-        return
-      }
-      if (row.id === "cancel") {
-        options.submitConstructedLine("setting -cancel")
-        return
-      }
       if (row.id === "locale-ja" || row.id === "locale-en") {
         const locale = row.id === "locale-ja" ? "ja" : "en"
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { locale })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { locale },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "edit-picker-on") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { editPicker: true })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { editPicker: true },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "edit-picker-off") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { editPicker: false })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { editPicker: false },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "ime-candidate-help-on") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { imeCandidateHelp: true })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { imeCandidateHelp: true },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "ime-candidate-help-off") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { imeCandidateHelp: false })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { imeCandidateHelp: false },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "prompt-fire-on") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { promptFire: true })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { promptFire: true },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "prompt-fire-off") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { promptFire: false })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { promptFire: false },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "search-legend-text") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { searchLegendMode: "text" })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { searchLegendMode: "text" },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "search-legend-emoji") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { searchLegendMode: "emoji" })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { searchLegendMode: "emoji" },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "search-legend-text-emoji") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { searchLegendMode: "text_emoji" })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { searchLegendMode: "text_emoji" },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "host-ui-auto") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { hostUiMode: "auto" })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { hostUiMode: "auto" },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "host-ui-desktop") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { hostUiMode: "desktop" })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { hostUiMode: "desktop" },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "host-ui-mobile") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, { hostUiMode: "mobile" })
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          { hostUiMode: "mobile" },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "reset-yes") {
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, {
+        const { externalWriteFailed } = await commitPatchAndMirror(
+          current,
+          {
             editPicker: false,
             imeCandidateHelp: true,
             promptFire: false,
@@ -185,7 +255,9 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
               bgColor: null,
               fontSize: null,
               fontFamily: null,
-              bgImageDataUrl: null
+              bgImageDataUrl: null,
+              searchHitHighlightBg: null,
+              searchJumpHighlightBg: null
             },
             picker: {
               fg: null,
@@ -194,8 +266,10 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
               fontFamily: null,
               bgImageDataUrl: null
             }
-          })
+          },
+          true
         )
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "reset-no") {
@@ -210,10 +284,8 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           current.view === "pickerFontSize"
             ? { picker: { fontSize } }
             : { appearance: { fontSize } }
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, patch)
-        )
+        const { externalWriteFailed } = await commitPatchAndMirror(current, patch, true)
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "bg-import") {
@@ -234,10 +306,15 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           afterImport.view === "pickerBgImage"
             ? { picker: { bgImageDataUrl: result.dataUrl } }
             : { appearance: { bgImageDataUrl: result.dataUrl } }
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(afterImport, bgPatch)
-        )
+        const { externalWriteFailed } = await commitPatchAndMirror(afterImport, bgPatch, true)
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.bgImage.imported", options.uiLocale, {
+            mimeType: result.mimeType,
+            byteLength: String(result.byteLength)
+          })
+        ])
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "bg-clear") {
@@ -245,10 +322,8 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           current.view === "pickerBgImage"
             ? { picker: { bgImageDataUrl: null } }
             : { appearance: { bgImageDataUrl: null } }
-        options.setSettingListPicker(
-          options.sessionId,
-          settingPickerApplyDraftToMain(current, bgPatch)
-        )
+        const { externalWriteFailed } = await commitPatchAndMirror(current, bgPatch, true)
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         return
       }
       if (row.id === "storage-mode-internal") {
@@ -296,10 +371,10 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
             : []
         const reloaded = await reloadUiSettingsFromExternalDirectory()
         if (reloaded.ok) {
-          options.setSettingListPicker(options.sessionId, {
-            ...settingPickerGoToView("main", current),
-            draft: reloaded.settings
-          })
+          const { externalWriteFailed } = await commitFullSettings(
+            current,
+            reloaded.settings
+          )
           await options.appendLogLines([
             logPrefix,
             tSetting("setting.storage.externalActivatedLoaded", options.uiLocale, {
@@ -307,6 +382,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
             }),
             ...migrateLines
           ])
+          await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
         } else {
           options.setSettingListPicker(
             options.sessionId,
@@ -447,17 +523,15 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         const reloaded = await reloadUiSettingsFromExternalDirectory()
         if (reloaded.ok) {
           const afterReload = options.settingListPickerRef.current ?? current
-          options.setSettingListPicker(options.sessionId, {
-            ...afterReload,
-            view: "main",
-            editing: false,
-            editDraft: "",
-            draft: reloaded.settings
-          })
+          const { externalWriteFailed } = await commitFullSettings(
+            afterReload,
+            reloaded.settings
+          )
           await options.appendLogLines([
             logPrefix,
-            tSetting("setting.storage.reloadDraft", options.uiLocale)
+            tSetting("setting.storage.reloadCommitted", options.uiLocale)
           ])
+          await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
           return
         }
         if (reloaded.ok === false) {
@@ -520,17 +594,18 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           return
         }
         const afterImport = options.settingListPickerRef.current ?? current
-        options.setSettingListPicker(options.sessionId, {
-          ...afterImport,
-          view: "main",
-          editing: false,
-          editDraft: "",
-          draft: result.settings
-        })
-        await options.appendLogLines([logPrefix, tSetting("setting.picker.importDraft", options.uiLocale)])
+        const { externalWriteFailed } = await commitFullSettings(
+          afterImport,
+          result.settings
+        )
+        await options.appendLogLines([
+          logPrefix,
+          tSetting("setting.import.done", options.uiLocale)
+        ])
+        await appendExternalFailedIfNeeded(logPrefix, externalWriteFailed)
       }
     },
-    [options]
+    [appendExternalFailedIfNeeded, commitFullSettings, commitPatchAndMirror, options]
   )
 
   const onSettingPickerApplyEdit = useCallback(
@@ -543,28 +618,28 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         ])
         return
       }
-      options.setSettingListPicker(options.sessionId, (current) => {
-        if (!current) {
-          return null
-        }
-        const layerPatch =
-          field === "fg" || field === "picker-fg"
-            ? { fg: value }
-            : field === "bg-color" || field === "picker-bg-color"
-              ? { bgColor: value }
-              : field === "search-hit-highlight"
-                ? { searchHitHighlightBg: value }
-                : field === "search-jump-highlight"
-                  ? { searchJumpHighlightBg: value }
-                  : { fontFamily: value }
-        const draftPatch =
-          field === "picker-fg" || field === "picker-bg-color" || field === "picker-font"
-            ? { picker: layerPatch }
-            : { appearance: layerPatch }
-        return settingPickerApplyDraftToMain(current, draftPatch)
-      })
+      const current = options.settingListPickerRef.current
+      if (!current) {
+        return
+      }
+      const layerPatch =
+        field === "fg" || field === "picker-fg"
+          ? { fg: value }
+          : field === "bg-color" || field === "picker-bg-color"
+            ? { bgColor: value }
+            : field === "search-hit-highlight"
+              ? { searchHitHighlightBg: value }
+              : field === "search-jump-highlight"
+                ? { searchJumpHighlightBg: value }
+                : { fontFamily: value }
+      const draftPatch: SettingDraftPatch =
+        field === "picker-fg" || field === "picker-bg-color" || field === "picker-font"
+          ? { picker: layerPatch }
+          : { appearance: layerPatch }
+      const { externalWriteFailed } = await commitPatchAndMirror(current, draftPatch, true)
+      await appendExternalFailedIfNeeded("setting -list", externalWriteFailed)
     },
-    [options]
+    [appendExternalFailedIfNeeded, commitPatchAndMirror, options]
   )
 
   const onSettingPickerEditInvalid = useCallback(async () => {

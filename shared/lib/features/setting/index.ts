@@ -85,14 +85,22 @@ export {
   parseSettingExitListLine
 } from "./setting-list-picker-input"
 export {
+  applySettingDraftPatchToSettings,
   createSettingListPickerState,
   settingPickerApplyDraftToMain,
   settingPickerGoToView,
   settingPickerRevertDraft,
   settingPickerUpdateDraft,
+  type SettingDraftPatch,
   type SettingListPickerState,
   type SettingListPickerView
 } from "./setting-list-picker-state"
+export {
+  commitUiSettings,
+  applySettingSetCui,
+  applySettingSaveCui,
+  applySettingCancelCui
+} from "./setting-cui-apply"
 export {
   buildSettingPickerRows,
   fontSizeFromPickerIndex,
