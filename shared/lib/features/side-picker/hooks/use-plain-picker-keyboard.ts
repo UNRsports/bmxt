@@ -16,7 +16,10 @@ import { runPickerWindowCaptureChain } from "../interaction/picker-list-kernel"
 import type { PlainPickerKeyboardExtensions } from "../interaction/plain-picker-keyboard-extensions"
 import { runPickerSearchEnter, type RunPickerSearchEnterOptions } from "../interaction/picker-search-enter"
 import { runPickerSearchJump, type RunPickerSearchJumpOptions } from "../interaction/picker-search-jump"
-import { verticalNavDirection } from "../interaction/picker-vertical-nav"
+import {
+  physicalArrowVerticalNavDirection,
+  verticalNavDirection
+} from "../interaction/picker-vertical-nav"
 import { filterUrlListCommandCompletions } from "../interaction/url-list-commands"
 import { plainPickerHiIndicesMatching } from "../search/plain-picker-search"
 import { useWindowKeydownCapture } from "./use-window-keydown-capture"
@@ -119,8 +122,33 @@ export function usePlainPickerKeyboard({
 
   const runPickerVerticalNav = useCallback(
     (e: KeyboardEvent): boolean => {
-      // IME textarea shows filter/command text; j/k and arrows must reach the input, not hi.
-      if (searchMode || commandMode) {
+      // EN: `:` buffer — keep all keys for the command line (no hi moves).
+      if (commandMode) {
+        return false
+      }
+      // EN: `/` filter — physical ↑↓ move hi; j/k stay as query text (same as tree pickers).
+      // JA: `/` 絞り込み中は物理 ↑↓ のみフォーカス移動。j/k はクエリ文字のまま。
+      if (searchMode) {
+        if (!keyboardActive || e.ctrlKey || e.metaKey || e.altKey) {
+          return false
+        }
+        const ev = e as KeyboardEvent & { isComposing?: boolean }
+        if (ev.isComposing || lineCount === 0) {
+          return false
+        }
+        const dir = physicalArrowVerticalNavDirection(e)
+        if (dir === "down") {
+          e.preventDefault()
+          e.stopPropagation()
+          setHi((h) => Math.min(h + 1, lineCount - 1))
+          return true
+        }
+        if (dir === "up") {
+          e.preventDefault()
+          e.stopPropagation()
+          setHi((h) => Math.max(h - 1, 0))
+          return true
+        }
         return false
       }
       if (extensions?.customVerticalNav?.(e)) {
@@ -128,7 +156,7 @@ export function usePlainPickerKeyboard({
       }
       return runDefaultVerticalNav(e)
     },
-    [commandMode, extensions, runDefaultVerticalNav, searchMode]
+    [commandMode, extensions, keyboardActive, lineCount, runDefaultVerticalNav, searchMode, setHi]
   )
 
   const defaultSearchJumpEnabled =

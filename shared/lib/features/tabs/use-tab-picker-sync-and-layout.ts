@@ -130,7 +130,10 @@ export function useTabPickerSyncAndLayoutEffects({
       }
     }
 
-    if (searchMode) {
+    // EN: Snap to first match only when the filter/structure changes — not on every hi move
+    // (otherwise ↑↓ during `/` is immediately reset to matches[0]).
+    // JA: クエリ／構造変化時だけ先頭マッチへ寄せる。hi 変更のたびに戻すと `/` 中の ↑↓ が無効になる。
+    if (searchMode && structChanged) {
       const { needle } = parsePickerSearchNeedle(filterQuery)
       if (needle !== "") {
         const matches = tabPickerVisibleHiIndicesMatching(rows, visibleRowIndices, filterQuery)

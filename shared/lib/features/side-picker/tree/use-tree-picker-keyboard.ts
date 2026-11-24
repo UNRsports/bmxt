@@ -20,7 +20,10 @@ import {
   runPickerSearchJump,
   type RunPickerSearchJumpOptions
 } from "../interaction/picker-search-jump"
-import { verticalNavDirection } from "../interaction/picker-vertical-nav"
+import {
+  physicalArrowVerticalNavDirection,
+  verticalNavDirection
+} from "../interaction/picker-vertical-nav"
 import { treePickerVisibleHiIndicesMatching } from "./tree-picker-search"
 import type { TreePickerRowView } from "./tree-picker-types"
 
@@ -169,6 +172,19 @@ export function useTreePickerKeyboard({
       if (runPickerSearchEnter(e, searchEnterOptions)) {
         return true
       }
+      // EN: Physical ↑↓ move hi while filtering; j/k stay as filter text (tabs-compatible).
+      // JA: 絞り込み中は物理 ↑↓ のみフォーカス移動。j/k はクエリ文字のまま。
+      const navDir = physicalArrowVerticalNavDirection(e)
+      if (navDir === "down") {
+        stopKey(e)
+        setHi((h) => Math.min(h + 1, Math.max(0, views.length - 1)))
+        return true
+      }
+      if (navDir === "up") {
+        stopKey(e)
+        setHi((h) => Math.max(h - 1, 0))
+        return true
+      }
       if (e.key === "Escape") {
         stopKey(e)
         closeSearch()
@@ -176,7 +192,7 @@ export function useTreePickerKeyboard({
       }
       return false
     },
-    [closeSearch, searchEnterOptions]
+    [closeSearch, searchEnterOptions, setHi, views.length]
   )
 
   const handleCommandKey = useCallback(
