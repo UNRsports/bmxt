@@ -15,7 +15,11 @@ import {
   settingPickerApplyDraftToMain,
   settingPickerUpdateDraft
 } from "../../../../shared/lib/features/setting/setting-list-picker-state.ts"
-import { settingSetPatchFromArgs } from "../../../../shared/lib/features/setting/setting-set-args.ts"
+import {
+  SETTING_SET_KEY_TOKENS,
+  settingSetPatchFromArgs,
+  settingSetValueCandidates
+} from "../../../../shared/lib/features/setting/setting-set-args.ts"
 import { settingMainRowTargetView } from "../../../../shared/lib/features/setting/setting-picker-nav.ts"
 import { buildZipArchive, parseZipArchive } from "../../../../shared/lib/features/setting/zip-store.ts"
 import {
@@ -253,6 +257,26 @@ describe("setting list picker draft", () => {
     assert.deepEqual(settingSetPatchFromArgs("prompt-fire", "on"), { promptFire: true })
     assert.deepEqual(settingSetPatchFromArgs("prompt-fire", "off"), { promptFire: false })
     assert.equal(settingSetPatchFromArgs("prompt-fire", "maybe"), null)
+  })
+  it("lists closed setting -set key tokens and discrete value candidates", () => {
+    assert.ok(SETTING_SET_KEY_TOKENS.includes("locale"))
+    assert.ok(SETTING_SET_KEY_TOKENS.includes("prompt-fire"))
+    assert.deepEqual(settingSetValueCandidates("locale"), ["ja", "en"])
+    assert.deepEqual(settingSetValueCandidates("prompt-fire"), ["on", "off"])
+    assert.deepEqual(settingSetValueCandidates("search-legend"), [
+      "text",
+      "emoji",
+      "text_emoji"
+    ])
+    assert.deepEqual(settingSetValueCandidates("host-ui"), [
+      "auto",
+      "desktop",
+      "mobile",
+      "default"
+    ])
+    assert.deepEqual(settingSetValueCandidates("fg"), ["default", "reset"])
+    assert.deepEqual(settingSetValueCandidates("sync-hold-ms"), ["default"])
+    assert.equal(settingSetValueCandidates("unknown-key"), null)
   })
   it("setting -set appearance scalars validate and clear", () => {
     assert.deepEqual(settingSetPatchFromArgs("fg", "#abc"), { appearance: { fg: "#aabbcc" } })
