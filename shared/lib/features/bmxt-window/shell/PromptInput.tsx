@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { tPrompt } from "../../setting/i18n/ns/prompt"
 import { tSession } from "../../setting/i18n/ns/session"
 import type { UiLocale } from "../../setting/locale"
@@ -162,17 +162,45 @@ export function PromptInput({
   const promptFieldRef = useRef<HTMLDivElement>(null)
   const promptMirrorRef = useRef<HTMLDivElement>(null)
 
-  useLayoutEffect(() => {
+  // EN: Size the field from mirror (+ IME) wrap height so soft-wrapped lines grow/shrink
+  //     like a terminal. Mirror caret geometry stays authoritative for fire effects.
+  const syncPromptFieldHeight = useCallback(() => {
     const field = promptFieldRef.current
-    const mirror = promptMirrorRef.current
+    const mirrorEl = promptMirrorRef.current
     const ta = imeRef.current
-    if (!field || !mirror || !ta || isCommandBusy) {
+    if (!field || !mirrorEl || !ta || isCommandBusy) {
       return
     }
-    const next = Math.max(mirror.scrollHeight, Math.ceil(1.35 * 16))
+    // EN: Drop prior floors first so delete / narrower panes can shrink.
+    field.style.minHeight = ""
+    ta.style.minHeight = ""
+    ta.style.height = ""
+    const linePx = Math.ceil(1.35 * 16)
+    const next = Math.max(mirrorEl.scrollHeight, ta.scrollHeight, linePx)
     field.style.minHeight = `${next}px`
     ta.style.minHeight = `${next}px`
-  }, [line, cursorPos, navReloadTabMeta, mirror.composition, imeRef, isCommandBusy])
+  }, [imeRef, isCommandBusy])
+
+  useLayoutEffect(() => {
+    syncPromptFieldHeight()
+  }, [line, cursorPos, navReloadTabMeta, mirror.composition, syncPromptFieldHeight])
+
+  useLayoutEffect(() => {
+    if (isCommandBusy) {
+      return
+    }
+    const field = promptFieldRef.current
+    if (!field || typeof ResizeObserver === "undefined") {
+      return
+    }
+    const ro = new ResizeObserver(() => {
+      syncPromptFieldHeight()
+    })
+    ro.observe(field)
+    return () => {
+      ro.disconnect()
+    }
+  }, [isCommandBusy, syncPromptFieldHeight])
 
   useLayoutEffect(() => {
     if (!isCommandBusy || !promptPaneFocused) {
@@ -205,7 +233,7 @@ export function PromptInput({
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
-          wrap="off"
+          wrap="soft"
           tabIndex={promptPaneFocused ? 0 : -1}
           aria-label={commandBusyLabel}
           value=""
@@ -231,6 +259,8 @@ export function PromptInput({
             <>
               <span>{renderPromptMirrorChipsOnly(mirror.before, navReloadTabMeta, uiLocale)}</span>
               <span className="bmxt-prompt-composition">{mirror.composition}</span>
+              {/* EN: Invisible end-of-composition anchor so fire effects track wrap lines. */}
+              <span ref={cursorMirrorCellRef} className="bmxt-prompt-effect-origin" aria-hidden />
               <span>{renderPromptMirrorChipsOnly(mirror.after, navReloadTabMeta, uiLocale)}</span>
             </>
           ) : (
@@ -260,7 +290,7 @@ export function PromptInput({
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
-          wrap="off"
+          wrap="soft"
           tabIndex={promptPaneFocused ? 0 : -1}
           aria-label={
             mode === "isearch"

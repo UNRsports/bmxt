@@ -1087,7 +1087,7 @@ body {
 
 .bmxt-prompt-line {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 6px;
   min-height: 1.35em;
   line-height: 1.35;
@@ -1482,7 +1482,10 @@ body {
   min-height: 100%;
   box-sizing: border-box;
   pointer-events: none;
-  white-space: pre;
+  /* EN: Soft-wrap like a terminal; keep in sync with `.bmxt-prompt-ime`. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   overflow: hidden;
   color: #c9d1d9;
   line-height: 1.35;
@@ -1500,9 +1503,12 @@ body {
   padding: 0;
   border: none;
   resize: none;
-  overflow-x: auto;
+  /* EN: Grow with wrap; never show a horizontal scrollbar. */
+  overflow-x: hidden;
   overflow-y: hidden;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   background: transparent;
   color: transparent;
   /* Mirror shows the blinking cell; IME composition still draws on the textarea layer. */
@@ -1528,6 +1534,16 @@ body {
   text-decoration: underline;
   text-decoration-color: #58a6ff;
   text-underline-offset: 2px;
+}
+
+/* EN: Zero-width caret proxy for prompt-effect origin (IME composition / wrap). */
+.bmxt-prompt-effect-origin {
+  display: inline-block;
+  width: 0;
+  height: 1.35em;
+  overflow: hidden;
+  vertical-align: bottom;
+  pointer-events: none;
 }
 
 .bmxt-prompt-chip-stack {
