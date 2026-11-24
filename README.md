@@ -21,7 +21,7 @@
   - [`aboutbmxt`](#aboutbmxt)
   - [Nav mode (`nav -enter` / `nav -exit`)](#nav-mode)
   - [`translate` (`translate -on` / `translate -off` / `translate -setting`)](#translate)
-  - [`setting` (`setting -list` / `setting -exit -list`)](#setting)
+  - [`setting` (`setting -list` / `setting -set` / `setting -exit -list`)](#setting)
   - [`session` (terminal sessions)](#session)
   - [`sync` (Family local sync)](#sync)
   - [`bookmark`](#bookmark-command)
@@ -288,8 +288,9 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `translate -setting --en-ja` | Save **en → ja** pair; round-trip preview and nav commit use Japanese on Alt hold |
 | `setting` | Print usage and restore the prompt to `setting ` for `-list` |
 | `setting -list` | Plain list of current UI settings (locale, appearance, storage mode summary) |
-| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, **Family sync** display name + setup guide, export/import zip); **each apply saves immediately** |
-| `setting -set <key> <value>` | Save one setting immediately (locale / appearance scalars / toggles; images stay picker-only) |
+| `setting -list | browse` | Open the **settings picker** column (UI locale, appearance, **storage** internal/external, **snapshot storage** bundled/Obsidian vault, **Family sync** display name + setup guide, export/import zip); **each apply submits a one-shot `setting …` line and saves immediately** |
+| `setting -set <key> <value>` | Save one setting immediately (closed key set: locale / toggles / appearance scalars / highlight colors / sync timing; image **clear** via `-set`, image **import** via `setting -bg-import`) |
+| `setting -export` / `-import` / `-bg-import` / `-reset-default` / `-storage` / `-pick-dir` / `-reload` / `-snapshot-storage` / `-snapshot-pick-dir` / `-sync-guide` | One-shot setting ops (same path as picker applies; see **[`setting`](#setting)**) |
 | `snapshot -save [<tabId>]` | Save the active tab (or given tab) as a Markdown snapshot with YAML frontmatter (Obsidian-compatible); storage destination follows **setting** snapshot storage |
 | `setting -exit -list` | Close the settings picker column in this session |
 | `session` | Print usage and restore the prompt to `session ` for second tokens (see **[`session`](#session)**) |
@@ -427,14 +428,15 @@ While a BMXt window is open, **the extension page owns terminal session state**.
 
 - Bare `search` + **Enter** prints the usage block and restores **`search `**.
 - **`search -list` only** (no trailing space) + **Enter** restores the prompt to **`search -list `** (continuation). **`search -list `** + **Enter** runs a cross-scope search (**`--all`**) as **plain** output via **`RUN_CMD`** → **`search_list`** effect (or use **`search -list … | browse`** for the picker column).
-- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** (plain) prints **`search.hit`** rows via the **`-list` registry**. **`search -list … | browse`** opens the search picker column; **`--all`** dispatches all effect scopes in parallel inside the picker job. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** reads each open **https** tab **live**. **`--snapshot`** searches saved Markdown snapshots (see **[`snapshot`](#snapshot)**). Picker progress lines are rAF-batched and hidden when results arrive. **Since 0.8.4:** **`--page`** hits carry subdivided matches via ListResult field **`pageMatchesJson`** (`search-page-matches-list-field.ts`) so the picker can jump/scroll to in-page snippets more reliably.
+- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`** (plain) prints **`search.hit`** rows via the **`-list` registry**. **`search -list … | browse`** opens the search picker column; **`--all`** dispatches all effect scopes in parallel inside the picker job. Repeat **`--history`** / **`--bookmark`** scans may use an in-process memory cache (`search-cache-store`). **`--page`** reads each open **https** tab **live** (bounded concurrency via **`page-scan-pool.ts`**). **`--snapshot`** searches saved Markdown snapshots (see **[`snapshot`](#snapshot)**). Picker progress lines are rAF-batched and hidden when results arrive. **Since 0.8.4:** **`--page`** hits carry subdivided matches via ListResult field **`pageMatchesJson`** (`search-page-matches-list-field.ts`) so the picker can jump/scroll to in-page snippets more reliably.
+- **Google Sheets (`--page`):** open **`docs.google.com/spreadsheets/…`** tabs are scanned with a Sheets-specific collector (`page-extract/sheets/`). Hits are **cell-level** (A1-style). In the picker, **Enter** / preview on a detail row jumps the sheet to that cell (`navigate-sheets-to-cell.ts`). Japanese and other non-ASCII needles use the same substring path as ordinary pages (keyword hand-off is not locale-special-cased beyond normal Unicode text).
 - **`Ctrl+C`** on the prompt or **`search -exit -list`** cancels an in-flight **`search-list`** job for this session (see **[Job execution](#job-execution)**).
-- In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** / **`[bookmark]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit; **`Enter`** on an open-target row opens the URL at the chosen target.
+- In the results list, **`→`** opens **detail** when the URL is **already open** in a tab and the row has subdivided hits; otherwise **`→`** on **`[history]`** / **`[bookmark]`** rows opens **open-target** when the tab is **not** open (regardless of detail hits). **`←`** or **`Esc`** steps back one level. **`Enter`** on a results row opens in a new tab (or jumps when a page hit applies); **`Enter`** on a detail row activates the source tab and scrolls to the hit (or Sheets cell); **`Enter`** on an open-target row opens the URL at the chosen target.
 - **`--auto` page-active:** **`↑` / `↓`** (and **`j` / `k`**) preview open-tab result rows and detail in-page hits on highlight move (detail uses a longer debounce and reuses a warmed Range session so GitHub-scale DOMs stay responsive). **`Enter`** still jumps / brings the tab forward.
 - **Open-tab rows only:** **`Ctrl+↑` / `Ctrl+↓`** jump among rows whose URL is already open in a tab (with animated list scroll). In **`--auto`** page-active mode, preview runs on each jump.
 - **`Alt+↑` / `Alt+↓`** ( **`--manual`** page-active only): preview the highlighted row in the background tab without changing normal **`↑`/`↓`** highlight rules.
 - **Detail bar** (status strip under the prompt while the search picker is open): with the caret at **end-of-line**, **`→`** selects the bar; **`←`** returns to the prompt; **`Tab`** / **`Shift+Tab`** cycle visible detail bars; **`Alt`** toggles **`--auto` / `--manual`** page-active (saved in **`chrome.storage.local`**); **`→`** from the bar enters the search picker column. Open-tab result rows show **favicons** when available.
-- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **https** tabs on demand (visible `innerText` per tab via content script / `executeScript`; **not** persisted to any search cache) using the extension’s declared https **`host_permissions`** (if site access was turned off under `chrome://extensions`, re-enable it).
+- Patterns use the same **case-insensitive substring** rules as `dom` (no regex v1); optional ASCII quotes are stripped. **`search -list … --page`** walks non-discarded **https** tabs on demand (visible `innerText` per tab via content script / `executeScript`, or Sheets cell text for spreadsheet tabs; **not** persisted to any search cache) using the extension’s declared https **`host_permissions`** (if site access was turned off under `chrome://extensions`, re-enable it).
 
 <a id="bookmark-command"></a>
 
@@ -622,22 +624,46 @@ The status strip under the prompt shows modes such as **`nav`**, **ON/OFF**, **j
 
 ### `setting` (`setting -list` / `setting -set` / `setting -exit -list`)
 
-UI locale and **terminal + picker appearance** are edited in a dedicated **settings picker** side column or via **`setting -set`**. **Default persistence** is **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`lib/features/extension-storage/keys.ts`). **Optional external storage** uses the File System Access API (user-chosen folder); mode is stored in **`bmxt_ui_settings_storage_v1`**. The Service Worker **`run`** for **`setting`** prints usage only; open/close and all edits are **UI-handled** in **`bmxt-shell.tsx`** before **`RUN_CMD`**.
+UI locale and **terminal + picker appearance** are edited in a dedicated **settings picker** side column or via **one-shot `setting …` lines**. **Default persistence** is **`chrome.storage.local`** under **`bmxt_ui_settings_v1`** (`lib/features/extension-storage/keys.ts`). **Optional external storage** uses the File System Access API (user-chosen folder); mode is stored in **`bmxt_ui_settings_storage_v1`**.
+
+**Command path (since one-shot / CUI migration):** Rust **`cmd/setting.rs`** parses second tokens and returns **UiActions** (`setting_set`, `setting_export`, …). The settings picker does **not** mutate storage itself — it builds the same lines (`lib/features/picker/build-setting-command-line.ts`) and **`submitConstructedLine`**s them through normal command dispatch. Apply lives in **`apply-ui-action.ts`** → **`setting-cui-apply.ts`** / **`setting-cui-ops.ts`**.
 
 | Input | Effect |
 |-------|--------|
-| Bare **`setting`** + **Enter** | Prints usage and restores **`setting `** (continuation). Tab completes **`-list`** / **`-set`** / **`-exit`** (then **`-list`** for exit). |
+| Bare **`setting`** + **Enter** | Prints usage and restores **`setting `** (continuation). Tab completes **`-list`** / **`-set`** / **`-export`** / **`-import`** / **`-exit`** (and related one-shots). |
 | **`setting -list`** + **Enter** | **Plain** list of current UI settings (`setting.field` rows via **`-list` registry**). |
-| **`setting -list | browse`** + **Enter** | Opens the **setting** picker column (mirror of committed settings). |
-| **`setting -set <key> <value>`** + **Enter** | Validates and **saves immediately** (locale / toggles / appearance scalars; images stay picker-only). |
+| **`setting -list | browse`** + **Enter** | Opens the **setting** picker column (mirror of committed settings). Applies submit one-shot lines. |
+| **`setting -set <key> <value>`** + **Enter** | Validates and **saves immediately** (closed key set below). |
+| **`setting -export`** / **`-import`** | Zip backup download / zip file picker → immediate save. |
+| **`setting -bg-import [--picker]`** | Background image file picker (optional **`--picker`** layer). |
+| **`setting -reset-default`** | Reset appearance to defaults and save. |
+| **`setting -storage internal\|external`** | Switch UI settings storage mode. |
+| **`setting -pick-dir`** / **`-reload`** | (External mode) re-pick parent folder / reload bundle and save. |
+| **`setting -snapshot-storage bundled\|vault`** / **`-snapshot-pick-dir`** | Snapshot destination; vault re-pick when vault mode is on. |
+| **`setting -sync-guide`** | Print Family sync setup guide lines (msgs only). |
 | **`setting -save`** / **`setting -cancel`** | Compat aliases: close the settings column only (nothing left to discard). |
 | **`setting -exit -list`** + **Enter** | Closes the setting picker column in this session. |
 
+**`setting -set` keys (closed)**
+
+| Key | Value |
+|-----|--------|
+| **`locale`** | **`ja`** / **`en`** |
+| **`edit-picker`**, **`ime-candidate-help`**, **`prompt-fire`** | **`on`** / **`off`** |
+| **`search-legend`** | **`text`** / **`emoji`** / **`text_emoji`** |
+| **`host-ui`** | **`auto`** / **`desktop`** / **`mobile`** / **`default`** |
+| **`fg`**, **`bg-color`**, **`picker-fg`**, **`picker-bg-color`**, **`search-hit-highlight`**, **`search-jump-highlight`** | Hex color, or **`default`** / **`reset`** to clear |
+| **`size`**, **`picker-size`** | e.g. **`14px`**, or clear tokens |
+| **`font`**, **`picker-font`** | Font family string, or clear tokens |
+| **`bg-image`**, **`picker-bg-image`** | Clear only (**`default`** / **`reset`**); import uses **`-bg-import`** |
+| **`sync-hold-ms`**, **`cli-door-retry-ms`** | Milliseconds, or **`default`** |
+
 **Immediate commit**
 
-- Each validated picker apply (choice, Enter on edit, image import/clear, reset, zip import, storage-reload) writes **`bmxt_ui_settings_v1`** and, in external mode, the **settings bundle**, then updates the live UI.
+- Each validated apply (picker choice, Enter on edit, image import/clear, reset, zip import, storage-reload) writes **`bmxt_ui_settings_v1`** and, in external mode, the **settings bundle**, then updates the live UI.
 - Inline color/font typing buffers in **`editDraft`** until Enter validates; partial hex is preview-only and is not written on every keystroke.
 - The **Preview** panel shows the current (committed) appearance, plus in-progress edit preview while typing.
+- **`prompt-fire: on`** paints typing/delete FX across the BMXt window canvas (not only the prompt caret).
 
 **Storage (internal vs external)**
 
@@ -708,7 +734,7 @@ When changing UI settings shape or on-disk format in a release:
 
 Shared contract for all side pickers: **←** = step back / leave column · **→** = step forward / select (`side-picker/interaction/picker-exit-to-detail-bar.ts`, `picker-key-event.ts`). Hex colors support live preview while typing in edit mode.
 
-**Implementation:** **`lib/features/setting/`** (`settings.ts`, `appearance.ts`, `apply-appearance.ts`, `settings-export.ts`, `settings-external-storage.ts`, `settings-bundle-layout.ts`, `settings-storage-config.ts`, `setting-picker-*.tsx`), picker slot **`setting`** in **`lib/features/side-picker/`**, UI wiring in **`bmxt-shell.tsx`** and **`useSettingPickerShell.ts`**.
+**Implementation:** Rust **`cmd/setting.rs`**; TS apply **`setting-cui-apply.ts`** / **`setting-cui-ops.ts`** / **`setting-set-args.ts`**; picker → line builder **`build-setting-command-line.ts`**; persistence **`settings.ts`**, **`settings-export.ts`**, **`settings-external-storage.ts`**, **`settings-bundle-layout.ts`**; prompt FX **`lib/features/prompt-effects/`**; picker slot **`setting`** in **`lib/features/side-picker/`**; shell wiring **`bmxt-shell.tsx`** / **`useSettingPickerShell.ts`** / **`apply-ui-action.ts`**.
 
 <a id="session"></a>
 
@@ -1017,7 +1043,7 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 
 **Settings picker column (`setting -list | browse`)**
 
-- Immediate commit on apply; preview mirrors committed settings — see **[`setting`](#setting)**.
+- Immediate commit on apply via one-shot **`setting …`** lines (`build-setting-command-line.ts`); preview mirrors committed settings — see **[`setting`](#setting)**.
 - **`Esc`** at the column top level returns to the **prompt** (column stays open); **`setting -exit -list`** closes it.
 - Keyboard: **`useSettingPickerKeyboard`** (`lib/features/setting/use-setting-picker-keyboard.ts`); not the plain-list `/` / `n` / `N` model.
 
@@ -1762,7 +1788,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
   - [`aboutbmxt`](#aboutbmxt-ja)
   - [Nav モード（`nav -enter` / `nav -exit`）](#nav-mode-ja)
   - [`translate`（`translate -on` / `translate -off` / `translate -setting`）](#translate-ja)
-  - [`setting`（`setting -list` / `setting -exit -list`）](#setting-ja)
+  - [`setting`（`setting -list` / `setting -set` / `setting -exit -list`）](#setting-ja)
   - [`session`（ターミナルセッション）](#session-ja)
   - [`sync`（Family ローカル同期）](#sync-ja)
   - [`bookmark`](#bookmark-command-ja)
@@ -2023,8 +2049,9 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `translate -setting --en-ja` | ペア **en-ja** を保存。往復プレビュー・nav Alt 確定は日本語 |
 | `setting` | 利用案内を表示し、続けて `setting ` へ入力復元（`-list` 用） |
 | `setting -list` | 現在の UI 設定をプレーン一覧 |
-| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・**Family sync** 表示名＋セットアップ案内・zip 入出力）。**適用のたびに即保存** |
-| `setting -set <key> <value>` | 設定を1件即保存（locale／外観スカラー／トグル。画像はピッカーのみ） |
+| `setting -list | browse` | **設定ピッカー**列（UI 言語・外観・保存先・snapshot 保存先・**Family sync** 表示名＋セットアップ案内・zip 入出力）。**適用のたびにワンショット `setting …` 行を submit して即保存** |
+| `setting -set <key> <value>` | 設定を1件即保存（閉集合キー: locale／トグル／外観スカラー／ハイライト色／sync タイミング。画像の**クリア**は `-set`、**取込**は `setting -bg-import`） |
+| `setting -export` / `-import` / `-bg-import` / `-reset-default` / `-storage` / `-pick-dir` / `-reload` / `-snapshot-storage` / `-snapshot-pick-dir` / `-sync-guide` | 設定ワンショット操作（ピッカー適用と同じ経路。**[`setting`](#setting-ja)** 参照） |
 | `snapshot -save [<tabId>]` | アクティブタブ（または指定 tabId）を YAML frontmatter 付き Markdown snapshot として保存（Obsidian 連携向け）。保存先は **setting** の snapshot 保存先設定に従う |
 | `setting -exit -list` | 当該セッションの設定ピッカー列を閉じる |
 | `session` | 利用案内を表示し、続けて `session ` へ入力復元（第二トークン用。**[`session`](#session-ja)** 参照） |
@@ -2269,22 +2296,46 @@ Vimium 型の全画面ヒント撒きではない。**指して同定 → 属性
 
 ### `setting`（`setting -list` / `setting -set` / `setting -exit -list`）
 
-UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の **設定ピッカー**列または **`setting -set`** で編集します。**既定の永続化**は **`chrome.storage.local`** の **`bmxt_ui_settings_v1`**（`lib/features/extension-storage/keys.ts`）。**任意の外部保存**は File System Access API（ユーザーが選んだフォルダ）；モードは **`bmxt_ui_settings_storage_v1`** に保存。Service Worker の **`setting`** **`run`** は利用案内のみ；開閉と編集はすべて **`bmxt-shell.tsx`** が **`RUN_CMD`** より前に処理します。
+UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の **設定ピッカー**列または **ワンショット `setting …` 行**で編集します。**既定の永続化**は **`chrome.storage.local`** の **`bmxt_ui_settings_v1`**（`lib/features/extension-storage/keys.ts`）。**任意の外部保存**は File System Access API（ユーザーが選んだフォルダ）；モードは **`bmxt_ui_settings_storage_v1`** に保存。
+
+**コマンド経路（ワンショット／CUI 移行後）:** Rust **`cmd/setting.rs`** が第二トークンを解釈し **UiAction**（`setting_set`、`setting_export` など）を返す。設定ピッカーはストレージを直接書き換えず、同じ行を組み立て（`lib/features/picker/build-setting-command-line.ts`）て **`submitConstructedLine`** する。適用は **`apply-ui-action.ts`** → **`setting-cui-apply.ts`** / **`setting-cui-ops.ts`**。
 
 | 入力 | 動作 |
 |------|------|
-| 単独 **`setting`** + **Enter** | 利用案内を表示し、**`setting `** に復帰（continuation）。Tab 補完は **`-list`** / **`-set`** / **`-exit`**（exit は続けて **`-list`**）。 |
+| 単独 **`setting`** + **Enter** | 利用案内を表示し、**`setting `** に復帰（continuation）。Tab 補完は **`-list`** / **`-set`** / **`-export`** / **`-import`** / **`-exit`**（および関連ワンショット）。 |
 | **`setting -list`** + **Enter** | 現在 UI 設定の **プレーン一覧**（**`-list` レジストリ**の `setting.field` 行）。 |
-| **`setting -list | browse`** + **Enter** | **setting** ピッカー列を開く（committed 設定のミラー）。 |
-| **`setting -set <key> <value>`** + **Enter** | 検証のうえ **即保存**（locale／トグル／外観スカラー。画像はピッカーのみ）。 |
+| **`setting -list | browse`** + **Enter** | **setting** ピッカー列を開く（committed 設定のミラー）。適用はワンショット行を submit。 |
+| **`setting -set <key> <value>`** + **Enter** | 検証のうえ **即保存**（下記の閉集合キー）。 |
+| **`setting -export`** / **`-import`** | zip バックアップ書き出し／zip ファイルピッカー→即保存。 |
+| **`setting -bg-import [--picker]`** | 背景画像ファイルピッカー（任意 **`--picker`** レイヤ）。 |
+| **`setting -reset-default`** | 外観を既定に戻して保存。 |
+| **`setting -storage internal\|external`** | UI 設定の保存先モード切替。 |
+| **`setting -pick-dir`** / **`-reload`** | （外部モード）親フォルダ再選択／バンドル再読込して保存。 |
+| **`setting -snapshot-storage bundled\|vault`** / **`-snapshot-pick-dir`** | snapshot 保存先；vault モード時の Vault 再選択。 |
+| **`setting -sync-guide`** | Family sync セットアップ案内行を表示（msgs のみ）。 |
 | **`setting -save`** / **`setting -cancel`** | 互換エイリアス: 設定列を閉じるのみ（破棄する下書きなし）。 |
 | **`setting -exit -list`** + **Enter** | 当該セッションの設定ピッカー列を閉じる。 |
 
+**`setting -set` キー（閉集合）**
+
+| キー | 値 |
+|------|-----|
+| **`locale`** | **`ja`** / **`en`** |
+| **`edit-picker`**, **`ime-candidate-help`**, **`prompt-fire`** | **`on`** / **`off`** |
+| **`search-legend`** | **`text`** / **`emoji`** / **`text_emoji`** |
+| **`host-ui`** | **`auto`** / **`desktop`** / **`mobile`** / **`default`** |
+| **`fg`**, **`bg-color`**, **`picker-fg`**, **`picker-bg-color`**, **`search-hit-highlight`**, **`search-jump-highlight`** | hex 色、または **`default`** / **`reset`** でクリア |
+| **`size`**, **`picker-size`** | 例 **`14px`**、またはクリア用トークン |
+| **`font`**, **`picker-font`** | フォント名、またはクリア用トークン |
+| **`bg-image`**, **`picker-bg-image`** | クリアのみ（**`default`** / **`reset`**）。取込は **`-bg-import`** |
+| **`sync-hold-ms`**, **`cli-door-retry-ms`** | ミリ秒、または **`default`** |
+
 **即時確定**
 
-- ピッカーでの検証済み適用（選択、編集 Enter、画像取込／削除、reset、zip import、storage-reload）のたびに **`bmxt_ui_settings_v1`**（外部モード時は設定バンドルも）へ書き込み、ライブ UI を更新する。
+- 検証済み適用（ピッカー選択、編集 Enter、画像取込／削除、reset、zip import、storage-reload）のたびに **`bmxt_ui_settings_v1`**（外部モード時は設定バンドルも）へ書き込み、ライブ UI を更新する。
 - 色／フォントのインライン入力は **`editDraft`** にバッファし、Enter で検証してから保存。途中の hex はプレビューのみで、キー入力ごとに書かない。
 - 下部 **Preview** は現在の（committed）外観と、編集中のプレビューを表示。
+- **`prompt-fire: on`** の打鍵／削除エフェクトは BMXt ウィンドウ全体のキャンバスに描画する（プロンプトキャレット付近のみではない）。
 
 **保存先（拡張機能内／外部）**
 
@@ -2355,7 +2406,7 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 
 全サイドピッカー共通契約: **←** = 戻る／列を離れる · **→** = 進む／選択（`side-picker/interaction/picker-exit-to-detail-bar.ts`、`picker-key-event.ts`）。色（hex）は編集中にリアルタイムプレビュー（未確定のキー入力はストレージへ書かない）。
 
-**実装:** **`lib/features/setting/`**（`settings.ts`、`setting-cui-apply.ts`、`appearance.ts`、`apply-appearance.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`、`settings-storage-config.ts`、`setting-picker-*.tsx`）、ピッカースロット **`setting`**（**`lib/features/side-picker/`**）、配線は **`bmxt-shell.tsx`** と **`useSettingPickerShell.ts`**。
+**実装:** Rust **`cmd/setting.rs`**；TS 適用 **`setting-cui-apply.ts`** / **`setting-cui-ops.ts`** / **`setting-set-args.ts`**；ピッカー→行組み立て **`build-setting-command-line.ts`**；永続化 **`settings.ts`**、**`settings-export.ts`**、**`settings-external-storage.ts`**、**`settings-bundle-layout.ts`**；打鍵 FX **`lib/features/prompt-effects/`**；ピッカースロット **`setting`**（**`lib/features/side-picker/`**）；シェル配線 **`bmxt-shell.tsx`** / **`useSettingPickerShell.ts`** / **`apply-ui-action.ts`**。
 
 <a id="session-ja"></a>
 
@@ -2663,7 +2714,7 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 
 **設定ピッカー列（`setting -list | browse`）**
 
-- 適用時に即保存；プレビューは committed 設定のミラー — **[`setting`](#setting-ja)** 参照。
+- 適用はワンショット **`setting …`** 行（`build-setting-command-line.ts`）経由で即保存；プレビューは committed 設定のミラー — **[`setting`](#setting-ja)** 参照。
 - 列最上位の **`Esc`** は **プロンプト**へ（列は開いたまま）。閉じるは **`setting -exit -list`**。
 - キー配信は **`useSettingPickerKeyboard`**（`lib/features/setting/use-setting-picker-keyboard.ts`）。search/dom の `/` / `n` / `N` モデルとは別。
 
@@ -2729,14 +2780,15 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 - **`search` 単体 + Enter** で利用案内を表示し、**`search `** へ復帰する。
 - **`search -list` のみ**（末尾スペースなし）+ **Enter** → **`search -list `** に復帰（continuation）。**`search -list `** + **Enter** → 横断検索 **`--all`** を **プレーン**出力（**`RUN_CMD`** → **`search_list`**）。ピッカー列は **`search -list … | browse`**。
-- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`**（プレーン）は **`search.hit`** 行を **`-list` レジストリ**で出力。**`search -list … | browse`** は search ピッカー列を開く。キャッシュ・live 読み取り・snapshot の詳細は英語節 **[`search`](#search-command)** と同様。**0.8.4 以降:** **`--page`** ヒットは ListResult の **`pageMatchesJson`**（`search-page-matches-list-field.ts`）で細分化マッチを渡し、ピッカーからのページ内ジャンプ／スクロールを安定化。
+- **`search -list [--all|--history|--bookmark|--page|--snapshot] [<pattern>]`**（プレーン）は **`search.hit`** 行を **`-list` レジストリ**で出力。**`search -list … | browse`** は search ピッカー列を開く。**`--page`** は開いている **https** タブをライブ走査（上限付き並行は **`page-scan-pool.ts`**）。キャッシュ・snapshot の詳細は英語節 **[`search`](#search-command)** と同様。**0.8.4 以降:** **`--page`** ヒットは ListResult の **`pageMatchesJson`**（`search-page-matches-list-field.ts`）で細分化マッチを渡し、ピッカーからのページ内ジャンプ／スクロールを安定化。
+- **Google スプレッドシート（`--page`）:** 開いている **`docs.google.com/spreadsheets/…`** タブは Sheets 専用コレクタ（`page-extract/sheets/`）で走査し、ヒットは **セル単位**（A1 形式）。ピッカー詳細行の **Enter**／プレビューで該当セルへジャンプ（`navigate-sheets-to-cell.ts`）。日本語など非 ASCII の針も通常ページと同じ部分一致経路（ロケール専用の別経路はない）。
 - プロンプトの **`Ctrl+C`** または **`search -exit -list`** で、当該セッションの走査中 **`search-list`** ジョブをキャンセルできる（**[ジョブ実行](#job-execution-ja)**）。
-- 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧** へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** / **`[bookmark]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール。開き先行の **`Enter`** で選択先へ開く。
+- 結果一覧で **`→`** は、該当 URL のタブが **開いていれば** 細分化ヒットがある行のみ **詳細一覧** へ。**タブが開いていなければ**（詳細ヒットの有無を問わず）**`[history]`** / **`[bookmark]`** 行は **開き先** へ。**`←`** / **`Esc`** で 1 段戻る。結果行の **`Enter`** は新規タブ（または page ジャンプ）。詳細行の **`Enter`** はタブ前面化して該当箇所へスクロール（Sheets ならセルへジャンプ）。開き先行の **`Enter`** で選択先へ開く。
 - **`--auto` page-active:** **`↑` / `↓`**（および **`j` / `k`**）で開き済み結果行と詳細のページ内ヒットをハイライト移動時にプレビュー（詳細は debounce を長くし、温めた Range セッションを再利用して GitHub 級 DOM でも固まりにくくする）。**`Enter`** は従来どおりジャンプ／前面化。
 - **開き済みタブ行のみ:** **`Ctrl+↑` / `Ctrl+↓`** で URL が既に開いている行だけジャンプ（リストはアニメーションスクロール）。**`--auto`** page-active ではジャンプごとにプレビュー。
 - **`Alt+↑` / `Alt+↓`**（**`--manual`** page-active のみ）: 通常の **`↑`/`↓`** ハイライトを変えず、背面タブをプレビュー。
 - **詳細バー**（search ピッカー表示中のプロンプト下ステータス列）: キャレットが **行末** のとき **`→`** でバーを選択、**`←`** でプロンプトへ、**`Tab`** / **`Shift+Tab`** で詳細バーを循環、**`Alt`** で **`--auto` / `--manual`** page-active を切替（**`chrome.storage.local`** に保存）、詳細バーから **`→`** で search ピッカー列へ。開き済みタブの結果行には **ファビコン** を表示（取得可能な場合）。
-- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **https** タブを**実行時に**走査する（タブごとの可視 `innerText`。**search キャッシュには本文を保存しない**）。宣言済みの必須 https **`host_permissions`** を使う（`chrome://extensions` でサイトアクセスをオフにしている場合は再有効化）。
+- パターンの扱いは `dom` と同様（大文字小文字を区別しない部分一致、v1 は正規表現なし、ASCII 引用符の除去）。**`search -list … --page`** は非破棄の **https** タブを**実行時に**走査する（タブごとの可視 `innerText`、Sheets タブはセル文字。**search キャッシュには本文を保存しない**）。宣言済みの必須 https **`host_permissions`** を使う（`chrome://extensions` でサイトアクセスをオフにしている場合は再有効化）。
 
 <a id="bookmark-command-ja"></a>
 
