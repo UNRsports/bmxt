@@ -15,12 +15,12 @@ export const firePromptEffectTheme: PromptEffectTheme = {
   id: FIRE_THEME_ID,
   spawn(event: PromptEffectEventKind, ctx: PromptEffectSpawnContext, out: PromptParticle[]): void {
     if (event === "type") {
-      spawnFireTypeBurst(out, ctx.origin)
+      spawnFireTypeBurst(out, ctx.origin, ctx.quality)
       return
     }
-    spawnFireDeleteBurst(out, ctx.origin, ctx.removedCount)
+    spawnFireDeleteBurst(out, ctx.origin, ctx.removedCount, ctx.quality)
   },
-  stepAndPaint(ctx: CanvasRenderingContext2D, particle: PromptParticle): boolean {
-    return stepAndPaintFireParticle(ctx, particle)
+  stepAndPaint(ctx, particle, quality): boolean {
+    return stepAndPaintFireParticle(ctx, particle, quality)
   }
 }

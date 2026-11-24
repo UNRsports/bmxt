@@ -24,6 +24,8 @@ import { useUiSettings } from "../../setting/use-ui-settings"
 import type { TokenPickerModel } from "../token-picker-panel"
 import { useCspDynamicStyle } from "../csp-dynamic-stylesheet"
 import { shouldKeepSessionSwitchPickerOpen, measureFloatingPickerHostPosition } from "./bmxt-shell-prompt-helpers"
+import { isHollowTokenPickerModel } from "./token-picker-hollow"
+import { isSameImeTokenPickerSlot } from "./token-picker-same-slot"
 import {
   navReloadTabChipMetaFromCandidate,
   type NavReloadTabChipMeta
@@ -127,8 +129,10 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
     width?: number
     height?: number
   } | null>(null)
+  // EN: Require at least one candidate — [] === [] must not enable near-fullscreen help host.
   const fillViewportForHelp =
     subCmdPicker !== null &&
+    subCmdPicker.candidates.length > 0 &&
     subCmdPicker.showCandidateHelp !== false &&
     Array.isArray(subCmdPicker.candidateHelps) &&
     subCmdPicker.candidateHelps.length === subCmdPicker.candidates.length
@@ -324,6 +328,25 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
               prev.candidates.length === candidates.length &&
               prev.candidates.every((c, i) => c === candidates[i])
             if (sameSlot && prev) {
+              const labelsSame =
+                Array.isArray(prev.candidateLabels) &&
+                prev.candidateLabels.length === candidateLabels.length &&
+                prev.candidateLabels.every((l, i) => l === candidateLabels[i])
+              const rowsSame =
+                Array.isArray(prev.candidateRows) &&
+                prev.candidateRows.length === candidateRows.length &&
+                prev.candidateRows.every((r, i) => {
+                  const next = candidateRows[i]
+                  return (
+                    next !== undefined &&
+                    r.title === next.title &&
+                    r.detail === next.detail &&
+                    r.faviconSrc === next.faviconSrc
+                  )
+                })
+              if (labelsSame && rowsSame) {
+                return prev
+              }
               return {
                 ...prev,
                 candidateLabels,
@@ -376,6 +399,13 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
               prev.candidates.length === candidates.length &&
               prev.candidates.every((c, i) => c === candidates[i])
             if (sameSlot && prev) {
+              const labelsSame =
+                Array.isArray(prev.candidateLabels) &&
+                prev.candidateLabels.length === candidateLabels.length &&
+                prev.candidateLabels.every((l, i) => l === candidateLabels[i])
+              if (labelsSame) {
+                return prev
+              }
               return {
                 ...prev,
                 candidateLabels,
@@ -440,6 +470,10 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
             if (!prev) {
               return null
             }
+            // EN: Already hollow — keep identity so Firefox FX + empty hint bar do not re-render.
+            if (isHollowTokenPickerModel(prev)) {
+              return prev
+            }
             return {
               ...prev,
               candidates: [],
@@ -458,22 +492,25 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         setSubCmdPicker(null)
         return
       }
-      const candidateHelps = listImeCandidateHelpsFromUsage(
-        resolved.candidates,
-        ln,
-        resolved.tokenStart,
-        locale
-      )
       setSubCmdPicker((prev) => {
-        const sameSlot =
-          prev !== null &&
-          prev.tokenStart === resolved.tokenStart &&
-          prev.tokenEnd === resolved.tokenEnd &&
-          prev.tier === resolved.tier &&
-          prev.candidates.length === resolved.candidates.length &&
-          prev.candidates.every((c, i) => c === resolved.candidates[i])
-        const hi = sameSlot
-          ? Math.min(prev!.hi, resolved.candidates.length - 1)
+        const sameSlot = isSameImeTokenPickerSlot(prev, resolved)
+        if (
+          sameSlot &&
+          prev &&
+          prev.showCandidateHelp === showCandidateHelp &&
+          prev.pipeAvailable === resolved.pipeAvailable
+        ) {
+          // EN: Keep identity — avoids TokenPickerPanel re-render on every keystroke.
+          return prev
+        }
+        const candidateHelps = listImeCandidateHelpsFromUsage(
+          resolved.candidates,
+          ln,
+          resolved.tokenStart,
+          locale
+        )
+        const hi = sameSlot && prev
+          ? Math.min(prev.hi, resolved.candidates.length - 1)
           : 0
         return {
           tokenStart: resolved.tokenStart,

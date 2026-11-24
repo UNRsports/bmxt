@@ -78,7 +78,9 @@ export function TokenPickerPanel({ model, onPickIndex }: Props) {
   const useRows =
     Array.isArray(model.candidateRows) &&
     model.candidateRows.length === model.candidates.length
+  // EN: Empty candidate lists must not enable --with-help ([] === [] is true otherwise).
   const helpPaneEnabled =
+    model.candidates.length > 0 &&
     model.showCandidateHelp !== false &&
     !useRows &&
     Array.isArray(model.candidateHelps) &&

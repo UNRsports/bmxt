@@ -3,6 +3,8 @@
  * JA: プロンプト入力／削除エフェクト共通のパーティクルとテーマ契約。
  */
 
+import type { PromptEffectPaintQuality } from "./constants"
+
 export type PromptEffectEventKind = "type" | "delete"
 
 export type PromptParticle = {
@@ -31,6 +33,8 @@ export type PromptEffectSpawnContext = {
   origin: PromptEffectOrigin
   /** EN: Characters removed on delete events (0 on type). */
   removedCount: number
+  /** EN: full = normal; menuLite = Firefox candidate-menu path. */
+  quality: PromptEffectPaintQuality
 }
 
 /**
@@ -44,5 +48,9 @@ export type PromptEffectTheme = {
    * EN: Advance physics and draw one live particle. Return false when finished.
    * JA: 物理更新と描画。寿命切れなら false。
    */
-  stepAndPaint(ctx: CanvasRenderingContext2D, particle: PromptParticle): boolean
+  stepAndPaint(
+    ctx: CanvasRenderingContext2D,
+    particle: PromptParticle,
+    quality: PromptEffectPaintQuality
+  ): boolean
 }

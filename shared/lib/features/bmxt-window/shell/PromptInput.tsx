@@ -250,6 +250,7 @@ export function PromptInput({
           line={line}
           cursorPos={cursorPos}
           composition={mirror.composition}
+          candidateMenuOpen={promptPickerOpen}
         />
         <textarea
           ref={imeRef}

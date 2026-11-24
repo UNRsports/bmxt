@@ -1,3 +1,4 @@
+import type { PromptEffectPaintQuality } from "../../constants"
 import type { PromptParticle } from "../../types"
 import { fireHeatColor, fireShatterColor } from "./colors"
 
@@ -5,12 +6,13 @@ import { fireHeatColor, fireShatterColor } from "./colors"
  * EN: Step physics and paint one fire-theme particle. False when expired.
  * JA: fire テーマ粒子の物理更新と描画。寿命切れなら false。
  *
- * Flame uses two solid discs (not createRadialGradient) — Gecko pays heavily for
- * per-particle radial gradients under `lighter` on a large canvas.
+ * Full quality: soft outer + core discs (no createRadialGradient — costly on Gecko).
+ * Menu-lite: single disc only.
  */
 export function stepAndPaintFireParticle(
   ctx: CanvasRenderingContext2D,
-  particle: PromptParticle
+  particle: PromptParticle,
+  quality: PromptEffectPaintQuality = "full"
 ): boolean {
   const lifeRatio = particle.life / particle.maxLife
   particle.x += particle.vx
@@ -25,6 +27,13 @@ export function stepAndPaintFireParticle(
     particle.vy -= 0.06 + Math.random() * 0.08
     const alpha = Math.min(1, lifeRatio * 1.25) * 0.85
     const radius = particle.size * (0.55 + lifeRatio * 0.7)
+    if (quality === "menuLite") {
+      ctx.fillStyle = fireHeatColor(particle.heat, alpha)
+      ctx.beginPath()
+      ctx.arc(particle.x, particle.y, radius, 0, Math.PI * 2)
+      ctx.fill()
+      return true
+    }
     // EN: Soft outer glow (cheaper than radial gradient under additive blend).
     ctx.fillStyle = fireHeatColor(particle.heat * 0.55, alpha * 0.28)
     ctx.beginPath()
@@ -58,10 +67,12 @@ export function stepAndPaintFireParticle(
   ctx.lineTo(-radius * 0.35, 0)
   ctx.closePath()
   ctx.fill()
-  ctx.fillStyle = core
-  ctx.beginPath()
-  ctx.arc(0, 0, Math.max(0.6, radius * 0.35), 0, Math.PI * 2)
-  ctx.fill()
+  if (quality !== "menuLite") {
+    ctx.fillStyle = core
+    ctx.beginPath()
+    ctx.arc(0, 0, Math.max(0.6, radius * 0.35), 0, Math.PI * 2)
+    ctx.fill()
+  }
   ctx.restore()
   return true
 }
