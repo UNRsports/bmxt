@@ -19,6 +19,20 @@ describe("search pageMatches ListResult field", () => {
     assert.equal(decoded?.[1]?.globalOccurrence, 1)
   })
 
+  it("round-trips Sheets cellRef", () => {
+    const encoded = serializeSearchPageMatchesField([
+      {
+        lineNo: 2,
+        snippet: "B2: World",
+        occurrence: 0,
+        globalOccurrence: 0,
+        cellRef: "B2"
+      }
+    ])
+    const decoded = parseSearchPageMatchesField(encoded)
+    assert.equal(decoded?.[0]?.cellRef, "B2")
+  })
+
   it("returns null/undefined for empty input", () => {
     assert.equal(serializeSearchPageMatchesField(undefined), null)
     assert.equal(serializeSearchPageMatchesField([]), null)

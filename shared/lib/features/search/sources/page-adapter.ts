@@ -6,6 +6,8 @@
 import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
 import { collectPageMatchesFromOpenTab } from "../../page-extract/collect-tab-page-matches"
 import { readOpenTabInnerText } from "../../page-extract/read-tab-inner-text"
+import { readSheetsPreviewFromOpenTab } from "../../page-extract/sheets/collect-sheets-page-matches"
+import { isGoogleSheetsUrl } from "../../url/parse-google-sheets-url"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 import { MAX_MATCHES_PER_TAB, MAX_PAGE_TEXT_CHARS, PAGE_SCAN_PREFIX_CHARS } from "../limits"
 import { linesForSearchPageTab } from "./page-find-blocks"
@@ -181,6 +183,7 @@ export async function searchPageLines(
   let scanned = 0
   let skipped = 0
   let skippedLong = 0
+  let skippedSheets = 0
   let tabsChecked = 0
   let cancelled = false
   const matchAll = !pattern.trim()
@@ -222,6 +225,16 @@ export async function searchPageLines(
     const outcome = await withTabScanBudget(
       (async (): Promise<TabScanOutcome> => {
         if (matchAll) {
+          if (isGoogleSheetsUrl(url)) {
+            const sheetsPreview = await readSheetsPreviewFromOpenTab(
+              tab,
+              maxPageTextChars || PAGE_SCAN_PREFIX_CHARS
+            )
+            if (sheetsPreview.kind === "ok") {
+              return { kind: "preview", text: sheetsPreview.text, ok: true }
+            }
+            return { kind: "preview", text: null, ok: false }
+          }
           const body = await readOpenTabInnerText(tab, maxPageTextChars || PAGE_SCAN_PREFIX_CHARS)
           return { kind: "preview", text: body, ok: body !== null }
         }
@@ -265,6 +278,9 @@ export async function searchPageLines(
       scanned += 1
     } else {
       skipped += 1
+      if (isGoogleSheetsUrl(url)) {
+        skippedSheets += 1
+      }
     }
     await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
 
@@ -340,6 +356,12 @@ export async function searchPageLines(
   out.unshift(
     `(${matchAll ? scanned : pageCount} page(s), ${lineHitCount} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}${longSuffix}; ${tabTotal} tab(s) checked)`
   )
+  if (skippedSheets > 0) {
+    out.push(
+      tSearch("search.sheets.loadFailed", uiLocale) +
+        ` (${skippedSheets})`
+    )
+  }
   appendLongPageNotices(out, longPages, uiLocale)
   return out
 }

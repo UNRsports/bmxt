@@ -29,6 +29,12 @@ function parseOnePageMatch(raw: unknown): SearchPageMatch | null {
   if (isFiniteNumber(o.globalOccurrence) && o.globalOccurrence >= 0) {
     match.globalOccurrence = Math.floor(o.globalOccurrence)
   }
+  if (typeof o.cellRef === "string") {
+    const cellRef = o.cellRef.trim().toUpperCase()
+    if (/^[A-Z]{1,3}\d{1,7}$/.test(cellRef)) {
+      match.cellRef = cellRef
+    }
+  }
   return match
 }
 
@@ -55,6 +61,12 @@ export function serializeSearchPageMatchesField(
       m.globalOccurrence >= 0
     ) {
       row.globalOccurrence = m.globalOccurrence
+    }
+    if (typeof m.cellRef === "string") {
+      const cellRef = m.cellRef.trim().toUpperCase()
+      if (/^[A-Z]{1,3}\d{1,7}$/.test(cellRef)) {
+        row.cellRef = cellRef
+      }
     }
     return row
   })

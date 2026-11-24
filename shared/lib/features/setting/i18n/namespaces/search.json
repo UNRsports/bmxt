@@ -216,6 +216,14 @@
     "ja": "search — 一致箇所へスクロールできませんでした（chrome://extensions でサイトアクセスを確認してから再試行してください）",
     "en": "search — could not scroll to match (enable site access under chrome://extensions, then try again)"
   },
+  "search.sheets.jumpFailed": {
+    "ja": "search — Google スプレッドシートのセルへ移動できませんでした。",
+    "en": "search — could not jump to the Google Sheets cell."
+  },
+  "search.sheets.loadFailed": {
+    "ja": "search — Google スプレッドシートのセルデータを読めませんでした（ログイン／共有権限を確認するか、シートを開き直してください）。",
+    "en": "search — could not read Google Sheets cell data (check sign-in / sharing, or reopen the sheet)."
+  },
   "search.status.auto": {
     "ja": "結果一覧・詳細: ↑↓ で背面／ページ内プレビュー · Enter ジャンプ",
     "en": "Results & detail: ↑↓ background / in-page preview · Enter jump"

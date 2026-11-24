@@ -14,6 +14,11 @@ export type SearchPageMatch = {
   occurrence: number
   /** EN: Global 0-based needle index in page innerText at index time (scroll target). */
   globalOccurrence?: number
+  /**
+   * EN: A1 cell reference for Google Sheets CSV hits (open → `#gid=&range=`).
+   * JA: Google スプレッドシート CSV ヒットの A1（開くとき `#gid=&range=`）。
+   */
+  cellRef?: string
 }
 export type PickerEntry = {
   id: string

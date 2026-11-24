@@ -1,10 +1,10 @@
 {
-  "0.9.5": {
+  "0.9.6": {
     "ja": [
-      "UIの細部動作と内部のコマンドや連携処理の仕様を見直し"
+      ""
     ],
     "en": [
-      "Reviewed UI detail behavior and internal command and collaboration processing specifications"
+      ""
     ]
   }
 }

@@ -1,10 +1,16 @@
 import { createTabInNormalBrowserWindow } from "../dispatch/handlers/shared"
 import { resolveSearchPickerPageMatch, lineHitIndexForPageMatch } from "./search-picker-page-match"
+import { navigateSheetsTabToCell } from "./sources/navigate-sheets-to-cell"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { openEntryEffects } from "../side-picker/model/open-entry"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 import type { PickerEntry, SearchPageMatch } from "../side-picker/model/picker-entry"
+import {
+  buildGoogleSheetsCellUrl,
+  isGoogleSheetsUrl,
+  parseGoogleSheetsUrl
+} from "../url/parse-google-sheets-url"
 import { isScriptablePageUrl } from "../url/is-scriptable-page-url"
 import {
   resolveOpenTabForSearchEntry,
@@ -25,6 +31,10 @@ const TAB_LOAD_TIMEOUT_MS = 20000
 
 function scrollFailedLog(ctx: DispatchHostContext): string {
   return tSearch("search.scrollToMatch.failed", ctx.uiLocale ?? DEFAULT_UI_LOCALE)
+}
+
+function sheetsJumpFailedLog(ctx: DispatchHostContext): string {
+  return tSearch("search.sheets.jumpFailed", ctx.uiLocale ?? DEFAULT_UI_LOCALE)
 }
 
 function sleep(ms: number): Promise<void> {
@@ -57,8 +67,13 @@ async function scrollToMatchInTab(
   match: SearchPageMatch,
   pageMatchIndex: number,
   matches: SearchPageMatch[] | undefined,
-  searchPattern: string
+  searchPattern: string,
+  tabUrl?: string
 ): Promise<boolean> {
+  const cellRef = match.cellRef?.trim()
+  if (cellRef && tabUrl && isGoogleSheetsUrl(tabUrl)) {
+    return navigateSheetsTabToCell(tabId, tabUrl, cellRef)
+  }
   const needle = searchPattern.trim()
   if (!needle) {
     return false
@@ -110,14 +125,36 @@ async function createTabAndJumpToNeedle(
   if (!url || !isScriptablePageUrl(url)) {
     return false
   }
-  const tab = await createTabInNormalBrowserWindow(url)
+  // EN: Sheets — open directly on the cell range when we have an A1 ref.
+  // JA: Sheets — A1 があるときはセル range 付き URL で開く。
+  let openUrl = url
+  if (match.cellRef && isGoogleSheetsUrl(url)) {
+    const parts = parseGoogleSheetsUrl(url)
+    if (parts) {
+      const ranged = buildGoogleSheetsCellUrl(parts, match.cellRef)
+      if (ranged) {
+        openUrl = ranged
+      }
+    }
+  }
+  const tab = await createTabInNormalBrowserWindow(openUrl)
   if (!tab || tab.id == null || tab.windowId == null) {
     return false
   }
   await waitForTabComplete(tab.id)
   await sleep(TAB_FOCUS_DELAY_MS + 200)
   await activateOpenTab({ tabId: tab.id, windowId: tab.windowId })
-  return scrollToMatchInTab(tab.id, match, pageMatchIndex, entry.pageMatches, searchPattern)
+  if (match.cellRef && isGoogleSheetsUrl(url)) {
+    return true
+  }
+  return scrollToMatchInTab(
+    tab.id,
+    match,
+    pageMatchIndex,
+    entry.pageMatches,
+    searchPattern,
+    url
+  )
 }
 
 /**
@@ -156,27 +193,36 @@ export async function openSearchPickerEntry(
 
   if (resolved && (await tabStillOpen(resolved.tabId))) {
     await activateOpenTab(resolved)
-    if (match && needle) {
+    if (match && (needle || match.cellRef)) {
       const scrolled = await scrollToMatchInTab(
         resolved.tabId,
         match,
         pageMatchIndex,
         entry.pageMatches,
-        needle
+        needle,
+        entry.url
       )
       if (!scrolled && match.lineNo > 0) {
-        await appendLogLines([scrollFailedLog(ctx)])
+        const failLog =
+          match.cellRef && isGoogleSheetsUrl(entry.url)
+            ? sheetsJumpFailedLog(ctx)
+            : scrollFailedLog(ctx)
+        await appendLogLines([failLog])
       }
     }
     return
   }
 
-  if (match && needle && match.lineNo > 0) {
+  if (match && (needle || match.cellRef) && match.lineNo > 0) {
     const jumped = await createTabAndJumpToNeedle(entry, match, pageMatchIndex, needle)
     if (jumped) {
       return
     }
-    await appendLogLines([scrollFailedLog(ctx)])
+    const failLog =
+      match.cellRef && isGoogleSheetsUrl(entry.url)
+        ? sheetsJumpFailedLog(ctx)
+        : scrollFailedLog(ctx)
+    await appendLogLines([failLog])
     return
   }
 
