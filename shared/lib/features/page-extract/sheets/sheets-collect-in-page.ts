@@ -11,6 +11,9 @@ export type SheetsInPageMatch = {
   occurrence: number
   globalOccurrence: number
   cellRef: string
+  cellValue: string
+  /** EN: True when rows came from full-sheet CSV export (A1 trustworthy). */
+  rowTrusted: boolean
 }
 
 export type SheetsInPageCollectOk = {
@@ -249,16 +252,23 @@ export async function bmxtCollectSheetsMatchesInPage(
 
   const tryLoad = async (): Promise<Loaded | null> => {
     const base = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
+    // EN: Prefer full-sheet export first — gviz/htmlembed follow filters and skew A1 row numbers.
+    // JA: フルシート export を優先。gviz/htmlembed はフィルタに従い A1 行がずれる。
     const candidates: { source: "gviz" | "export" | "htmlembed"; url: string; kind: "csv" | "html" }[] =
       [
         {
-          source: "gviz",
-          url: `${base}/gviz/tq?tqx=out:csv&gid=${effectiveGid}`,
+          source: "export",
+          url: `${base}/export?format=csv&gid=${effectiveGid}`,
           kind: "csv"
         },
         {
           source: "export",
-          url: `${base}/export?format=csv&gid=${effectiveGid}`,
+          url: `https://docs.google.com/spreadsheets/export?format=csv&id=${spreadsheetId}&gid=${effectiveGid}`,
+          kind: "csv"
+        },
+        {
+          source: "gviz",
+          url: `${base}/gviz/tq?tqx=out:csv&gid=${effectiveGid}`,
           kind: "csv"
         },
         {
@@ -370,7 +380,9 @@ export async function bmxtCollectSheetsMatchesInPage(
         snippet,
         occurrence: occ,
         globalOccurrence,
-        cellRef
+        cellRef,
+        cellValue: scanned,
+        rowTrusted: loaded.source === "export"
       })
       globalOccurrence += 1
       if (truncated) {
@@ -571,8 +583,13 @@ export async function bmxtPreviewSheetsInPage(
   const base = `https://docs.google.com/spreadsheets/d/${spreadsheetId}`
   const candidates: { source: "gviz" | "export" | "htmlembed"; url: string; kind: "csv" | "html" }[] =
     [
-      { source: "gviz", url: `${base}/gviz/tq?tqx=out:csv&gid=${effectiveGid}`, kind: "csv" },
       { source: "export", url: `${base}/export?format=csv&gid=${effectiveGid}`, kind: "csv" },
+      {
+        source: "export",
+        url: `https://docs.google.com/spreadsheets/export?format=csv&id=${spreadsheetId}&gid=${effectiveGid}`,
+        kind: "csv"
+      },
+      { source: "gviz", url: `${base}/gviz/tq?tqx=out:csv&gid=${effectiveGid}`, kind: "csv" },
       { source: "htmlembed", url: `${base}/htmlembed?gid=${effectiveGid}`, kind: "html" }
     ]
 

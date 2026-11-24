@@ -26,11 +26,15 @@ describe("search pageMatches ListResult field", () => {
         snippet: "B2: World",
         occurrence: 0,
         globalOccurrence: 0,
-        cellRef: "B2"
+        cellRef: "B2",
+        cellValue: "World",
+        sheetsRowTrusted: false
       }
     ])
     const decoded = parseSearchPageMatchesField(encoded)
     assert.equal(decoded?.[0]?.cellRef, "B2")
+    assert.equal(decoded?.[0]?.cellValue, "World")
+    assert.equal(decoded?.[0]?.sheetsRowTrusted, false)
   })
 
   it("returns null/undefined for empty input", () => {

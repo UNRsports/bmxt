@@ -54,6 +54,13 @@ function parseMatchField(value: string): SearchPageMatch | null {
   const cellRef = cellRefFromSnippetPrefix(snippet)
   if (cellRef) {
     match.cellRef = cellRef
+    const after = snippet.slice(cellRef.length).replace(/^:\s*/, "").trim()
+    if (after) {
+      match.cellValue = after.slice(0, 500)
+    }
+    // EN: Line-parsed A1 is untrusted (may come from filter-skewed gviz).
+    // JA: 行テキスト由来の A1 はフィルタずれの可能性があるため未信頼。
+    match.sheetsRowTrusted = false
   }
   return match
 }

@@ -72,7 +72,11 @@ async function scrollToMatchInTab(
 ): Promise<boolean> {
   const cellRef = match.cellRef?.trim()
   if (cellRef && tabUrl && isGoogleSheetsUrl(tabUrl)) {
-    return navigateSheetsTabToCell(tabId, tabUrl, cellRef)
+    return navigateSheetsTabToCell(tabId, tabUrl, {
+      cellRef,
+      cellValue: match.cellValue ?? match.snippet,
+      preferFind: match.sheetsRowTrusted !== true
+    })
   }
   const needle = searchPattern.trim()
   if (!needle) {

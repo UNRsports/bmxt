@@ -5,8 +5,10 @@ import {
   activateDomListLinkAtPath,
   jumpDomListTargetToPath
 } from "../../../dom/dom-scroll-to-path.ts"
+import { navigateSheetsTabToCell } from "../../../search/sources/navigate-sheets-to-cell.ts"
 import { scrollSearchPageToNeedle } from "../../../search/sources/page-scroll-to-search-needle.ts"
 import { executePickerFocusPlan } from "../../../side-picker/model/focus-picker-entry.ts"
+import { isGoogleSheetsUrl } from "../../../url/parse-google-sheets-url.ts"
 import {
   segmentFailure,
   segmentSuccess,
@@ -81,6 +83,93 @@ async function activateTab(tabId: number): Promise<boolean> {
   }
 }
 
+/** EN: Tokenizer keeps wrapping quotes from `shellQuote`; strip before use. */
+function stripWrappingQuotes(raw: string): string {
+  const t = raw.trim()
+  if (t.length >= 2) {
+    const a = t[0]
+    const b = t[t.length - 1]
+    if ((a === "'" && b === "'") || (a === '"' && b === '"')) {
+      return t.slice(1, -1)
+    }
+  }
+  return t
+}
+
+async function resolveTabUrl(tabId: number, fallbackUrl: string): Promise<string> {
+  const trimmed = stripWrappingQuotes(fallbackUrl)
+  if (trimmed.length > 0) {
+    return trimmed
+  }
+  try {
+    const tab = await chrome.tabs.get(tabId)
+    return typeof tab.url === "string" ? tab.url : ""
+  } catch {
+    return ""
+  }
+}
+
+function cellRefFromSheetsUrl(url: string): string | undefined {
+  try {
+    const u = new URL(url)
+    const hash = u.hash.startsWith("#") ? u.hash.slice(1) : u.hash
+    const range = new URLSearchParams(hash).get("range")
+    if (range && /^[A-Z]{1,3}\d{1,7}$/i.test(range.trim())) {
+      return range.trim().toUpperCase()
+    }
+  } catch {
+    return undefined
+  }
+  return undefined
+}
+
+/**
+ * EN: Sheets has no DOM text ranges — use Name Box / Find / URL instead of page scroll.
+ * JA: Sheets には DOM テキスト Range がないため、ページスクロールではなく Name Box／Find／URL を使う。
+ */
+async function jumpToNeedleInTab(
+  tabId: number,
+  needle: string,
+  options: {
+    url?: string
+    line?: number
+    cellRef?: string
+    cellValue?: string
+    sheetsRowTrusted?: boolean
+  } = {}
+): Promise<boolean> {
+  const trimmed = stripWrappingQuotes(needle)
+  if (!trimmed) {
+    return true
+  }
+  const url = await resolveTabUrl(tabId, options.url ?? "")
+  if (isGoogleSheetsUrl(url)) {
+    const fromUrl = cellRefFromSheetsUrl(url)
+    const fromOpt = (options.cellRef ?? "").trim().toUpperCase()
+    const fromLine =
+      options.line !== undefined && options.line > 0
+        ? `A${Math.floor(options.line)}`
+        : ""
+    const cellRef =
+      (/^[A-Z]{1,3}\d{1,7}$/.test(fromOpt) ? fromOpt : "") ||
+      fromUrl ||
+      (/^[A-Z]{1,3}\d{1,7}$/.test(fromLine) ? fromLine : "")
+    if (!cellRef) {
+      return false
+    }
+    // EN: Single navigation path (Name Box, else one tabs.update). No Find stacking.
+    // JA: 単一ナビ（Name Box、だめなら tabs.update 一度）。Find の重ねがけはしない。
+    return navigateSheetsTabToCell(tabId, url, {
+      cellRef,
+      cellValue: stripWrappingQuotes(options.cellValue ?? trimmed)
+    })
+  }
+  return scrollSearchPageToNeedle(tabId, {
+    searchNeedle: trimmed,
+    lineNo: options.line !== undefined && options.line >= 0 ? options.line : undefined
+  })
+}
+
 export async function runJumpFromBmxtRuleStream(
   stream: BmxtRuleStream,
   _deps: CommandDispatchDeps,
@@ -114,15 +203,14 @@ export async function runJumpFromBmxtRuleStream(
     }
 
     const needle = (entryString(record.entries, "pattern") ?? "").trim()
+    const url = entryString(record.entries, "url") ?? ""
     const activated = await activateTab(tabId)
     if (!activated) {
       stderr.push(tPipe("pipe.jump.failed", locale, { tabId: String(tabId) }))
       continue
     }
     if (needle.length > 0) {
-      const scrolled = await scrollSearchPageToNeedle(tabId, {
-        searchNeedle: needle
-      })
+      const scrolled = await jumpToNeedleInTab(tabId, needle, { url })
       if (!scrolled) {
         stderr.push(tPipe("pipe.jump.scrollFailed", locale, { tabId: String(tabId) }))
       }
@@ -182,9 +270,9 @@ export async function runJumpTargetAction(args: {
   }
   const needle = args.needle.trim()
   if (needle.length > 0) {
-    const scrolled = await scrollSearchPageToNeedle(tabId, {
-      searchNeedle: needle,
-      lineNo: args.line >= 0 ? args.line : undefined
+    const scrolled = await jumpToNeedleInTab(tabId, needle, {
+      url: args.url,
+      line: args.line
     })
     if (!scrolled && args.line > 0) {
       return withMergedLines(

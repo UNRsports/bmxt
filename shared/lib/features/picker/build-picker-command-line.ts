@@ -7,6 +7,11 @@ import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-op
 import type { PickerEntry } from "../side-picker/model/picker-entry.ts"
 import type { SearchOpenDestinationRow } from "../search/search-open-destination.ts"
 import { buildSessionSwitchCommandLine, type SessionListRow } from "../session"
+import {
+  buildGoogleSheetsCellUrl,
+  isGoogleSheetsUrl,
+  parseGoogleSheetsUrl
+} from "../url/parse-google-sheets-url.ts"
 
 function shellQuote(value: string): string {
   if (/^[A-Za-z0-9_./:?&=%+#@~-]+$/.test(value)) {
@@ -109,6 +114,23 @@ export function buildSearchJumpCommandLine(
     const match = entry.pageMatches?.[matchIndex]
     if (match && match.lineNo > 0) {
       parts.push("--line", String(match.lineNo))
+    }
+    // EN: Pass Sheets URL (with range when cellRef known) so jump uses Find/Name Box / tabs.update.
+    //     Do not quote `#` URLs — tokenizer is whitespace-only and would keep quote chars.
+    // JA: Sheets URL（cellRef があれば range 付き）を渡し Find／Name Box／tabs.update へ。
+    //     `#` URL は引用しない（tokenize は空白分割のみで引用符が残る）。
+    let url = normalizePickerOpenUrl(entry.url)
+    if (url !== undefined && isGoogleSheetsUrl(url) && match?.cellRef) {
+      const sheetParts = parseGoogleSheetsUrl(url)
+      if (sheetParts) {
+        const ranged = buildGoogleSheetsCellUrl(sheetParts, match.cellRef)
+        if (ranged) {
+          url = ranged
+        }
+      }
+    }
+    if (url !== undefined) {
+      parts.push("--url", url)
     }
     return parts.join(" ")
   }

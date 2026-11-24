@@ -19,6 +19,13 @@ export type SearchPageMatch = {
    * JA: Google スプレッドシート CSV ヒットの A1（開くとき `#gid=&range=`）。
    */
   cellRef?: string
+  /** EN: Raw cell text for Sheets Find navigation when filters skew A1. */
+  cellValue?: string
+  /**
+   * EN: False when A1 came from filtered gviz/htmlembed (row index may not match the sheet).
+   * JA: フィルタ済み gviz 等由来の A1 は行番号がずれることがあるため false。
+   */
+  sheetsRowTrusted?: boolean
 }
 export type PickerEntry = {
   id: string
