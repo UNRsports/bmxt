@@ -44,3 +44,18 @@ export function pickerStopEvent(e: KeyboardEvent): void {
   e.preventDefault()
   e.stopPropagation()
 }
+
+/**
+ * EN: Horizontal picker navigation contract (all side columns):
+ *     ← = cancel / step back · → = select / step forward.
+ * JA: サイド列ピッカー共通の横キー契約（← 戻る／→ 進む）。
+ */
+export function pickerArrowLeft(e: PickerKeyEvent): boolean {
+  const { ctrl, meta, alt } = pickerModifierChord(e)
+  return (e.key === "ArrowLeft" || e.code === "ArrowLeft") && !ctrl && !meta && !alt
+}
+
+export function pickerArrowRight(e: PickerKeyEvent): boolean {
+  const { ctrl, meta, alt } = pickerModifierChord(e)
+  return (e.key === "ArrowRight" || e.code === "ArrowRight") && !ctrl && !meta && !alt
+}

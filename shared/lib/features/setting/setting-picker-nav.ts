@@ -107,11 +107,3 @@ export function isSettingPickerDetailView(view: SettingListPickerView): boolean 
 export function isSettingDetailView(view: SettingListPickerView): boolean {
   return isSettingGlobalDetailView(view) || isSettingPickerDetailView(view)
 }
-
-export function isArrowRight(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">): boolean {
-  return e.key === "ArrowRight" && !e.ctrlKey && !e.metaKey && !e.altKey
-}
-
-export function isArrowLeft(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">): boolean {
-  return e.key === "ArrowLeft" && !e.ctrlKey && !e.metaKey && !e.altKey
-}

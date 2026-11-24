@@ -1,5 +1,12 @@
 import { useCallback, useMemo } from "react"
 import { runPickerWindowCaptureChain } from "../side-picker/interaction/picker-list-kernel"
+import {
+  pickerArrowLeft,
+  pickerArrowRight,
+  pickerEnterKey,
+  pickerPlainTypingKey,
+  pickerStopEvent
+} from "../side-picker/interaction/picker-key-event"
 import { verticalNavDirection } from "../side-picker/interaction/picker-vertical-nav"
 import { useWindowKeydownCapture } from "../side-picker/hooks/use-window-keydown-capture"
 import type { UiSettingsStorageConfig } from "./settings-storage-config"
@@ -7,8 +14,6 @@ import type { SnapshotStorageConfig } from "../snapshot/snapshot-storage-config"
 import type { SyncPickerSummary } from "../sync/facade/sync-picker-summary.ts"
 import { settingPickerGoToView, type SettingListPickerState } from "./setting-list-picker-state"
 import {
-  isArrowLeft,
-  isArrowRight,
   isSettingDetailView,
   isSettingListSubView,
   settingMainRowTargetView,
@@ -176,14 +181,20 @@ export function useSettingPickerKeyboard({
     goMain()
   }, [goMain, onStateChange, setHi, state])
 
-  const handleArrowLeft = useCallback((): void => {
+  /**
+   * EN: ← = step back only (cancel edit / leave sub-view). Root-list exit uses
+   *     shared `exitToDetailBar` (never exit on →).
+   */
+  const handleArrowLeftBack = useCallback((): boolean => {
     if (state.editing) {
       cancelEditing()
-      return
+      return true
     }
     if (state.view !== "main") {
       leaveNonMainView()
+      return true
     }
+    return false
   }, [cancelEditing, leaveNonMainView, state.editing, state.view])
 
   const commitEdit = useCallback(async (): Promise<boolean> => {
@@ -246,66 +257,60 @@ export function useSettingPickerKeyboard({
       if (!keyboardActive) {
         return
       }
-      if (
-        state.editing &&
-        ev.key.length === 1 &&
-        !ev.ctrlKey &&
-        !ev.metaKey &&
-        !ev.altKey
-      ) {
+      if (state.editing && pickerPlainTypingKey(ev)) {
         return
       }
-      if (isArrowRight(ev)) {
-        ev.preventDefault()
-        ev.stopPropagation()
-        if (state.view === "main" && !state.editing) {
-          callbacks.onExitToDetailBar?.()
-          return
+      // EN: → = drill forward / apply (never exit the column).
+      if (pickerArrowRight(ev)) {
+        pickerStopEvent(ev)
+        if (!state.editing) {
+          void handleArrowRight()
         }
-        void handleArrowRight()
         return
       }
-      if (isArrowLeft(ev)) {
-        ev.preventDefault()
-        ev.stopPropagation()
-        handleArrowLeft()
+      // EN: ← = cancel edit / leave sub-view; root list falls through to shared exit.
+      if (pickerArrowLeft(ev) && handleArrowLeftBack()) {
+        pickerStopEvent(ev)
         return
       }
       if (
         runPickerWindowCaptureChain(ev, sessionId ?? "", {
+          exitToDetailBar:
+            callbacks.onExitToDetailBar && state.view === "main" && !state.editing
+              ? {
+                  canExit: () => state.view === "main" && !state.editing,
+                  onExit: callbacks.onExitToDetailBar
+                }
+              : undefined,
           verticalNav: runVerticalNav
         })
       ) {
         return
       }
-      if (ev.key === "Enter" && !ev.shiftKey && !(ev as KeyboardEvent & { isComposing?: boolean }).isComposing) {
-        ev.preventDefault()
-        ev.stopPropagation()
+      if (pickerEnterKey(ev)) {
+        pickerStopEvent(ev)
         void handleEnter()
         return
       }
       if (ev.key === "Escape") {
         if (state.editing) {
-          ev.preventDefault()
-          ev.stopPropagation()
+          pickerStopEvent(ev)
           cancelEditing()
           return
         }
         if (state.view !== "main") {
-          ev.preventDefault()
-          ev.stopPropagation()
+          pickerStopEvent(ev)
           leaveNonMainView()
           return
         }
-        ev.preventDefault()
-        ev.stopPropagation()
+        pickerStopEvent(ev)
         callbacks.onReturnToPrompt?.()
       }
     },
     [
       cancelEditing,
       callbacks,
-      handleArrowLeft,
+      handleArrowLeftBack,
       handleArrowRight,
       handleEnter,
       keyboardActive,
@@ -325,7 +330,7 @@ export function useSettingPickerKeyboard({
         return
       }
       const native = e.nativeEvent
-      if (isArrowRight(native) || isArrowLeft(native)) {
+      if (pickerArrowRight(native) || pickerArrowLeft(native)) {
         e.preventDefault()
         return
       }
@@ -333,7 +338,7 @@ export function useSettingPickerKeyboard({
         e.preventDefault()
         return
       }
-      if (native.key === "Enter" && !native.shiftKey && !native.isComposing) {
+      if (pickerEnterKey(native)) {
         e.preventDefault()
         void handleEnter()
         return

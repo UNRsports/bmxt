@@ -316,8 +316,8 @@
     "en": "setting -list · language · ↑↓ · Enter/→ save · ← list"
   },
   "setting.picker.headline.main": {
-    "ja": "setting -list · ↑↓ · → 設定 · Enter で即保存・反映 · Esc → プロンプト",
-    "en": "setting -list · ↑↓ · → configure · Enter saves immediately · Esc → prompt"
+    "ja": "setting -list · ↑↓ · → 設定 · ← 詳細バー · Esc → プロンプト",
+    "en": "setting -list · ↑↓ · → configure · ← detail bar · Esc → prompt"
   },
   "setting.picker.headline.pickerBgImage": {
     "ja": "setting -list · bg-image（ピッカー） · ↑↓ · Enter/→ 保存・反映 · ← 一覧",
@@ -340,8 +340,8 @@
     "en": "setting -list · search-jump-highlight · → edit · ← list"
   },
   "setting.picker.hint": {
-    "ja": "設定ピッカー — 選択・確定で即保存 · ↑↓ · → · ← · Esc → プロンプト",
-    "en": "Setting picker — select/confirm saves immediately · ↑↓ · → · ← · Esc → prompt"
+    "ja": "設定ピッカー — →/Enter で進む・確定 · ← で戻る · Esc → プロンプト",
+    "en": "Setting picker — →/Enter forward · ← back · Esc → prompt"
   },
   "setting.picker.imeCandidateHelpOff": {
     "ja": "オフ — 候補メニューにヘルプを出さない",

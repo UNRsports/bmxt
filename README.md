@@ -702,11 +702,10 @@ When changing UI settings shape or on-disk format in a release:
 |-----|-----------|--------------------------------------|----------------------------------|
 | **↑** / **↓** | Move highlight | Move highlight (current value pre-highlighted) | — |
 | **→** / **Enter** | Enter sub-view or run immediate action (export/import) | Apply choice (save) + return to main | Start inline edit / Enter saves |
-| **←** / **Esc** | — | Back to main | Cancel edit, or back to main |
-| **Enter** (editing) | — | — | Apply typed value to draft preview |
-| **Esc** (column) | Return focus to **prompt** (column stays open) | | |
+| **←** | Exit to detail bar / prompt strip (same as other pickers) | Back to main | Cancel edit, or back to main |
+| **Esc** | Return focus to **prompt** (column stays open) | Back to main | Cancel edit, or back to main |
 
-Hex colors support live preview while typing in edit mode.
+Shared contract for all side pickers: **←** = step back / leave column · **→** = step forward / select (`side-picker/interaction/picker-exit-to-detail-bar.ts`, `picker-key-event.ts`). Hex colors support live preview while typing in edit mode.
 
 **Implementation:** **`lib/features/setting/`** (`settings.ts`, `appearance.ts`, `apply-appearance.ts`, `settings-export.ts`, `settings-external-storage.ts`, `settings-bundle-layout.ts`, `settings-storage-config.ts`, `setting-picker-*.tsx`), picker slot **`setting`** in **`lib/features/side-picker/`**, UI wiring in **`bmxt-shell.tsx`** and **`useSettingPickerShell.ts`**.
 
@@ -2349,11 +2348,10 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 |------|-----------|------------------------------|---------------------------|
 | **↑** / **↓** | ハイライト移動 | ハイライト移動（現在値を事前ハイライト） | — |
 | **→** / **Enter** | サブ画面へ／即時実行（export/import） | 選択を保存してメインへ | インライン編集開始／Enter で保存 |
-| **←** / **Esc** | — | メインへ戻る | 編集キャンセルまたはメインへ |
-| **Enter**（編集中） | — | — | 入力値を検証して保存 |
-| **Esc**（列） | **プロンプト**へ（列は開いたまま） | | |
+| **←** | 詳細バー／プロンプト帯へ戻る（他ピッカーと同じ） | メインへ戻る | 編集キャンセルまたはメインへ |
+| **Esc** | **プロンプト**へ（列は開いたまま） | メインへ戻る | 編集キャンセルまたはメインへ |
 
-色（hex）は編集中にリアルタイムプレビュー（未確定のキー入力はストレージへ書かない）。
+全サイドピッカー共通契約: **←** = 戻る／列を離れる · **→** = 進む／選択（`side-picker/interaction/picker-exit-to-detail-bar.ts`、`picker-key-event.ts`）。色（hex）は編集中にリアルタイムプレビュー（未確定のキー入力はストレージへ書かない）。
 
 **実装:** **`lib/features/setting/`**（`settings.ts`、`setting-cui-apply.ts`、`appearance.ts`、`apply-appearance.ts`、`settings-export.ts`、`settings-external-storage.ts`、`settings-bundle-layout.ts`、`settings-storage-config.ts`、`setting-picker-*.tsx`）、ピッカースロット **`setting`**（**`lib/features/side-picker/`**）、配線は **`bmxt-shell.tsx`** と **`useSettingPickerShell.ts`**。
 
