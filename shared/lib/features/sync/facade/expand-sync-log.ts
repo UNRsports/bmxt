@@ -137,6 +137,19 @@ export function expandSyncLogToken(token: string, locale: UiLocale): string {
   if (token === "sync.list.noConnectedPeers") {
     return tCmd("cmd.sync.list.noConnectedPeers", locale)
   }
+  if (token === "sync.list.peerFailedFooterIntro") {
+    return tCmd("cmd.sync.list.peerFailedFooterIntro", locale)
+  }
+  if (token.startsWith("sync.list.peerFailedFooterItem:")) {
+    const rest = token.slice("sync.list.peerFailedFooterItem:".length)
+    const split = rest.indexOf(":")
+    const deviceId = split >= 0 ? rest.slice(0, split) : rest
+    const detail = split >= 0 ? rest.slice(split + 1) : ""
+    return tCmd("cmd.sync.list.peerFailedFooterItem", locale, {
+      deviceId: deviceId.length > 0 ? deviceId : "unknown",
+      detail: detail.length > 0 ? detail : "error"
+    })
+  }
   if (token.startsWith("sync.list.peerFailed:")) {
     const rest = token.slice("sync.list.peerFailed:".length)
     const split = rest.indexOf(":")

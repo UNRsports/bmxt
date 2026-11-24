@@ -1,4 +1,5 @@
 import { getRunLocale } from "../../setting/i18n/run-locale"
+import { formatPeerFailureFooterLinesPreferMeta } from "../../sync/bus/peer-failure-footer.ts"
 import { fetchCrossDeviceTabsList } from "../../sync/bus/fetch-cross-device-tabs.ts"
 import {
   tabPickerRowsFromListResult
@@ -8,11 +9,16 @@ import { createTabPickerRowsRefresh } from "../tab-picker-rows-refresh"
 import type { TabPickerRow } from "../picker-rows"
 import { forEachTabPickerEngine, getTabPickerEngine } from "./store"
 
+type RowsRefreshUpdate = {
+  rows: TabPickerRow[]
+  peerNoticeLines?: string[]
+}
+
 /** EN: Chrome-driven (or cross-device) row rebuild → engine dispatch. */
 export function createEngineTabPickerRowsRefresh() {
   return createTabPickerRowsRefresh(
     async () => {
-      const updates: Record<string, TabPickerRow[]> = {}
+      const updates: Record<string, RowsRefreshUpdate> = {}
       const jobs: Promise<void>[] = []
       const locale = getRunLocale()
       forEachTabPickerEngine((sessionId, engine) => {
@@ -21,7 +27,10 @@ export function createEngineTabPickerRowsRefresh() {
             const prev = engine.getState()
             try {
               if (prev.listScope.kind === "local") {
-                updates[sessionId] = await buildTabPickerRows(prev.showUrl, locale)
+                updates[sessionId] = {
+                  rows: await buildTabPickerRows(prev.showUrl, locale),
+                  peerNoticeLines: []
+                }
                 return
               }
               const fetched = await fetchCrossDeviceTabsList({
@@ -29,7 +38,10 @@ export function createEngineTabPickerRowsRefresh() {
                 locale,
                 scope: prev.listScope
               })
-              updates[sessionId] = tabPickerRowsFromListResult(fetched.result)
+              updates[sessionId] = {
+                rows: tabPickerRowsFromListResult(fetched.result),
+                peerNoticeLines: formatPeerFailureFooterLinesPreferMeta(fetched.result, locale)
+              }
             } catch {
               /* keep previous rows in engine */
             }
@@ -43,8 +55,12 @@ export function createEngineTabPickerRowsRefresh() {
       return updates
     },
     (updates) => {
-      for (const [sessionId, rows] of Object.entries(updates)) {
-        getTabPickerEngine(sessionId)?.dispatch({ type: "rowsRebuilt", rows })
+      for (const [sessionId, update] of Object.entries(updates)) {
+        getTabPickerEngine(sessionId)?.dispatch({
+          type: "rowsRebuilt",
+          rows: update.rows,
+          peerNoticeLines: update.peerNoticeLines
+        })
       }
     }
   )

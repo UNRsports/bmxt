@@ -135,6 +135,51 @@
     "ja": "ウェルカムページを新しいタブで開きました",
     "en": "opened welcome page in a new tab"
   },
+  "effect.probeCapabilities.done": {
+    "ja": "機能チェックを完了しました",
+    "en": "capability check finished"
+  },
+  "effect.capability.report.header": {
+    "ja": "ブラウザ API 機能チェック:",
+    "en": "Browser API capability check:"
+  },
+  "effect.capability.item.tabs": {
+    "ja": "tabs",
+    "en": "tabs"
+  },
+  "effect.capability.item.windows": {
+    "ja": "windows",
+    "en": "windows"
+  },
+  "effect.capability.item.tabGroups": {
+    "ja": "tabGroups",
+    "en": "tabGroups"
+  },
+  "effect.capability.item.bookmarks": {
+    "ja": "bookmarks",
+    "en": "bookmarks"
+  },
+  "effect.capability.item.history": {
+    "ja": "history",
+    "en": "history"
+  },
+  "effect.capability.item.scriptingHost": {
+    "ja": "scripting + https host",
+    "en": "scripting + https host"
+  },
+  "effect.capability.item.webrtc": {
+    "ja": "WebRTC",
+    "en": "WebRTC"
+  },
+  "effect.capability.item.fsa": {
+    "ja": "File System Access",
+    "en": "File System Access"
+  },
+  "effect.capability.item.translator": {
+    "ja": "Translator",
+    "en": "Translator"
+  },
+
   "effect.tabsNu.noUrl": {
     "ja": "(現在のタブに URL がありません — 通常ウィンドウでページを開くか、タブ ID コンテキストを指定してください)",
     "en": "(no URL for current tab — focus a normal window with a page, or pass a tab id context)"

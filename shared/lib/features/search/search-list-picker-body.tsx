@@ -65,6 +65,8 @@ export type SearchListPickerBodyProps = {
   statusOnly?: boolean
   /** EN: Cap / lookback notices shown above results when hits exist. */
   bannerLines?: string[]
+  /** EN: Non-responding peer footer shown below the list (`--peers`). */
+  peerFooterLines?: string[]
   matchHi?: number
   pickerView?: SearchListPickerView
   detailHits?: SearchEntryDetailHit[]
@@ -242,6 +244,7 @@ export function SearchListPickerBody({
   statusLines = [],
   statusOnly = false,
   bannerLines = [],
+  peerFooterLines = [],
   matchHi = 0,
   pickerView = "results",
   detailHits = [],
@@ -900,6 +903,15 @@ export function SearchListPickerBody({
           renderResultsRows(0, visibleEntries.length)
         )}
       </div>
+      {peerFooterLines.length > 0 ? (
+        <div className="bmxt-picker-peer-footer" role="status">
+          {peerFooterLines.map((line, i) => (
+            <div key={`peer-footer-${i}`} className="bmxt-picker-peer-footer-line">
+              {line}
+            </div>
+          ))}
+        </div>
+      ) : null}
       {searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
       {commandMode ? (
         <PickerCommandFooter

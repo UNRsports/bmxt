@@ -21,6 +21,8 @@ export type TabPickerState = {
   initialHi: number
   variant?: "default" | "groupNew"
   interactive?: TabPickerInteractiveSnapshot
+  /** EN: Non-responding peer footer for `--peers` browse. */
+  peerNoticeLines?: string[]
 }
 
 export function emptyTabPickerInteractiveSnapshot(): TabPickerInteractiveSnapshot {

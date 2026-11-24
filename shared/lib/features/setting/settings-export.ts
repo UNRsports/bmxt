@@ -13,6 +13,11 @@ import {
   type SearchLegendMode
 } from "./search-legend-mode.ts"
 import type { UiSettings } from "./settings.ts"
+import {
+  DEFAULT_CLI_DOOR_RETRY_MS,
+  DEFAULT_SYNC_HOLD_INTERVAL_MS,
+  normalizeSyncTimingMs
+} from "./sync-timing.ts"
 import { parseHexColor } from "./validate-color.ts"
 import { parseFontFamily } from "./validate-font.ts"
 import { parseFontSizePx } from "./validate-size.ts"
@@ -67,6 +72,10 @@ export type SettingsExportJson = {
   promptFire?: boolean
   /** EN: Optional; missing → text (bracket text only). */
   searchLegendMode?: SearchLegendMode
+  /** EN: Optional; missing → default sync hold interval. */
+  syncHoldIntervalMs?: number
+  /** EN: Optional; missing → default CLI door retry interval. */
+  cliDoorRetryMs?: number
   appearance: SettingsExportAppearanceV2
 }
 
@@ -135,8 +144,16 @@ function bgImageFileName(
 }
 
 export function buildSettingsExportJson(settings: UiSettings): SettingsExportJson {
-  const { locale, appearance, hostUiMode, imeCandidateHelp, promptFire, searchLegendMode } =
-    settings
+  const {
+    locale,
+    appearance,
+    hostUiMode,
+    imeCandidateHelp,
+    promptFire,
+    searchLegendMode,
+    syncHoldIntervalMs,
+    cliDoorRetryMs
+  } = settings
   return {
     version: 2,
     exportedAt: new Date().toISOString(),
@@ -145,6 +162,8 @@ export function buildSettingsExportJson(settings: UiSettings): SettingsExportJso
     imeCandidateHelp,
     promptFire,
     searchLegendMode,
+    syncHoldIntervalMs,
+    cliDoorRetryMs,
     appearance: {
       fg: appearance.fg,
       bgColor: appearance.bgColor,
@@ -326,7 +345,12 @@ export function parseSettingsExportJson(
     ),
     imeCandidateHelp: o.imeCandidateHelp !== false,
     promptFire: o.promptFire === true,
-    searchLegendMode: normalizeSearchLegendMode(o.searchLegendMode)
+    searchLegendMode: normalizeSearchLegendMode(o.searchLegendMode),
+    syncHoldIntervalMs: normalizeSyncTimingMs(
+      o.syncHoldIntervalMs,
+      DEFAULT_SYNC_HOLD_INTERVAL_MS
+    ),
+    cliDoorRetryMs: normalizeSyncTimingMs(o.cliDoorRetryMs, DEFAULT_CLI_DOOR_RETRY_MS)
   }
 }
 

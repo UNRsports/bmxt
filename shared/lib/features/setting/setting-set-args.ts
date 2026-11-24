@@ -9,6 +9,11 @@ import type { SettingDraftPatch } from "./setting-list-picker-state.ts"
 import { parseHexColor } from "./validate-color.ts"
 import { parseFontFamily } from "./validate-font.ts"
 import { parseFontSizePx } from "./validate-size.ts"
+import {
+  DEFAULT_CLI_DOOR_RETRY_MS,
+  DEFAULT_SYNC_HOLD_INTERVAL_MS,
+  parseSyncTimingMsToken
+} from "./sync-timing.ts"
 
 function parseBoolToken(value: string): boolean | null {
   const lower = value.trim().toLowerCase()
@@ -74,6 +79,25 @@ export function settingSetPatchFromArgs(
   if (k === "prompt-fire") {
     const b = parseBoolToken(v)
     return b === null ? null : { promptFire: b }
+  }
+  if (k === "sync-hold-ms") {
+    const parsed = parseSyncTimingMsToken(v)
+    if (parsed === null) {
+      return null
+    }
+    return {
+      syncHoldIntervalMs:
+        parsed === "default" ? DEFAULT_SYNC_HOLD_INTERVAL_MS : parsed
+    }
+  }
+  if (k === "cli-door-retry-ms") {
+    const parsed = parseSyncTimingMsToken(v)
+    if (parsed === null) {
+      return null
+    }
+    return {
+      cliDoorRetryMs: parsed === "default" ? DEFAULT_CLI_DOOR_RETRY_MS : parsed
+    }
   }
   if (k === "search-legend") {
     return { searchLegendMode: normalizeSearchLegendMode(v) }

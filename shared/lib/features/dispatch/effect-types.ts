@@ -28,6 +28,7 @@ export type HostEffect =
   | { kind: "open_url_new_tab"; url: string }
   | { kind: "open_url_new_window"; url: string }
   | { kind: "open_welcome_page" }
+  | { kind: "probe_capabilities" }
   | { kind: "search_bookmark"; pattern: string }
   | { kind: "search_history"; pattern: string }
   | { kind: "search_page"; pattern: string }

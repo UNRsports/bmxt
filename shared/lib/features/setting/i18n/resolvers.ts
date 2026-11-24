@@ -195,7 +195,9 @@ export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSetti
     hostUiMode,
     imeCandidateHelp,
     promptFire,
-    searchLegendMode
+    searchLegendMode,
+    syncHoldIntervalMs,
+    cliDoorRetryMs
   } = settings
   const defaultLabel = tSetting("setting.summary.default", locale)
   const token = settingTokenForUiLocale(uiLoc)
@@ -223,6 +225,10 @@ export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSetti
     tSetting("setting.summary.imeCandidateHelp", locale, { value: imeHelpLabel }),
     tSetting("setting.summary.promptFire", locale, { value: promptFireLabel }),
     tSetting("setting.summary.searchLegend", locale, { value: searchLegendLabel }),
+    tSetting("setting.summary.syncHoldIntervalMs", locale, {
+      value: String(syncHoldIntervalMs)
+    }),
+    tSetting("setting.summary.cliDoorRetryMs", locale, { value: String(cliDoorRetryMs) }),
     tSetting("setting.summary.fg", locale, { value: appearance.fg ?? defaultLabel }),
     tSetting("setting.summary.bgColor", locale, { value: appearance.bgColor ?? defaultLabel }),
     tSetting("setting.summary.size", locale, { value: appearance.fontSize ?? defaultLabel }),

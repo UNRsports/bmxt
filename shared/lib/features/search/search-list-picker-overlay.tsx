@@ -88,7 +88,7 @@ export function SearchListPickerOverlay({
 }: Props) {
   const { settings: uiSettings } = useUiSettings()
   const locale = uiSettings.locale
-  const { phase, entries, emptyResultLines, pattern = "" } = state
+  const { phase, entries, emptyResultLines, peerNoticeLines, pattern = "" } = state
   const loading = phase === "loading"
   const progressLines = loading ? loadingProgressLines : state.progressLines
   const [pickerView, setPickerView] = useState<SearchListPickerView>("results")
@@ -499,6 +499,7 @@ export function SearchListPickerOverlay({
       statusLines={statusLines}
       statusOnly={loading || entries.length === 0}
       bannerLines={resultNoticeLines}
+      peerFooterLines={peerNoticeLines ?? []}
       matchHi={matchHi}
       pickerView={pickerView}
       detailHits={detailHits}

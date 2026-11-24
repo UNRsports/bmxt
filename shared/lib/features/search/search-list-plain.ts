@@ -12,7 +12,7 @@ import {
   type SearchLegendMode
 } from "../setting/search-legend-mode.ts"
 import { loadUiSettings } from "../setting/settings.ts"
-import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
+import { formatPeerFailureFooterLinesPreferMeta } from "../sync/bus/peer-failure-footer.ts"
 import { enrichSearchPickerEntriesFromOpenTabs } from "./enrich-search-entries-from-tabs.ts"
 import { MAX_SEARCH_LINES_OUT, maxSearchLinesPerScope } from "./limits.ts"
 import { isParallelSearchEffect } from "./search-effect-parallel.ts"
@@ -258,34 +258,28 @@ export async function fetchSearchListResult(options: SearchListFetchOptions): Pr
   return buildSearchListResult(entries, pattern, linesOut, legendMode)
 }
 
-function syncNoticeLinesFromResult(result: ListResult, locale: UiLocale): string[] {
-  const raw = result.meta?.syncNotices
-  if (raw === undefined || raw.trim().length === 0) {
-    return []
-  }
-  const tokens = raw.split("\n").filter((token) => token.length > 0)
-  return expandSyncLogLines(tokens, locale)
-}
-
 export function formatSearchListPlainLines(result: ListResult, locale: UiLocale): string[] {
-  const notices = syncNoticeLinesFromResult(result, locale)
-  if (result.records.length === 0) {
-    return [...notices, tSearch("search.list.empty", locale)]
-  }
+  const footer = formatPeerFailureFooterLinesPreferMeta(result, locale)
   const noticeRecords = result.records.filter((record) => record.fields.source === "notice")
   const hitRecords = result.records.filter((record) => record.fields.source !== "notice")
-  const noticeLabels = noticeRecords.map((record) =>
-    String(record.display?.label ?? record.fields.title ?? "")
-  )
+  const noticeLabels = noticeRecords
+    .map((record) => String(record.display?.label ?? record.fields.title ?? ""))
+    .filter((line) => line.trim().length > 0)
+  if (hitRecords.length === 0) {
+    return [
+      ...noticeLabels,
+      tSearch("search.list.empty", locale),
+      ...footer
+    ]
+  }
   const body = formatListPlainLines({
     ...result,
     records: hitRecords
   })
-  const hitCount = hitRecords.length
   return [
-    ...notices,
-    ...noticeLabels.filter((line) => line.trim().length > 0),
-    ...appendListPlainSummary(body, hitCount > 0 ? hitCount : 0, locale)
+    ...noticeLabels,
+    ...appendListPlainSummary(body, hitRecords.length, locale),
+    ...footer
   ]
 }
 

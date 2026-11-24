@@ -37,6 +37,7 @@ import {
   listResultHasDeviceTaggedTabs,
   tabPickerRowsFromListResult
 } from "./from-list-result/tabs-rows.ts"
+import { formatPeerFailureFooterLinesPreferMeta } from "../sync/bus/peer-failure-footer.ts"
 
 export type OpenPickerOptions = {
   showUrl: boolean
@@ -104,13 +105,15 @@ async function openTabsPicker(
     }
     const initialHi = resolveInitialTabPickerHighlightIndex(rows, lastNormalWindowId)
     const pageActiveToken = settingTokenForPageActiveMode(deps.tabsPageActiveModeRef.current)
+    const peerNoticeLines = formatPeerFailureFooterLinesPreferMeta(listResult, locale)
     deps.setTabPicker(
       deps.sessionId,
       openTabPickerEngineForSession(deps.sessionId, {
         rows,
         showUrl,
         listScope,
-        initialHi
+        initialHi,
+        peerNoticeLines
       })
     )
     deps.activatePaneFocus("tabs")
@@ -138,12 +141,14 @@ async function openSearchPicker(
   // EN: Refresh / attach open-tab body hits (globalOccurrence) before highlight / → detail.
   // JA: ハイライトと → 詳細用に、開タブ本文ヒットを再付与・更新する。
   const enriched = await enrichSearchPickerEntriesFromOpenTabs(entries, pattern)
+  const peerNoticeLines = formatPeerFailureFooterLinesPreferMeta(listResult, locale)
   deps.setSearchListPicker(deps.sessionId, {
     phase: "results",
     progressLines: [],
     entries: enriched,
     pattern,
-    emptyResultLines
+    emptyResultLines,
+    peerNoticeLines: peerNoticeLines.length > 0 ? peerNoticeLines : undefined
   })
   deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "search"))
   deps.activatePaneFocus("search")

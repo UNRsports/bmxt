@@ -62,7 +62,8 @@ const INACTIVE_ENGINE_STATE: TabPickerEngineState = {
   editPanel: null,
   editTitle: "",
   actionMenuPanel: null,
-  bookmarkPanel: null
+  bookmarkPanel: null,
+  peerNoticeLines: []
 }
 
 function bookmarkPanelHeadline(panel: BookmarkPanel, locale: UiLocale): string {
@@ -754,6 +755,7 @@ export function useTabPickerController({
     commandListingHint,
     moveCloseAfter,
     isHostPaneFocused,
-    inputRef
+    inputRef,
+    peerNoticeLines: state.peerNoticeLines
   }
 }

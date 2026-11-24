@@ -57,7 +57,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-setting", trailingTokens: ["--ja-en","--en-ja"] as const, tail: "none" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
-  "aboutbmxt": [] as const,
+  "aboutbmxt": [
+    { head: "-system", trailingTokens: [] as const, tail: "none" }
+  ] as const,
   "session": [
     { head: "-new", trailingTokens: [] as const, tail: "rest" },
     { head: "-list", trailingTokens: [] as const, tail: "none" },
@@ -205,8 +207,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       const lower = token.toLowerCase()
       return lower === "-on" || lower === "-off" || lower === "-setting" || lower === "help"
     }
-    case "aboutbmxt":
-      return false
+    case "aboutbmxt": {
+      const lower = token.toLowerCase()
+      return lower === "-system"
+    }
     case "session": {
       const lower = token.toLowerCase()
       return lower === "-new" || lower === "-list" || lower === "-switch" || lower === "-next" || lower === "-prev" || lower === "-setting-name" || lower === "help"

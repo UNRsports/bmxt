@@ -235,8 +235,13 @@
       "module": "aboutbmxt",
       "canonicalName": "aboutbmxt",
       "aliases": [],
-      "usagePrimary": "aboutbmxt",
-      "subcommands": []
+      "usagePrimary": "aboutbmxt | aboutbmxt -system",
+      "subcommands": [
+        {
+          "head": "-system",
+          "tail": "none"
+        }
+      ]
     },
     {
       "module": "session",
@@ -731,6 +736,13 @@
       "shape": "unit",
       "tsHandlerFile": "open-welcome-page",
       "tsHandlerExport": "applyOpenWelcomePageEffect"
+    },
+    {
+      "kind": "probe_capabilities",
+      "rustVariant": "ProbeCapabilities",
+      "shape": "unit",
+      "tsHandlerFile": "probe-capabilities",
+      "tsHandlerExport": "applyProbeCapabilitiesEffect"
     },
     {
       "kind": "session_new",

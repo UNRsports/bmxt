@@ -1,5 +1,6 @@
 import { memo, type ReactElement, type ReactNode } from "react"
 import { decodeLogLine } from "../command-line/command-output.ts"
+import { parseLogStatusSegments } from "../command-line/log-status-marker.ts"
 import { parseTabRefLogSegments, type TabRefLogMeta } from "../command-line/tab-ref-log.ts"
 
 type Props = {
@@ -46,16 +47,37 @@ function LogTabRef(props: { meta: TabRefLogMeta }): ReactElement {
   )
 }
 
-function renderLogLineText(text: string): ReactNode {
+function renderTabRefAwareText(text: string, keyPrefix: string): ReactNode {
   const segments = parseTabRefLogSegments(text)
   if (segments.length === 1 && segments[0]!.kind === "text") {
     return segments[0]!.text
   }
   return segments.map((seg, i) => {
     if (seg.kind === "text") {
-      return seg.text.length > 0 ? <span key={i}>{seg.text}</span> : null
+      return seg.text.length > 0 ? <span key={`${keyPrefix}-t-${i}`}>{seg.text}</span> : null
     }
-    return <LogTabRef key={i} meta={seg.meta} />
+    return <LogTabRef key={`${keyPrefix}-r-${i}`} meta={seg.meta} />
+  })
+}
+
+function renderLogLineText(text: string): ReactNode {
+  const statusSegments = parseLogStatusSegments(text)
+  const hasStatus = statusSegments.some((seg) => seg.kind === "status")
+  if (!hasStatus) {
+    return renderTabRefAwareText(text, "plain")
+  }
+  return statusSegments.map((seg, i) => {
+    if (seg.kind === "status") {
+      const className =
+        seg.status === "ok" ? "bmxt-out-status bmxt-out-status--ok" : "bmxt-out-status bmxt-out-status--ng"
+      const label = seg.status === "ok" ? "OK" : "NG"
+      return (
+        <span key={`st-${i}`} className={className}>
+          {label}
+        </span>
+      )
+    }
+    return <span key={`tx-${i}`}>{renderTabRefAwareText(seg.text, `s${i}`)}</span>
   })
 }
 

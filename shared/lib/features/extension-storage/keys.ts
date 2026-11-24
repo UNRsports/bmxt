@@ -94,6 +94,12 @@ export const JOB_DB_KEY = "bmxt_job_db_v1"
 /** Interactive tutorial progress (completed / skipped / step index). */
 export const TUTORIAL_PROGRESS_KEY = "bmxt_tutorial_progress_v1"
 
+/**
+ * EN: When true, next BMXt prompt open should print the browser capability report.
+ * JA: true のとき次のプロンプト窓オープンでブラウザ能力レポートを表示する。
+ */
+export const CAPABILITY_REPORT_PENDING_KEY = "bmxt_capability_report_pending_v1"
+
 /** Family sync: per-browser device identity (`shared/lib/features/sync/`). */
 export const SYNC_DEVICE_IDENTITY_KEY = "bmxt_sync_device_v1"
 

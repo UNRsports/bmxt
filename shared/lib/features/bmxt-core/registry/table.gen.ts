@@ -74,7 +74,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "aboutbmxt",
     aliases: [] as const,
-    usagePrimary: "aboutbmxt"
+    usagePrimary: "aboutbmxt | aboutbmxt -system"
   },
   {
     name: "session",

@@ -67,6 +67,8 @@ export type SettingDraftPatch = {
   promptFire?: boolean
   searchLegendMode?: SearchLegendMode
   hostUiMode?: HostUiMode
+  syncHoldIntervalMs?: number
+  cliDoorRetryMs?: number
   appearance?: SettingAppearancePatch
   picker?: Partial<UiAppearanceLayer>
 }
@@ -82,6 +84,8 @@ export function createSettingListPickerState(committed: UiSettings): SettingList
       searchLegendMode: normalizeSearchLegendMode(
         committed.searchLegendMode ?? DEFAULT_SEARCH_LEGEND_MODE
       ),
+      syncHoldIntervalMs: committed.syncHoldIntervalMs,
+      cliDoorRetryMs: committed.cliDoorRetryMs,
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }
@@ -124,6 +128,12 @@ export function applySettingDraftPatchToSettings(
       ...next,
       searchLegendMode: normalizeSearchLegendMode(patch.searchLegendMode)
     }
+  }
+  if (patch.syncHoldIntervalMs !== undefined) {
+    next = { ...next, syncHoldIntervalMs: patch.syncHoldIntervalMs }
+  }
+  if (patch.cliDoorRetryMs !== undefined) {
+    next = { ...next, cliDoorRetryMs: patch.cliDoorRetryMs }
   }
   const nextAppearance: UiAppearance = {
     ...next.appearance,
@@ -181,6 +191,8 @@ export function settingPickerRevertDraft(
       searchLegendMode: normalizeSearchLegendMode(
         committed.searchLegendMode ?? DEFAULT_SEARCH_LEGEND_MODE
       ),
+      syncHoldIntervalMs: committed.syncHoldIntervalMs,
+      cliDoorRetryMs: committed.cliDoorRetryMs,
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }

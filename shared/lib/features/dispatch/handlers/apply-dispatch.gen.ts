@@ -26,6 +26,7 @@ import { applyOpenUrlIntoWindowEffect } from "./effects/open-url-into-window"
 import { applyOpenUrlNewTabEffect } from "./effects/open-url-new-tab"
 import { applyOpenUrlNewWindowEffect } from "./effects/open-url-new-window"
 import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
+import { applyProbeCapabilitiesEffect } from "./effects/probe-capabilities"
 import { applySearchBookmarkEffect } from "./effects/search-bookmark"
 import { applySearchHistoryEffect } from "./effects/search-history"
 import { applySearchListEffect } from "./effects/search-list"
@@ -90,6 +91,8 @@ export async function applyOne(
       return applyOpenUrlNewWindowEffect(ctx, e)
     case "open_welcome_page":
       return applyOpenWelcomePageEffect(ctx, e)
+    case "probe_capabilities":
+      return applyProbeCapabilitiesEffect(ctx, e)
     case "search_bookmark":
       return applySearchBookmarkEffect(ctx, e)
     case "search_history":

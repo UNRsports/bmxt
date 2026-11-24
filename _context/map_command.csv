@@ -83,7 +83,7 @@ setting,-cancel,,none,,setting -cancel,UiAction `setting_cancel`。互換: 設�
 setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,
 snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapshot `。,
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,
-aboutbmxt,,,,,aboutbmxt,Effect: open_welcome_page。,
+aboutbmxt,,,,,aboutbmxt | aboutbmxt -system,Effect: open_welcome_page / probe_capabilities。install/update 後プロンプトで能力レポート。,
 tutorial,,,,,tutorial | tutorial -start | tutorial -skip,UiAction set_mode feature_id=tutorial（start/skip）。初回自動開始＋コーチパネル。,0.8.7
 tutorial,-start,,none,,tutorial -start,既定レッスン（tab -list | browse）を開始。,0.8.7
 tutorial,-skip,,none,,tutorial -skip,スキップ（dismissedFirstRun）。,0.8.7

@@ -27,6 +27,11 @@ import {
   tryLoadUiSettingsFromExternal,
   trySaveUiSettingsToExternal
 } from "./settings-external-storage"
+import {
+  DEFAULT_CLI_DOOR_RETRY_MS,
+  DEFAULT_SYNC_HOLD_INTERVAL_MS,
+  normalizeSyncTimingMs
+} from "./sync-timing.ts"
 
 /** EN: Default on — show usage help beside IME candidate tokens. */
 export const DEFAULT_IME_CANDIDATE_HELP = true
@@ -57,6 +62,16 @@ export type UiSettings = {
    * JA: 検索ピッカーおよび `search -list` のスコープ凡例表示（テキスト／絵文字／併用）。
    */
   searchLegendMode: SearchLegendMode
+  /**
+   * EN: Sync tunnel hold tick interval (ms) while the prompt window is open.
+   * JA: プロンプト窓オープン中の Sync トンネル hold 間隔（ミリ秒）。
+   */
+  syncHoldIntervalMs: number
+  /**
+   * EN: CLI localhost door reconnect retry interval (ms).
+   * JA: CLI localhost door 再接続リトライ間隔（ミリ秒）。
+   */
+  cliDoorRetryMs: number
 }
 
 function pickImeCandidateHelpFromPartial(raw: Record<string, unknown>): boolean {
@@ -80,6 +95,20 @@ function pickSearchLegendModeFromPartial(raw: Record<string, unknown>): SearchLe
   return normalizeSearchLegendMode(raw.searchLegendMode)
 }
 
+function pickSyncHoldIntervalMsFromPartial(raw: Record<string, unknown>): number {
+  if (!("syncHoldIntervalMs" in raw)) {
+    return DEFAULT_SYNC_HOLD_INTERVAL_MS
+  }
+  return normalizeSyncTimingMs(raw.syncHoldIntervalMs, DEFAULT_SYNC_HOLD_INTERVAL_MS)
+}
+
+function pickCliDoorRetryMsFromPartial(raw: Record<string, unknown>): number {
+  if (!("cliDoorRetryMs" in raw)) {
+    return DEFAULT_CLI_DOOR_RETRY_MS
+  }
+  return normalizeSyncTimingMs(raw.cliDoorRetryMs, DEFAULT_CLI_DOOR_RETRY_MS)
+}
+
 function pickHostUiModeFromPartial(raw: Record<string, unknown>): HostUiMode {
   if ("hostUiMode" in raw) {
     return normalizeHostUiMode(raw.hostUiMode)
@@ -100,7 +129,9 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
       hostUiMode: DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
       promptFire: DEFAULT_PROMPT_FIRE,
-      searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
+      searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE,
+      syncHoldIntervalMs: DEFAULT_SYNC_HOLD_INTERVAL_MS,
+      cliDoorRetryMs: DEFAULT_CLI_DOOR_RETRY_MS
     }
   }
   const record = raw as Record<string, unknown>
@@ -110,7 +141,9 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
     hostUiMode: pickHostUiModeFromPartial(record),
     imeCandidateHelp: pickImeCandidateHelpFromPartial(record),
     promptFire: pickPromptFireFromPartial(record),
-    searchLegendMode: pickSearchLegendModeFromPartial(record)
+    searchLegendMode: pickSearchLegendModeFromPartial(record),
+    syncHoldIntervalMs: pickSyncHoldIntervalMsFromPartial(record),
+    cliDoorRetryMs: pickCliDoorRetryMsFromPartial(record)
   }
 }
 

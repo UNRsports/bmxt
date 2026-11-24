@@ -54,10 +54,21 @@ import {
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
+import {
+  consumeCapabilityReportPending,
+  runCapabilityReportLines
+} from "../capability"
 import { SyncHandshakeBar } from "../sync/handshake/clipboard/sync-handshake-bar.tsx"
 import { getSyncService } from "../sync/facade/sync-service"
-import { startSyncTunnelHold } from "../sync/peer/hold-sync-tunnel"
-import { startLocalhostDoorReconnect } from "../sync/handshake/localhost/start-localhost-door-reconnect.ts"
+import {
+  setSyncTunnelHoldIntervalMs,
+  startSyncTunnelHold,
+  stopSyncTunnelHold
+} from "../sync/peer/hold-sync-tunnel"
+import {
+  setLocalhostDoorRetryMs,
+  startLocalhostDoorReconnect
+} from "../sync/handshake/localhost/start-localhost-door-reconnect.ts"
 import { SyncLinkStatusBar } from "../sync/link/sync-link-status-bar"
 import { useSyncLinkStatus } from "../sync/link/use-sync-link-status"
 import { SyncWizardPanel } from "../sync/wizard"
@@ -275,11 +286,40 @@ export function BmxtShell({
   // JA: プロンプト窓が Family sync トンネルの宿主。SyncService 配線とキープアライブ。
   useEffect(() => {
     getSyncService()
+    stopSyncTunnelHold()
     startSyncTunnelHold(async () => {
       await getSyncService().status()
-    })
+    }, uiSettings.syncHoldIntervalMs)
     // EN: Family-authenticated auto-reconnect via CLI localhost listener (clipboard/file remain fallback).
-    startLocalhostDoorReconnect()
+    startLocalhostDoorReconnect(uiSettings.cliDoorRetryMs)
+    return () => {
+      stopSyncTunnelHold()
+    }
+  }, [])
+  useEffect(() => {
+    setSyncTunnelHoldIntervalMs(uiSettings.syncHoldIntervalMs)
+    setLocalhostDoorRetryMs(uiSettings.cliDoorRetryMs)
+  }, [uiSettings.syncHoldIntervalMs, uiSettings.cliDoorRetryMs])
+  // EN: After install/update, print browser API capability report once when the prompt opens.
+  // JA: install/update 後、プロンプト初回オープンでブラウザ API 能力レポートを一度表示する。
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const pending = await consumeCapabilityReportPending()
+      if (!pending || cancelled) {
+        return
+      }
+      const lines = await runCapabilityReportLines(uiSettings.locale)
+      if (cancelled) {
+        return
+      }
+      await appendLogLines(lines, "stdout")
+    })()
+    return () => {
+      cancelled = true
+    }
+    // EN: Mount-only — locale/appendLogLines identity must not re-trigger the pending consume.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-once
   }, [])
   const translateEnabledRef = useRef(false)
 

@@ -10,6 +10,7 @@ export function createInitialTabPickerEngineState(
     listScope?: TabPickerEngineState["listScope"]
     variant?: TabPickerEngineState["variant"]
     interactive?: TabPickerState["interactive"]
+    peerNoticeLines?: string[]
   }
 ): TabPickerEngineState {
   const interactive = input.interactive ?? emptyTabPickerInteractiveSnapshot()
@@ -58,7 +59,8 @@ export function createInitialTabPickerEngineState(
     editPanel: null,
     editTitle: "",
     actionMenuPanel: null,
-    bookmarkPanel: null
+    bookmarkPanel: null,
+    peerNoticeLines: input.peerNoticeLines ?? []
   }
 }
 
@@ -69,6 +71,7 @@ export function hydrateTabPickerEngineState(picker: TabPickerState): TabPickerEn
     listScope: picker.listScope,
     initialHi: picker.initialHi,
     variant: picker.variant,
-    interactive: picker.interactive
+    interactive: picker.interactive,
+    peerNoticeLines: picker.peerNoticeLines
   })
 }

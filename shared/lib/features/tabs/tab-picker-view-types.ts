@@ -64,4 +64,6 @@ export type TabPickerViewProps = {
   moveCloseAfter: boolean
   isHostPaneFocused: boolean
   inputRef: RefObject<HTMLTextAreaElement | null>
+  /** EN: Non-responding peer footer lines (`--peers`). */
+  peerNoticeLines: string[]
 }

@@ -47,10 +47,15 @@ export type TabPickerEngineState = {
   actionMenuPanel: ActionMenuPanel | null
   /** EN: Bookmark add panel (action menu / `:bookmark`); null when closed. */
   bookmarkPanel: BookmarkPanel | null
+  /**
+   * EN: Non-responding peer footer lines for `--peers` / `--device` lists.
+   * JA: `--peers` / `--device` 一覧の無応答ピア・フッタ行。
+   */
+  peerNoticeLines: string[]
 }
 
 export type TabPickerEngineAction =
-  | { type: "rowsRebuilt"; rows: TabPickerRow[] }
+  | { type: "rowsRebuilt"; rows: TabPickerRow[]; peerNoticeLines?: string[] }
   | { type: "reducer"; event: PickerReducerEvent; visibleLen: number }
   | { type: "reducerSequence"; events: PickerReducerEvent[]; visibleLen: number }
   | { type: "update"; updater: (prev: TabPickerEngineState) => TabPickerEngineState }

@@ -851,6 +851,14 @@
     "ja": "search-legend: {value}",
     "en": "search-legend: {value}"
   },
+  "setting.summary.syncHoldIntervalMs": {
+    "ja": "sync-hold-ms: {value}",
+    "en": "sync-hold-ms: {value}"
+  },
+  "setting.summary.cliDoorRetryMs": {
+    "ja": "cli-door-retry-ms: {value}",
+    "en": "cli-door-retry-ms: {value}"
+  },
   "setting.summary.locale": {
     "ja": "locale: {token}",
     "en": "locale: {token}"

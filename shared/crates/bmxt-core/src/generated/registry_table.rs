@@ -83,7 +83,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "aboutbmxt",
         aliases: &[],
-        usage_primary: "aboutbmxt",
+        usage_primary: "aboutbmxt | aboutbmxt -system",
     },
     CmdMeta {
         name: "session",
@@ -253,6 +253,13 @@ static BRANCHES_TRANSLATE: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "help",
+        trailing_tokens: &[],
+    },
+];
+
+static BRANCHES_ABOUTBMXT: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-system",
         trailing_tokens: &[],
     },
 ];
@@ -481,7 +488,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "-send" | "help"),
         "nav" => matches!(lower.as_str(), "-enter" | "-exit" | "-windowclose"),
         "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting" | "help"),
-        "aboutbmxt" => false,
+        "aboutbmxt" => matches!(lower.as_str(), "-system"),
         "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name" | "help"),
         "snapshot" => matches!(lower.as_str(), "-save"),
         "browse" => false,
@@ -514,7 +521,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "tab" => BRANCHES_TAB,
         "nav" => BRANCHES_NAV,
         "translate" => BRANCHES_TRANSLATE,
-        "aboutbmxt" => &[],
+        "aboutbmxt" => BRANCHES_ABOUTBMXT,
         "session" => BRANCHES_SESSION,
         "snapshot" => BRANCHES_SNAPSHOT,
         "browse" => &[],

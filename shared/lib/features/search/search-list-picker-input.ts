@@ -60,4 +60,9 @@ export type SearchListPickerState = {
    * JA: 上限／空結果の notice。ヒットなしは status、ありは一覧上のバナー。
    */
   emptyResultLines?: string[]
+  /**
+   * EN: Non-responding peer footer (from meta.syncNotices); shown below the list.
+   * JA: 無応答ピア・フッタ（meta.syncNotices）。一覧の下に表示。
+   */
+  peerNoticeLines?: string[]
 }

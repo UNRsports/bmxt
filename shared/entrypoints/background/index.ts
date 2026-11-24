@@ -1,5 +1,6 @@
 /** Service worker entry: window launch first; heavy services load on demand. */
 
+import { markCapabilityReportPendingOnInstall } from "../../lib/features/capability/mark-pending-on-install"
 import { reinjectContentScriptsIntoOpenTabs } from "../../lib/features/page-scripting/ensure-content-script"
 import { openWelcomePageOnUpdateIfNeeded } from "../../lib/features/welcome"
 import { loadBackgroundServicesAsync } from "./load-background-services"
@@ -18,6 +19,7 @@ export default defineBackground(() => {
   chrome.runtime.onInstalled.addListener((details) => {
     void hydrateBmxtWindowIdFromStorage()
     void openWelcomePageOnUpdateIfNeeded(details)
+    void markCapabilityReportPendingOnInstall(details)
     // EN: Install/update — inject CS into already-open http(s) tabs (no page reload).
     void reinjectContentScriptsIntoOpenTabs()
   })

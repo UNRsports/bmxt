@@ -1618,5 +1618,17 @@
   "cmd.cli.setting.useSet": {
     "ja": "変更: setting -set <key> <value>（即保存）",
     "en": "Change: setting -set <key> <value> (saves immediately)"
+  },
+  "cmd.aboutbmxt.usage": {
+    "ja": "usage: aboutbmxt | aboutbmxt -system",
+    "en": "usage: aboutbmxt | aboutbmxt -system"
+  },
+  "cmd.sync.list.peerFailedFooterIntro": {
+    "ja": "反応しなかったブラウザ:",
+    "en": "Browsers that did not respond:"
+  },
+  "cmd.sync.list.peerFailedFooterItem": {
+    "ja": "  - {deviceId} ({detail})",
+    "en": "  - {deviceId} ({detail})"
   }
 }

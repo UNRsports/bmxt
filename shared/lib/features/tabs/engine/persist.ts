@@ -27,6 +27,8 @@ export function projectTabPickerEngineToParentState(
     listScope: state.listScope,
     initialHi: state.initialHi,
     variant: state.variant,
-    interactive: interactiveSnapshotFromEngineState(state)
+    interactive: interactiveSnapshotFromEngineState(state),
+    peerNoticeLines:
+      state.peerNoticeLines.length > 0 ? [...state.peerNoticeLines] : undefined
   }
 }

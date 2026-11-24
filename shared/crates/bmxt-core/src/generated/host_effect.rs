@@ -100,6 +100,8 @@ pub enum HostEffect {
     },
     #[serde(rename = "open_welcome_page")]
     OpenWelcomePage,
+    #[serde(rename = "probe_capabilities")]
+    ProbeCapabilities,
     #[serde(rename = "search_bookmark")]
     SearchBookmark {
     pattern: String,
