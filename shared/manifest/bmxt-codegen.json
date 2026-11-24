@@ -589,7 +589,7 @@
       "module": "move_cmd",
       "canonicalName": "move",
       "aliases": [],
-      "usagePrimary": "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>",
+      "usagePrimary": "move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>",
       "subcommands": []
     },
     {
@@ -746,7 +746,8 @@
       "fields": {
         "tab_ids": "vec_i32",
         "window_id": "i32",
-        "group_id": "i32"
+        "group_id": "i32",
+        "before_tab_id": "i32"
       },
       "tsHandlerFile": "tabs-move",
       "tsHandlerExport": "applyTabsMoveEffect"

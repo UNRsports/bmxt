@@ -59,22 +59,34 @@ export function buildSearchOpenCommandLine(
   return `open ${quoted}`
 }
 
-/** EN: `#t:… | move --window <id>` / `--group` / `--ungroup`. */
+/** EN: `#t:… | move --window <id> [--before-tab <id>]` / `--group` / `--ungroup`. */
 export function buildTabMoveCommandLine(
   tabIds: readonly number[],
-  opts: { windowId: number; groupId?: number; ungroup?: boolean }
+  opts: {
+    windowId: number
+    groupId?: number
+    ungroup?: boolean
+    /** EN: Insert immediately before this tab; omit for end-of-window/group. */
+    beforeTabId?: number
+  }
 ): string | null {
   if (tabIds.length === 0 || opts.windowId < 0) {
     return null
   }
   const chips = tabIds.map((id) => `#t:${id}`).join(" ")
+  const before =
+    opts.beforeTabId !== undefined &&
+    Number.isFinite(opts.beforeTabId) &&
+    opts.beforeTabId >= 0
+      ? ` --before-tab ${opts.beforeTabId}`
+      : ""
   if (opts.ungroup) {
-    return `${chips} | move --ungroup --window ${opts.windowId}`
+    return `${chips} | move --ungroup --window ${opts.windowId}${before}`
   }
   if (opts.groupId !== undefined && opts.groupId >= 0) {
-    return `${chips} | move --group ${opts.groupId} --window ${opts.windowId}`
+    return `${chips} | move --group ${opts.groupId} --window ${opts.windowId}${before}`
   }
-  return `${chips} | move --window ${opts.windowId}`
+  return `${chips} | move --window ${opts.windowId}${before}`
 }
 
 export function buildTabNewWindowCommandLine(tabIds: readonly number[]): string | null {

@@ -316,7 +316,11 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
               plan.shouldGroupToTargetAfterMove && plan.targetGroupId !== null
                 ? plan.targetGroupId
                 : undefined,
-            ungroup: plan.shouldUngroupAfterMove
+            ungroup: plan.shouldUngroupAfterMove,
+            beforeTabId:
+              plan.targetKind === "tab" && plan.targetTabId !== null
+                ? plan.targetTabId
+                : undefined
           })
           if (line !== null) {
             clearMarkedViaReducer()
@@ -721,13 +725,18 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
             }
           }
           if (intent === "executeMove" && ctx.movePlan && ctx.movePlan.targetWindowId !== null) {
+            const movePlan = ctx.movePlan
             const line = buildTabMoveCommandLine(classified.tabIds, {
-              windowId: ctx.movePlan.targetWindowId,
+              windowId: movePlan.targetWindowId,
               groupId:
-                ctx.movePlan.shouldGroupToTargetAfterMove && ctx.movePlan.targetGroupId !== null
-                  ? ctx.movePlan.targetGroupId
+                movePlan.shouldGroupToTargetAfterMove && movePlan.targetGroupId !== null
+                  ? movePlan.targetGroupId
                   : undefined,
-              ungroup: ctx.movePlan.shouldUngroupAfterMove
+              ungroup: movePlan.shouldUngroupAfterMove,
+              beforeTabId:
+                movePlan.targetKind === "tab" && movePlan.targetTabId !== null
+                  ? movePlan.targetTabId
+                  : undefined
             })
             if (line !== null) {
               clearMarkedViaReducer()

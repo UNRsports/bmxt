@@ -21,7 +21,7 @@ import type { PipeConsumerEntry } from "./types.ts"
 export { isMovePipeConsumer, MOVE_ACCEPTS_BMXT_RULE_KINDS } from "./move-match.ts"
 
 function formatMoveSegment(
-  flags: { windowId: number; groupId: number; ungroup: boolean },
+  flags: { windowId: number; groupId: number; ungroup: boolean; beforeTabId: number },
   tabIds: number[]
 ): string {
   const parts = ["move"]
@@ -31,6 +31,9 @@ function formatMoveSegment(
     parts.push("--group", String(flags.groupId))
   }
   parts.push("--window", String(flags.windowId))
+  if (Number.isFinite(flags.beforeTabId) && flags.beforeTabId >= 0) {
+    parts.push("--before-tab", String(flags.beforeTabId))
+  }
   for (const id of tabIds) {
     parts.push(String(id))
   }

@@ -129,7 +129,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "move",
     aliases: [] as const,
-    usagePrimary: "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>"
+    usagePrimary: "move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>"
   },
   {
     name: "new-window",

@@ -112,20 +112,20 @@
     "en": "Non-interactive: group new <tabId>… [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>"
   },
   "cmd.move.usage.line1": {
-    "ja": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]",
-    "en": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]"
+    "ja": "usage: move --window <windowId> [--before-tab <tabId>] [tabId…] | move --group <groupId> --window <windowId> [--before-tab <tabId>] [tabId…]",
+    "en": "usage: move --window <windowId> [--before-tab <tabId>] [tabId…] | move --group <groupId> --window <windowId> [--before-tab <tabId>] [tabId…]"
   },
   "cmd.move.usage.line2": {
-    "ja": "  または move --ungroup --window <windowId> [tabId…] · `#t:… | move --window …`",
-    "en": "  Or move --ungroup --window <windowId> [tabId…] · `#t:… | move --window …`"
+    "ja": "  または move --ungroup --window <windowId> [tabId…] · `#t:… | move --window … [--before-tab …]`",
+    "en": "  Or move --ungroup --window <windowId> [tabId…] · `#t:… | move --window … [--before-tab …]`"
   },
   "cmd.move.usage.line3": {
-    "ja": "  例: move --window 1 12 34 · #t:12 #t:34 | move --group 5 --window 1",
-    "en": "  Examples: move --window 1 12 34 · #t:12 #t:34 | move --group 5 --window 1"
+    "ja": "  例: move --window 1 --before-tab 50 12 34 · #t:12 #t:34 | move --group 5 --window 1",
+    "en": "  Examples: move --window 1 --before-tab 50 12 34 · #t:12 #t:34 | move --group 5 --window 1"
   },
   "cmd.move.usage.line4": {
-    "ja": "  パイプ右辺は page.open のタブ ID をまとめて移動します。",
-    "en": "  As a pipe consumer, moves every page.open tab id from stdin."
+    "ja": "  パイプ右辺は page.open のタブ ID をまとめて移動します。`--before-tab` はそのタブの直前へ挿入します。",
+    "en": "  As a pipe consumer, moves every page.open tab id from stdin. `--before-tab` inserts immediately before that tab."
   },
   "cmd.newWindow.usage.line1": {
     "ja": "usage: new-window <tabId> [tabId…] | … | new-window",

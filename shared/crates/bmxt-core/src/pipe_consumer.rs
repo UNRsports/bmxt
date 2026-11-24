@@ -53,6 +53,9 @@ pub enum PipeConsumerClass {
         #[serde(rename = "groupId")]
         group_id: i32,
         ungroup: bool,
+        /// EN: Insert immediately before this tab id; `-1` = end of window/group.
+        #[serde(rename = "beforeTabId")]
+        before_tab_id: i32,
     },
     #[serde(rename = "bookmark-remove")]
     BookmarkRemove,
@@ -217,6 +220,7 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
     }
     let mut window_id = -1_i32;
     let mut group_id = -1_i32;
+    let mut before_tab_id = -1_i32;
     let mut ungroup = false;
     let mut i = 1usize;
     while i < parts.len() {
@@ -228,6 +232,11 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
         }
         if token == "--group" {
             group_id = parts.get(i + 1)?.parse::<i32>().ok()?;
+            i += 2;
+            continue;
+        }
+        if token == "--before-tab" {
+            before_tab_id = parts.get(i + 1)?.parse::<i32>().ok().filter(|n| *n >= 0)?;
             i += 2;
             continue;
         }
@@ -248,6 +257,7 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
         window_id,
         group_id,
         ungroup,
+        before_tab_id,
     })
 }
 
@@ -517,6 +527,7 @@ mod tests {
                 window_id: 1,
                 group_id: -1,
                 ungroup: false,
+                before_tab_id: -1,
             })
         );
         assert_eq!(
@@ -525,6 +536,16 @@ mod tests {
                 window_id: 2,
                 group_id: -1,
                 ungroup: true,
+                before_tab_id: -1,
+            })
+        );
+        assert_eq!(
+            classify_pipe_consumer("move --window 1 --before-tab 42"),
+            Some(PipeConsumerClass::Move {
+                window_id: 1,
+                group_id: -1,
+                ungroup: false,
+                before_tab_id: 42,
             })
         );
         assert_eq!(classify_pipe_consumer("move --ungroup --group 1 --window 2"), None);

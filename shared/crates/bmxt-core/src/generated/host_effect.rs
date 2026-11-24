@@ -176,6 +176,7 @@ pub enum HostEffect {
     },
     #[serde(rename = "tabs_move")]
     TabsMove {
+    before_tab_id: i64,
     group_id: i64,
     tab_ids: Vec<i64>,
     window_id: i64,

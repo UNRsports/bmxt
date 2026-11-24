@@ -16,6 +16,7 @@ import {
   buildOpenIntoWindowCommandLine,
   buildTabActivateCommandLine,
   buildTabCloseCommandLine,
+  buildTabMoveCommandLine,
   buildTabReloadCommandLine,
   buildWindowRenameCommandLine
 } from "../../../../shared/lib/features/picker/build-picker-command-line.ts"
@@ -53,6 +54,22 @@ describe("build-picker-command-line tab/window/group wizard lines", () => {
 
   it("builds window rename", () => {
     assert.equal(buildWindowRenameCommandLine(8, "Main"), "window rename 8 Main")
+  })
+
+  it("builds move lines with optional --before-tab", () => {
+    assert.equal(
+      buildTabMoveCommandLine([12, 34], { windowId: 1 }),
+      "#t:12 #t:34 | move --window 1"
+    )
+    assert.equal(
+      buildTabMoveCommandLine([12], { windowId: 1, beforeTabId: 50 }),
+      "#t:12 | move --window 1 --before-tab 50"
+    )
+    assert.equal(
+      buildTabMoveCommandLine([12], { windowId: 1, groupId: 5, beforeTabId: 50 }),
+      "#t:12 | move --group 5 --window 1 --before-tab 50"
+    )
+    assert.equal(buildTabMoveCommandLine([], { windowId: 1 }), null)
   })
 })
 

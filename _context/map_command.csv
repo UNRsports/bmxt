@@ -35,7 +35,7 @@ group,new,,,,group new | group new <tabId>… [--title …] [--color …],tabId 
 group,add,,,,group add <groupId> <tabId…>,Effect `group_add`。既存グループへタブ追加。,§7e。タブピッカー group 選択 Enter も同形行を submit
 group,rename,,,,group rename <groupId> <title>,Effect `group_rename`。タブグループのタイトル変更。,§7e picker :edit
 group,ungroup,,,,group ungroup <groupId>,Effect `group_ungroup`。グループ解除（タブは残す）。,§7e picker :edit
-move,,,,,move --window <id> [tabId…] | move --group <gid> --window <id> [tabId…] | move --ungroup --window <id> [tabId…] | … | move …,Effect `tabs_move`。パイプ右辺は page.open。,§7e。タブピッカー :move は typed 行を submit
+move,,,,,move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <id> [--before-tab <tabId>] [tabId…] | move --ungroup --window <id> [tabId…] | … | move …,Effect `tabs_move`（`before_tab_id` で挿入位置）。パイプ右辺は page.open。,§7e。タブピッカー :move は typed 行を submit；タブ行を宛先にすると --before-tab
 new-window,,,,,new-window <tabId…> | … | new-window,Effect `tabs_new_window`。パイプ右辺は page.open。,§7e。タブピッカー new-window も同形行を submit
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
 browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
