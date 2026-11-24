@@ -16,6 +16,10 @@ import {
   historyPickerRowsToListResult
 } from "../../../../shared/lib/features/history/history-list-result.ts"
 import {
+  computeHistorySearchFilteredVisibleIndices,
+  expandHistoryFoldsForSearchMatches
+} from "../../../../shared/lib/features/history/history-search-visibility.ts"
+import {
   createHistoryPickerState,
   historyActionTargetRows,
   toggleHistoryRowMark
@@ -241,5 +245,51 @@ describe("history ListResult handoff", () => {
     }
     const fromClone = historyPickerRowsFromListResult(cloned)
     assert.deepEqual(kinds(fromClone), kinds(rows))
+  })
+})
+
+describe("history `/` search visibility", () => {
+  afterEach(() => {
+    resetHistoryFoldState()
+  })
+
+  it("filters to matching visits and ancestor headers (title mode)", () => {
+    const rows = buildRows(ENTRIES)
+    const fallback = computeHistoryVisibleRowIndices(rows)
+    const visible = computeHistorySearchFilteredVisibleIndices(rows, "A", fallback)
+    assert.deepEqual(
+      visible.map((i) => kinds([rows[i]!])[0]),
+      ["month:2026-11", "day:2026-11-20", "visit:https://a.example/"]
+    )
+  })
+
+  it("filters by URL only when query starts with @", () => {
+    const rows = buildRows(ENTRIES)
+    const fallback = computeHistoryVisibleRowIndices(rows)
+    const visible = computeHistorySearchFilteredVisibleIndices(rows, "@c.example", fallback)
+    assert.deepEqual(
+      visible.map((i) => kinds([rows[i]!])[0]),
+      ["month:2026-11", "day:2026-11-03", "visit:https://c.example/"]
+    )
+  })
+
+  it("falls back to fold visibility when needle is empty", () => {
+    const rows = buildRows(ENTRIES)
+    collapseHistoryMonth("2026-11")
+    const fallback = computeHistoryVisibleRowIndices(rows)
+    assert.deepEqual(
+      computeHistorySearchFilteredVisibleIndices(rows, "   ", fallback),
+      fallback
+    )
+  })
+
+  it("expands collapsed folds that contain matches on commit", () => {
+    const rows = buildRows(ENTRIES)
+    collapseHistoryMonth("2026-11")
+    assert.equal(expandHistoryFoldsForSearchMatches(rows, "A"), true)
+    assert.deepEqual(
+      computeHistoryVisibleRowIndices(rows).map((i) => kinds([rows[i]!])[0]).slice(0, 3),
+      ["month:2026-11", "day:2026-11-20", "visit:https://a.example/"]
+    )
   })
 })

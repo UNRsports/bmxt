@@ -28,8 +28,8 @@
     "en": "No history entries."
   },
   "history.picker.hint": {
-    "ja": "history -list: ↑↓ 移動 · ←→ 折りたたみ · Space マーク · Enter / → 操作 · Esc プロンプトへ",
-    "en": "history -list: ↑↓ move · ←→ fold · Space mark · Enter / → actions · Esc prompt"
+    "ja": "history -list: ↑↓ 移動 · ←→ 折りたたみ · Space マーク · Enter / → 操作 · / ハイライト · n/N · :nohlsearch · Esc プロンプトへ",
+    "en": "history -list: ↑↓ move · ←→ fold · Space mark · Enter / → actions · / highlight · n/N · :nohlsearch · Esc prompt"
   },
   "history.picker.inputAria": {
     "ja": "履歴ピッカー入力",

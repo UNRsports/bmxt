@@ -1,13 +1,27 @@
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import type { Dispatch, SetStateAction } from "react"
 import { useWindowKeydownCapture } from "../hooks/use-window-keydown-capture"
 import {
   pickerArrowLeft,
   pickerArrowRight,
+  pickerOpenCommandChord,
   pickerOpenSearchChord,
   pickerPlainTypingKey
 } from "../interaction/picker-key-event"
+import {
+  runPickerCommandEnter,
+  type RunPickerCommandEnterOptions
+} from "../interaction/picker-command-enter"
+import {
+  runPickerSearchEnter,
+  type RunPickerSearchEnterOptions
+} from "../interaction/picker-search-enter"
+import {
+  runPickerSearchJump,
+  type RunPickerSearchJumpOptions
+} from "../interaction/picker-search-jump"
 import { verticalNavDirection } from "../interaction/picker-vertical-nav"
+import { treePickerVisibleHiIndicesMatching } from "./tree-picker-search"
 import type { TreePickerRowView } from "./tree-picker-types"
 
 export type UseTreePickerKeyboardOptions = {
@@ -19,6 +33,15 @@ export type UseTreePickerKeyboardOptions = {
   setSearchMode: Dispatch<SetStateAction<boolean>>
   filterQuery: string
   onFilterQueryChange: (value: string) => void
+  hlSearchPattern: string
+  setHlSearchPattern: Dispatch<SetStateAction<string>>
+  /** EN: Command wrapper hook — expand matching folds when `/` is committed. */
+  onSearchCommit?: (pattern: string) => void
+  commandMode: boolean
+  setCommandMode: Dispatch<SetStateAction<boolean>>
+  commandBuffer: string
+  setCommandBuffer: Dispatch<SetStateAction<string>>
+  setCommandListingHint: Dispatch<SetStateAction<boolean>>
   menuOpen: boolean
   menuItemCount: number
   menuPickIndex: number
@@ -42,29 +65,6 @@ function stopKey(e: KeyboardEvent): void {
   e.stopPropagation()
 }
 
-/** EN: Index of the next view whose label/detail contains the query (wraps), or -1. */
-export function findTreePickerSearchMatch(
-  views: readonly TreePickerRowView[],
-  fromIndex: number,
-  query: string
-): number {
-  const needle = query.trim().toLowerCase()
-  if (needle.length === 0 || views.length === 0) {
-    return -1
-  }
-  for (let step = 1; step <= views.length; step += 1) {
-    const index = (fromIndex + step) % views.length
-    const view = views[index]!
-    if (view.label.toLowerCase().includes(needle)) {
-      return index
-    }
-    if (view.detail !== null && view.detail.toLowerCase().includes(needle)) {
-      return index
-    }
-  }
-  return -1
-}
-
 export function useTreePickerKeyboard({
   keyboardActive,
   views,
@@ -74,6 +74,14 @@ export function useTreePickerKeyboard({
   setSearchMode,
   filterQuery,
   onFilterQueryChange,
+  hlSearchPattern,
+  setHlSearchPattern,
+  onSearchCommit,
+  commandMode,
+  setCommandMode,
+  commandBuffer,
+  setCommandBuffer,
+  setCommandListingHint,
   menuOpen,
   menuItemCount,
   menuPickIndex,
@@ -86,26 +94,104 @@ export function useTreePickerKeyboard({
   onReturnToPrompt,
   onExitToDetailBar
 }: UseTreePickerKeyboardOptions): UseTreePickerKeyboardResult {
+  const closeSearch = useCallback(() => {
+    onFilterQueryChange("")
+    setSearchMode(false)
+  }, [onFilterQueryChange, setSearchMode])
+
+  const closeCommand = useCallback(() => {
+    setCommandMode(false)
+    setCommandBuffer("")
+    setCommandListingHint(false)
+  }, [setCommandBuffer, setCommandListingHint, setCommandMode])
+
+  const searchEnterOptions = useMemo((): RunPickerSearchEnterOptions => {
+    return {
+      searchMode,
+      filterQuery,
+      onCommit: (pattern) => {
+        onSearchCommit?.(pattern)
+        setHlSearchPattern(pattern)
+        setSearchMode(false)
+        onFilterQueryChange("")
+      }
+    }
+  }, [
+    filterQuery,
+    onFilterQueryChange,
+    onSearchCommit,
+    searchMode,
+    setHlSearchPattern,
+    setSearchMode
+  ])
+
+  const searchJumpOptions = useMemo((): RunPickerSearchJumpOptions => {
+    return {
+      enabled: keyboardActive && !searchMode && !commandMode && !menuOpen,
+      hi,
+      highlightPattern: hlSearchPattern,
+      matchIndices: () => treePickerVisibleHiIndicesMatching(views, hlSearchPattern),
+      onJump: (targetHi) => setHi(targetHi)
+    }
+  }, [
+    commandMode,
+    hi,
+    hlSearchPattern,
+    keyboardActive,
+    menuOpen,
+    searchMode,
+    setHi,
+    views
+  ])
+
+  const commandEnterOptions = useMemo((): RunPickerCommandEnterOptions => {
+    return {
+      commandMode,
+      commandBuffer,
+      onEmptyEnter: () => setCommandListingHint(true),
+      onNohlsearch: () => {
+        setHlSearchPattern("")
+        closeCommand()
+        closeSearch()
+      }
+    }
+  }, [
+    closeCommand,
+    closeSearch,
+    commandBuffer,
+    commandMode,
+    setCommandListingHint,
+    setHlSearchPattern
+  ])
+
   const handleSearchKey = useCallback(
     (e: KeyboardEvent): boolean => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        stopKey(e)
-        const target = findTreePickerSearchMatch(views, hi, filterQuery)
-        if (target >= 0) {
-          setHi(target)
-        }
-        setSearchMode(false)
+      if (runPickerSearchEnter(e, searchEnterOptions)) {
         return true
       }
       if (e.key === "Escape") {
         stopKey(e)
-        onFilterQueryChange("")
-        setSearchMode(false)
+        closeSearch()
         return true
       }
       return false
     },
-    [filterQuery, hi, onFilterQueryChange, setHi, setSearchMode, views]
+    [closeSearch, searchEnterOptions]
+  )
+
+  const handleCommandKey = useCallback(
+    (e: KeyboardEvent): boolean => {
+      if (runPickerCommandEnter(e, commandEnterOptions)) {
+        return true
+      }
+      if (e.key === "Escape") {
+        stopKey(e)
+        closeCommand()
+        return true
+      }
+      return false
+    },
+    [closeCommand, commandEnterOptions]
   )
 
   const handleMenuKey = useCallback(
@@ -132,7 +218,6 @@ export function useTreePickerKeyboard({
         onMenuClose()
         return true
       }
-      // EN: Swallow everything else while the menu is open so rows do not move underneath.
       if (pickerArrowRight(e)) {
         stopKey(e)
         return true
@@ -144,6 +229,9 @@ export function useTreePickerKeyboard({
 
   const handleListKey = useCallback(
     (e: KeyboardEvent): boolean => {
+      if (runPickerSearchJump(e, searchJumpOptions)) {
+        return true
+      }
       const dir = verticalNavDirection(e)
       if (dir === "down") {
         stopKey(e)
@@ -201,7 +289,16 @@ export function useTreePickerKeyboard({
       }
       if (pickerOpenSearchChord(e)) {
         stopKey(e)
+        closeCommand()
         setSearchMode(true)
+        return true
+      }
+      if (pickerOpenCommandChord(e)) {
+        stopKey(e)
+        closeSearch()
+        setCommandMode(true)
+        setCommandBuffer("")
+        setCommandListingHint(false)
         return true
       }
       if (e.key === "Escape") {
@@ -212,12 +309,18 @@ export function useTreePickerKeyboard({
       return false
     },
     [
+      closeCommand,
+      closeSearch,
       hi,
       onExitToDetailBar,
       onOpenMenu,
       onReturnToPrompt,
       onSetFold,
       onToggleMark,
+      searchJumpOptions,
+      setCommandBuffer,
+      setCommandListingHint,
+      setCommandMode,
       setHi,
       setSearchMode,
       views
@@ -240,13 +343,26 @@ export function useTreePickerKeyboard({
         handleSearchKey(e)
         return
       }
+      if (commandMode) {
+        handleCommandKey(e)
+        return
+      }
       if (menuOpen) {
         handleMenuKey(e)
         return
       }
       handleListKey(e)
     },
-    [handleListKey, handleMenuKey, handleSearchKey, keyboardActive, menuOpen, searchMode]
+    [
+      commandMode,
+      handleCommandKey,
+      handleListKey,
+      handleMenuKey,
+      handleSearchKey,
+      keyboardActive,
+      menuOpen,
+      searchMode
+    ]
   )
 
   useWindowKeydownCapture(onWindowKeydownCapture)
@@ -256,12 +372,11 @@ export function useTreePickerKeyboard({
       if (!keyboardActive || e.nativeEvent.isComposing) {
         return
       }
-      // EN: Keep the hidden IME textarea empty outside search mode.
-      if (!searchMode && pickerPlainTypingKey(e.nativeEvent)) {
+      if (!searchMode && !commandMode && pickerPlainTypingKey(e.nativeEvent)) {
         e.preventDefault()
       }
     },
-    [keyboardActive, searchMode]
+    [commandMode, keyboardActive, searchMode]
   )
 
   return { onInputKeyDown }

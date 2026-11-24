@@ -32,8 +32,8 @@
     "en": "No bookmarks."
   },
   "bookmark.picker.hint": {
-    "ja": "bookmark -list: ↑↓ 移動 · ←→ 折りたたみ · Space マーク · Enter / → 操作 · Esc プロンプトへ",
-    "en": "bookmark -list: ↑↓ move · ←→ fold · Space mark · Enter / → actions · Esc prompt"
+    "ja": "bookmark -list: ↑↓ 移動 · ←→ 折りたたみ · Space マーク · Enter / → 操作 · / ハイライト · n/N · :nohlsearch · Esc プロンプトへ",
+    "en": "bookmark -list: ↑↓ move · ←→ fold · Space mark · Enter / → actions · / highlight · n/N · :nohlsearch · Esc prompt"
   },
   "bookmark.picker.inputAria": {
     "ja": "ブックマークピッカー入力",

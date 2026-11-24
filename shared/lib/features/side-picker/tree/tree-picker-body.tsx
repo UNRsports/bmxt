@@ -13,14 +13,18 @@ import {
   CSP_DYNAMIC_SCOPE_ATTR,
   useCspDynamicStyle
 } from "../../bmxt-window/csp-dynamic-stylesheet"
+import { useUiSettings } from "../../setting/use-ui-settings"
+import { PickerCommandFooter } from "../chrome/picker-command-footer"
 import { PickerListShell } from "../chrome/picker-list-shell"
 import { PickerSearchFooter } from "../chrome/picker-search-footer"
+import { urlListCommandListingHint } from "../interaction/url-list-commands"
 import { scrollPickerListToHiAfterLayout } from "../interaction/picker-list-scroll"
 import {
   computePlainPickerWindow,
   PLAIN_PICKER_VIRTUALIZE_MIN,
   scrollTopForPlainPickerIndex
 } from "../plain/plain-text-picker-virtual"
+import { treePickerHighlightSegments } from "./tree-picker-search"
 import { useTreePickerKeyboard } from "./use-tree-picker-keyboard"
 import type { TreePickerActionMenu, TreePickerRowView } from "./tree-picker-types"
 
@@ -42,6 +46,8 @@ export type TreePickerBodyProps = {
   onHiChange: (next: SetStateAction<number>) => void
   filterQuery: string
   onFilterQueryChange: (value: string) => void
+  /** EN: Expand matching folds when `/` Enter commits (command-dir wrapper). */
+  onSearchCommit?: (pattern: string) => void
   menu: TreePickerActionMenu | null
   onMenuPickIndexChange: (index: number) => void
   onMenuConfirm: () => void
@@ -65,15 +71,37 @@ function rowVariantClass(view: TreePickerRowView): string {
   return "bmxt-tab-picker-row--tab"
 }
 
+function renderHighlighted(
+  text: string,
+  searchHighlightQuery: string,
+  field: "label" | "detail",
+  keyPrefix: string
+): ReactNode {
+  let offset = 0
+  return treePickerHighlightSegments(text, searchHighlightQuery, field).map((seg) => {
+    const key = `${keyPrefix}-${offset}`
+    offset += seg.text.length
+    return seg.match ? (
+      <mark key={key} className="bmxt-tab-picker-search-hl">
+        {seg.text}
+      </mark>
+    ) : (
+      <span key={key}>{seg.text}</span>
+    )
+  })
+}
+
 function TreePickerRowImpl({
   view,
   index,
   isHi,
+  searchHighlightQuery,
   onSelect
 }: {
   view: TreePickerRowView
   index: number
   isHi: boolean
+  searchHighlightQuery: string
   onSelect: (index: number) => void
 }) {
   const className =
@@ -100,10 +128,14 @@ function TreePickerRowImpl({
             {markGlyph}
           </span>
           <span aria-hidden>{indentGlyphs.join("")}</span>
-          <span className="bmxt-tab-picker-tab-title-text">{view.label}</span>
+          <span className="bmxt-tab-picker-tab-title-text">
+            {renderHighlighted(view.label, searchHighlightQuery, "label", `l-${index}`)}
+          </span>
         </div>
         {view.detail !== null ? (
-          <div className="bmxt-tab-picker-tab-url">{view.detail}</div>
+          <div className="bmxt-tab-picker-tab-url">
+            {renderHighlighted(view.detail, searchHighlightQuery, "detail", `d-${index}`)}
+          </div>
         ) : null}
       </div>
     )
@@ -122,7 +154,7 @@ function TreePickerRowImpl({
         {view.expanded ? "▼" : "▶"}
       </span>
       <span className="bmxt-tab-picker-tab-glyph">{markGlyph}</span>
-      <span>{view.label}</span>
+      <span>{renderHighlighted(view.label, searchHighlightQuery, "label", `h-${index}`)}</span>
     </div>
   )
 }
@@ -143,6 +175,7 @@ export function TreePickerBody({
   onHiChange,
   filterQuery,
   onFilterQueryChange,
+  onSearchCommit,
   menu,
   onMenuPickIndexChange,
   onMenuConfirm,
@@ -155,15 +188,22 @@ export function TreePickerBody({
   keyboardActive,
   pickerInputRef
 }: TreePickerBodyProps) {
+  const { settings: uiSettings } = useUiSettings()
+  const locale = uiSettings.locale
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
   const measureRef = useRef<HTMLDivElement | null>(null)
   const [searchMode, setSearchMode] = useState(false)
+  const [hlSearchPattern, setHlSearchPattern] = useState("")
+  const [commandMode, setCommandMode] = useState(false)
+  const [commandBuffer, setCommandBuffer] = useState("")
+  const [commandListingHint, setCommandListingHint] = useState(false)
   const [rowHeight, setRowHeight] = useState<number | null>(null)
   const [windowRange, setWindowRange] = useState({ start: 0, end: 0 })
 
   const useVirtual = views.length >= PLAIN_PICKER_VIRTUALIZE_MIN
   const effectiveRowHeight = rowHeight ?? TREE_PICKER_ROW_HEIGHT_FALLBACK
+  const searchHighlightQuery = searchMode ? filterQuery : hlSearchPattern
 
   const setInputEl = useCallback(
     (el: HTMLTextAreaElement | null) => {
@@ -184,6 +224,14 @@ export function TreePickerBody({
     setSearchMode,
     filterQuery,
     onFilterQueryChange,
+    hlSearchPattern,
+    setHlSearchPattern,
+    onSearchCommit,
+    commandMode,
+    setCommandMode,
+    commandBuffer,
+    setCommandBuffer,
+    setCommandListingHint,
     menuOpen: menu !== null,
     menuItemCount: menu === null ? 0 : menu.items.length,
     menuPickIndex: menu === null ? 0 : menu.pickIndex,
@@ -290,6 +338,7 @@ export function TreePickerBody({
           view={view}
           index={i}
           isHi={i === hi}
+          searchHighlightQuery={searchHighlightQuery}
           onSelect={onSelectRow}
         />
       )
@@ -384,14 +433,17 @@ export function TreePickerBody({
         headline={headline}
         keyboardActive={keyboardActive}
         searchMode={searchMode}
-        commandMode={false}
+        commandMode={commandMode}
         filterQuery={filterQuery}
-        commandBuffer=""
+        commandBuffer={commandBuffer}
         setInputEl={setInputEl}
         onInputKeyDown={onInputKeyDown}
         onInputChange={(value) => {
           if (searchMode) {
             onFilterQueryChange(value)
+          } else if (commandMode) {
+            setCommandBuffer(value)
+            setCommandListingHint(false)
           }
         }}
         onCompositionEndSearch={searchMode ? (value) => onFilterQueryChange(value) : undefined}
@@ -405,6 +457,16 @@ export function TreePickerBody({
         onListScroll={useVirtual ? syncWindowFromScroll : undefined}
         listBody={listBody}
         searchFooter={searchMode ? <PickerSearchFooter filterQuery={filterQuery} /> : null}
+        commandFooter={
+          commandMode ? (
+            <PickerCommandFooter
+              commandBuffer={commandBuffer}
+              showListingHint={commandListingHint}
+              listingHintText={urlListCommandListingHint(locale)}
+              ambiguousPlaceholder={null}
+            />
+          ) : null
+        }
         inputRef={inputRef}
       />
       {menuPanel}

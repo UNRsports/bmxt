@@ -23,6 +23,10 @@ import {
   type BookmarkActionId
 } from "./bookmark-picker-view"
 import {
+  computeBookmarkSearchFilteredVisibleIndices,
+  expandBookmarkFoldsForSearchMatches
+} from "./bookmark-search-visibility"
+import {
   collapseBookmarkFolder,
   computeBookmarkVisibleRowIndices,
   expandBookmarkFolder
@@ -81,10 +85,19 @@ export function BookmarkPickerWrapper({
     getSyncLinkStatus
   )
 
-  const visibleIndices = useMemo(
+  const foldVisibleIndices = useMemo(
     () => computeBookmarkVisibleRowIndices(state.rows),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- foldRevision signals external fold-state change
     [state.rows, foldRevision]
+  )
+  const visibleIndices = useMemo(
+    () =>
+      computeBookmarkSearchFilteredVisibleIndices(
+        state.rows,
+        state.filterQuery,
+        foldVisibleIndices
+      ),
+    [foldVisibleIndices, state.filterQuery, state.rows]
   )
   const views = useMemo(
     () => buildBookmarkTreeViews(state, visibleIndices),
@@ -119,9 +132,18 @@ export function BookmarkPickerWrapper({
 
   const onFilterQueryChange = useCallback(
     (value: string) => {
-      onStateChange((prev) => ({ ...prev, filterQuery: value }))
+      onStateChange((prev) => ({ ...prev, filterQuery: value, hi: 0 }))
     },
     [onStateChange]
+  )
+
+  const onSearchCommit = useCallback(
+    (pattern: string) => {
+      if (expandBookmarkFoldsForSearchMatches(state.rows, pattern)) {
+        setFoldRevision((n) => n + 1)
+      }
+    },
+    [state.rows]
   )
 
   const onSetFold = useCallback(
@@ -407,6 +429,7 @@ export function BookmarkPickerWrapper({
       onHiChange={onHiChange}
       filterQuery={state.filterQuery}
       onFilterQueryChange={onFilterQueryChange}
+      onSearchCommit={onSearchCommit}
       menu={menu}
       onMenuPickIndexChange={onMenuPickIndexChange}
       onMenuConfirm={onMenuConfirm}
