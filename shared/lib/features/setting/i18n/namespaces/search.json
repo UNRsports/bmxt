@@ -224,6 +224,10 @@
     "ja": "search — Google スプレッドシートのセルデータを読めませんでした（ログイン／共有権限を確認するか、シートを開き直してください）。",
     "en": "search — could not read Google Sheets cell data (check sign-in / sharing, or reopen the sheet)."
   },
+  "search.sheets.truncatedHint": {
+    "ja": "search — シートが長いため先頭側のみ走査しました。見つからない場合は search -list --page --unlimit <pattern> を試してください。",
+    "en": "search — sheet was truncated to a prefix. If a hit is missing, retry with search -list --page --unlimit <pattern>."
+  },
   "search.status.auto": {
     "ja": "結果一覧・詳細: ↑↓ で背面／ページ内プレビュー · Enter ジャンプ",
     "en": "Results & detail: ↑↓ background / in-page preview · Enter jump"

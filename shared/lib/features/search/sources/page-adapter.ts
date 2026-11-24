@@ -6,7 +6,10 @@
 import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
 import { collectPageMatchesFromOpenTab } from "../../page-extract/collect-tab-page-matches"
 import { readOpenTabInnerText } from "../../page-extract/read-tab-inner-text"
-import { readSheetsPreviewFromOpenTab } from "../../page-extract/sheets/collect-sheets-page-matches"
+import {
+  readSheetsPreviewFromOpenTab,
+  SHEETS_TAB_SCAN_BUDGET_MS
+} from "../../page-extract/sheets/collect-sheets-page-matches"
 import { isGoogleSheetsUrl } from "../../url/parse-google-sheets-url"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 import { MAX_MATCHES_PER_TAB, MAX_PAGE_TEXT_CHARS, PAGE_SCAN_PREFIX_CHARS } from "../limits"
@@ -49,7 +52,8 @@ type TabScanOutcome =
 
 function withTabScanBudget(
   work: Promise<TabScanOutcome>,
-  shouldCancel?: () => boolean
+  shouldCancel?: () => boolean,
+  budgetMs: number = TAB_SCAN_BUDGET_MS
 ): Promise<TabScanOutcome> {
   return new Promise((resolve) => {
     let settled = false
@@ -64,7 +68,7 @@ function withTabScanBudget(
     }
     const timer = setTimeout(() => {
       finish({ kind: "matches", matches: [], truncatedLong: false, ok: false })
-    }, TAB_SCAN_BUDGET_MS)
+    }, budgetMs)
     // EN: Stop waiting as soon as Ctrl+C flips the job flag (executeScript itself cannot abort).
     // JA: Ctrl+C でフラグが立ったら待ちを打ち切る（executeScript 自体は中断不可）。
     const cancelPoll = setInterval(() => {
@@ -184,6 +188,7 @@ export async function searchPageLines(
   let skipped = 0
   let skippedLong = 0
   let skippedSheets = 0
+  let truncatedSheets = 0
   let tabsChecked = 0
   let cancelled = false
   const matchAll = !pattern.trim()
@@ -222,13 +227,17 @@ export async function searchPageLines(
       break
     }
 
+    const sheetsTab = isGoogleSheetsUrl(url)
     const outcome = await withTabScanBudget(
       (async (): Promise<TabScanOutcome> => {
         if (matchAll) {
-          if (isGoogleSheetsUrl(url)) {
+          if (sheetsTab) {
             const sheetsPreview = await readSheetsPreviewFromOpenTab(
               tab,
-              maxPageTextChars || PAGE_SCAN_PREFIX_CHARS
+              // EN: 0 = unlimit; otherwise Sheets helper applies its larger default via 0→default? 
+              //     Pass a sentinel: use PAGE_SCAN_PREFIX only as hint; helper remaps undefined-like.
+              // JA: 0 は unlimit。通常は Sheets 既定予算を使うため DEFAULT 相当を渡す。
+              unlimit ? 0 : 1_500_000
             )
             if (sheetsPreview.kind === "ok") {
               return { kind: "preview", text: sheetsPreview.text, ok: true }
@@ -240,14 +249,17 @@ export async function searchPageLines(
         }
         const collected = await collectPageMatchesFromOpenTab(tab, pattern, {
           maxMatches: MAX_MATCHES_PER_TAB,
-          maxTextChars: maxPageTextChars
+          // EN: Sheets uses its own default cell budget when maxTextChars is omitted.
+          // JA: Sheets は maxTextChars 省略時に独自のセル文字数上限を使う。
+          maxTextChars: sheetsTab ? (unlimit ? 0 : undefined) : maxPageTextChars
         })
         if (collected === null) {
           return { kind: "matches", matches: [], truncatedLong: false, ok: false }
         }
-        const truncatedLong =
-          collected.truncated ||
-          (!unlimit && collected.bodyLength > MAX_PAGE_TEXT_CHARS)
+        const truncatedLong = sheetsTab
+          ? collected.truncated === true
+          : collected.truncated ||
+            (!unlimit && collected.bodyLength > MAX_PAGE_TEXT_CHARS)
         return {
           kind: "matches",
           matches: collected.matches,
@@ -256,7 +268,8 @@ export async function searchPageLines(
           ok: true
         }
       })(),
-      shouldCancel
+      shouldCancel,
+      sheetsTab ? SHEETS_TAB_SCAN_BUDGET_MS : TAB_SCAN_BUDGET_MS
     )
     if (shouldCancel?.()) {
       cancelled = true
@@ -264,13 +277,17 @@ export async function searchPageLines(
     }
 
     if (outcome.kind === "matches" && outcome.truncatedLong && outcome.length !== undefined) {
-      skippedLong += 1
-      longPages.push({
-        tabId,
-        title: title || "(untitled)",
-        url: url || "(no url)",
-        length: outcome.length
-      })
+      if (sheetsTab) {
+        truncatedSheets += 1
+      } else {
+        skippedLong += 1
+        longPages.push({
+          tabId,
+          title: title || "(untitled)",
+          url: url || "(no url)",
+          length: outcome.length
+        })
+      }
     }
 
     const ok = outcome.ok
@@ -361,6 +378,9 @@ export async function searchPageLines(
       tSearch("search.sheets.loadFailed", uiLocale) +
         ` (${skippedSheets})`
     )
+  }
+  if (truncatedSheets > 0) {
+    out.push(tSearch("search.sheets.truncatedHint", uiLocale))
   }
   appendLongPageNotices(out, longPages, uiLocale)
   return out
