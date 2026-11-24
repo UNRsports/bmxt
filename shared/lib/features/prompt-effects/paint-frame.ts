@@ -1,15 +1,24 @@
 import type { PromptEffectTheme } from "./types"
 import type { PromptParticle } from "./types"
 
-/** EN: Resize canvas to the host, clear, and step/paint all particles via the theme. */
+/** EN: CSS pixel size of the full-window effect stage. */
+function resolveStageCssSize(): { cssW: number; cssH: number } {
+  const vv = window.visualViewport
+  const cssW = Math.max(1, Math.floor(vv?.width ?? window.innerWidth))
+  const cssH = Math.max(1, Math.floor(vv?.height ?? window.innerHeight))
+  return { cssW, cssH }
+}
+
+/**
+ * EN: Resize canvas to the viewport stage, clear, and step/paint all particles via the theme.
+ * JA: ビューポート全面に Canvas を合わせ、クリア後にテーマで粒子を step／描画する。
+ */
 export function paintPromptEffectFrame(
   canvas: HTMLCanvasElement,
-  host: HTMLElement,
   theme: PromptEffectTheme,
   particles: PromptParticle[]
 ): PromptParticle[] {
-  const cssW = Math.max(1, Math.floor(host.clientWidth))
-  const cssH = Math.max(1, Math.floor(host.clientHeight))
+  const { cssW, cssH } = resolveStageCssSize()
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   const pixelW = Math.floor(cssW * dpr)
   const pixelH = Math.floor(cssH * dpr)

@@ -18,8 +18,8 @@ export function stepAndPaintFireParticle(
   }
 
   if (particle.variant === "flame") {
-    particle.vx += (Math.random() - 0.5) * 0.12
-    particle.vy -= 0.04 + Math.random() * 0.05
+    particle.vx += (Math.random() - 0.5) * 0.14
+    particle.vy -= 0.06 + Math.random() * 0.08
     const alpha = Math.min(1, lifeRatio * 1.25) * 0.85
     const radius = particle.size * (0.55 + lifeRatio * 0.7)
     const grad = ctx.createRadialGradient(
@@ -40,9 +40,9 @@ export function stepAndPaintFireParticle(
     return true
   }
 
-  // EN: Shatter — outward drift with light gravity and twinkle.
-  particle.vx *= 0.985
-  particle.vy += 0.045
+  // EN: Shatter — outward drift with light gravity and twinkle (travels farther on the stage).
+  particle.vx *= 0.988
+  particle.vy += 0.038
   particle.spin *= 0.98
   const alpha = Math.min(1, lifeRatio * 1.35) * 0.95
   const radius = particle.size * (0.4 + lifeRatio * 0.9)

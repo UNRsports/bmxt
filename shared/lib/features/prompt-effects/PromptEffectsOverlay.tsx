@@ -20,8 +20,8 @@ export type PromptEffectsOverlayProps = {
 }
 
 /**
- * EN: Canvas host for prompt type/delete particle themes (gated by settings).
- * JA: プロンプト入力／削除パーティクルテーマの Canvas ホスト（設定でゲート）。
+ * EN: Full-window canvas host for prompt type/delete particle themes (gated by settings).
+ * JA: プロンプト入力／削除パーティクルテーマの全画面 Canvas ホスト（設定でゲート）。
  */
 export function PromptEffectsOverlay({
   enabled,
@@ -56,15 +56,13 @@ export function PromptEffectsOverlay({
     }
     const tick = (): void => {
       const canvas = canvasRef.current
-      const host = fieldRef.current
-      if (!canvas || !host || !enabledRef.current) {
+      if (!canvas || !enabledRef.current) {
         rafRef.current = null
         return
       }
       const theme = resolvePromptEffectTheme(themeIdRef.current)
       particlesRef.current = paintPromptEffectFrame(
         canvas,
-        host,
         theme,
         particlesRef.current
       )
