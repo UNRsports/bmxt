@@ -4,6 +4,7 @@
  */
 
 import { canScriptHttpHostPages } from "../extension-permissions/http-host-access.ts"
+import { isFileSystemAccessAvailable } from "../setting/settings-external-storage.ts"
 import { isBuiltInTranslatorSupported } from "../translate/translator-service.ts"
 import type {
   CapabilityId,
@@ -98,12 +99,24 @@ async function probeScriptingHost(): Promise<CapabilityStatus> {
   }
 }
 
+/**
+ * EN: WebRTC / FSA exist on the BMXt prompt window, not on the MV3 Service Worker.
+ *     Callers must run this probe in the page (see run-command UI path).
+ * JA: WebRTC / FSA はプロンプト窓にあり SW には無い。ページ側で検査すること。
+ */
 function probeWebRtc(): CapabilityStatus {
   try {
-    if (typeof RTCPeerConnection !== "function") {
-      return "ng"
+    const g = globalThis as typeof globalThis & {
+      RTCPeerConnection?: unknown
+      webkitRTCPeerConnection?: unknown
     }
-    return "ok"
+    if (typeof g.RTCPeerConnection === "function") {
+      return "ok"
+    }
+    if (typeof g.webkitRTCPeerConnection === "function") {
+      return "ok"
+    }
+    return "ng"
   } catch {
     return "ng"
   }
@@ -111,13 +124,7 @@ function probeWebRtc(): CapabilityStatus {
 
 function probeFsa(): CapabilityStatus {
   try {
-    const w = globalThis as typeof globalThis & {
-      showDirectoryPicker?: unknown
-    }
-    if (typeof w.showDirectoryPicker !== "function") {
-      return "ng"
-    }
-    return "ok"
+    return isFileSystemAccessAvailable() ? "ok" : "ng"
   } catch {
     return "ng"
   }
