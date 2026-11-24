@@ -102,31 +102,42 @@ fn run_list(args: &[String]) -> DispatchBundle {
         i += 1;
     }
 
-    let mut peer_parts = vec![
-        "search".to_string(),
-        "-list".to_string(),
-        "--history".to_string(),
-    ];
-    peer_parts.extend(pattern_parts.iter().cloned());
-    let mut dispatch_parts = vec![
-        "search".to_string(),
-        "-list".to_string(),
-        "--history".to_string(),
-    ];
-    if device_scope == "peers" {
-        dispatch_parts.push("--peers".to_string());
-    } else if device_scope == "device" {
-        dispatch_parts.push("--device".to_string());
-        dispatch_parts.push(device_id.clone());
+    // EN: Cross-device history stays on search (flat). Local uses date-tree list.
+    // JA: ピア横断は search のフラット一覧。ローカルは日付ツリー list。
+    if device_scope == "peers" || device_scope == "device" {
+        let mut peer_parts = vec![
+            "search".to_string(),
+            "-list".to_string(),
+            "--history".to_string(),
+        ];
+        peer_parts.extend(pattern_parts.iter().cloned());
+        let mut dispatch_parts = vec![
+            "search".to_string(),
+            "-list".to_string(),
+            "--history".to_string(),
+        ];
+        if device_scope == "peers" {
+            dispatch_parts.push("--peers".to_string());
+        } else {
+            dispatch_parts.push("--device".to_string());
+            dispatch_parts.push(device_id.clone());
+        }
+        dispatch_parts.extend(pattern_parts);
+        return effects(vec![HostEffect::SearchList {
+            dispatch_line: dispatch_parts.join(" "),
+            peer_dispatch_line: peer_parts.join(" "),
+            device_scope,
+            device_id,
+        }]);
     }
-    dispatch_parts.extend(pattern_parts);
 
-    effects(vec![HostEffect::SearchList {
-        dispatch_line: dispatch_parts.join(" "),
-        peer_dispatch_line: peer_parts.join(" "),
+    ui(UiAction::OpenPlainList {
+        list_id: "history".to_string(),
+        line: args.join(" "),
+        show_url: "false".to_string(),
         device_scope,
         device_id,
-    }])
+    })
 }
 
 fn run_delete(args: &[String]) -> DispatchBundle {
@@ -222,8 +233,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_emits_search_history() {
+    fn list_local_emits_open_plain_list() {
         let bundle = run(&["history".into(), "-list".into(), "foo".into()]);
+        match bundle {
+            DispatchBundle::Ui {
+                action:
+                    UiAction::OpenPlainList {
+                        list_id,
+                        line,
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(list_id, "history");
+                assert!(line.contains("history -list"));
+                assert!(line.contains("foo"));
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_peers_emits_search_history() {
+        let bundle = run(&[
+            "history".into(),
+            "-list".into(),
+            "--peers".into(),
+            "foo".into(),
+        ]);
         match bundle {
             DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::SearchList {

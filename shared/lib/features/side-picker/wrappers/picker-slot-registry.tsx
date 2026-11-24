@@ -17,6 +17,10 @@ import type { DomPageActiveMode } from "../../dom/page-active-setting"
 import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
 import type { SettingPickerRow } from "../../setting/setting-picker-rows"
 import { SettingPickerWrapper } from "../../setting/setting-picker-wrapper"
+import type { BookmarkPickerState } from "../../bookmark/bookmark-picker-state"
+import { BookmarkPickerWrapper } from "../../bookmark/bookmark-picker-wrapper"
+import type { HistoryPickerState } from "../../history/history-picker-state"
+import { HistoryPickerWrapper } from "../../history/history-picker-wrapper"
 
 export type SessionPickerColumnsProps = PickerColumnHostContext
 
@@ -30,14 +34,24 @@ export type PickerColumnHostContext = {
   searchListPicker: SearchListPickerState | null
   domListPicker: DomListPickerState | null
   settingListPicker: SettingListPickerState | null
+  bookmarkPicker: BookmarkPickerState | null
+  historyPicker: HistoryPickerState | null
   tabsPickerKeyboardActive: boolean
   searchPickerKeyboardActive: boolean
   domPickerKeyboardActive: boolean
   settingPickerKeyboardActive: boolean
+  bookmarkPickerKeyboardActive: boolean
+  historyPickerKeyboardActive: boolean
   tabPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   searchPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   domPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
   settingPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  bookmarkPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  historyPickerInputRef: MutableRefObject<HTMLTextAreaElement | null>
+  onBookmarkPickerStateChange: (
+    update: (prev: BookmarkPickerState) => BookmarkPickerState
+  ) => void
+  onHistoryPickerStateChange: (update: (prev: HistoryPickerState) => HistoryPickerState) => void
   onSettingPickerStateChange: (next: SettingListPickerState) => void
   onSettingPickerRowAction: (row: SettingPickerRow, index: number) => void | Promise<void>
   onSettingPickerApplyEdit: (
@@ -147,6 +161,36 @@ const PICKER_SLOT_RENDERERS: Record<PickerSlotId, SlotRenderer> = {
           sessionId={ctx.sessionId}
         />
       </PickerPanelHost>
+    ) : null,
+  bookmark: (ctx) =>
+    ctx.bookmarkPicker ? (
+      <PickerPanelHost>
+        <BookmarkPickerWrapper
+          state={ctx.bookmarkPicker}
+          onStateChange={ctx.onBookmarkPickerStateChange}
+          onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("bookmark")}
+          keyboardActive={ctx.bookmarkPickerKeyboardActive}
+          pickerInputRef={ctx.bookmarkPickerInputRef}
+          submitConstructedLine={ctx.submitConstructedLine}
+          onAppendLog={ctx.onAppendLog}
+        />
+      </PickerPanelHost>
+    ) : null,
+  history: (ctx) =>
+    ctx.historyPicker ? (
+      <PickerPanelHost>
+        <HistoryPickerWrapper
+          state={ctx.historyPicker}
+          onStateChange={ctx.onHistoryPickerStateChange}
+          onReturnToPrompt={() => ctx.activatePaneFocus("terminal")}
+          onExitToDetailBar={() => ctx.onExitToDetailBar("history")}
+          keyboardActive={ctx.historyPickerKeyboardActive}
+          pickerInputRef={ctx.historyPickerInputRef}
+          submitConstructedLine={ctx.submitConstructedLine}
+          onAppendLog={ctx.onAppendLog}
+        />
+      </PickerPanelHost>
     ) : null
 }
 
@@ -155,4 +199,11 @@ export function renderPickerSlot(slot: PickerSlotId, ctx: PickerColumnHostContex
   return PICKER_SLOT_RENDERERS[slot](ctx)
 }
 
-export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = ["tabs", "search", "dom", "setting"]
+export const PICKER_SLOT_ORDER: readonly PickerSlotId[] = [
+  "tabs",
+  "search",
+  "dom",
+  "setting",
+  "bookmark",
+  "history"
+]

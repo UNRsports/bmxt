@@ -143,6 +143,8 @@ import { formatBulletedLines, versionUpgradeTitle } from "../setting/i18n/resolv
 import { setRunLocale } from "../setting/i18n/run-locale"
 import { settingTokenForUiLocale } from "../setting/locale"
 import { type SettingListPickerState } from "../setting/setting-list-picker-state"
+import type { BookmarkPickerState } from "../bookmark/bookmark-picker-state"
+import type { HistoryPickerState } from "../history/history-picker-state"
 import {
   parseSettingExitListLine,
   parseSettingIncompleteLine
@@ -330,6 +332,8 @@ export function BmxtShell({
   const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const settingPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const bookmarkPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const historyPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   // EN: Sync during render (not useEffect) so rAF focus guards see the latest pane
   // before paint — e.g. `| browse` activatePaneFocus then compound-end focusPrompt.
@@ -350,10 +354,14 @@ export function BmxtShell({
     searchListPicker,
     domListPicker,
     settingListPicker,
+    bookmarkPicker,
+    historyPicker,
     setTabPicker,
     setSearchListPicker,
     setDomListPicker,
     setSettingListPicker,
+    setBookmarkListPicker,
+    setHistoryListPicker,
     sidePickerOpen
   } = usePickerManager({
     sessionId,
@@ -389,11 +397,15 @@ export function BmxtShell({
   const displaySearchListPicker = displaySessionPickers.search
   const displayDomListPicker = displaySessionPickers.dom
   const displaySettingListPicker = displaySessionPickers.setting
+  const displayBookmarkPicker = displaySessionPickers.bookmark
+  const displayHistoryPicker = displaySessionPickers.history
 
   const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
   const searchPickerKeyboardActive = paneFocus === "search" && isFocusedPane
   const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
   const settingPickerKeyboardActive = paneFocus === "setting" && isFocusedPane
+  const bookmarkPickerKeyboardActive = paneFocus === "bookmark" && isFocusedPane
+  const historyPickerKeyboardActive = paneFocus === "history" && isFocusedPane
 
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
@@ -411,6 +423,30 @@ export function BmxtShell({
   useEffect(() => {
     settingListPickerRef.current = settingListPicker
   }, [settingListPicker])
+  const bookmarkPickerRef = useRef<BookmarkPickerState | null>(null)
+  useEffect(() => {
+    bookmarkPickerRef.current = bookmarkPicker
+  }, [bookmarkPicker])
+  const historyPickerRef = useRef<HistoryPickerState | null>(null)
+  useEffect(() => {
+    historyPickerRef.current = historyPicker
+  }, [historyPicker])
+  const onBookmarkPickerStateChange = useCallback(
+    (update: (prev: BookmarkPickerState) => BookmarkPickerState) => {
+      setBookmarkListPicker(sessionId, (prev: BookmarkPickerState | null) =>
+        prev === null ? prev : update(prev)
+      )
+    },
+    [sessionId, setBookmarkListPicker]
+  )
+  const onHistoryPickerStateChange = useCallback(
+    (update: (prev: HistoryPickerState) => HistoryPickerState) => {
+      setHistoryListPicker(sessionId, (prev: HistoryPickerState | null) =>
+        prev === null ? prev : update(prev)
+      )
+    },
+    [sessionId, setHistoryListPicker]
+  )
   const jobRunner = useSessionJobRunner(sessionId)
   const {
     isCommandBusy,
@@ -658,6 +694,8 @@ export function BmxtShell({
         detailBarId ?? "",
         paneFocus,
         settingListPicker !== null ? "1" : "0",
+        bookmarkPicker !== null ? "1" : "0",
+        historyPicker !== null ? "1" : "0",
         tabPicker !== null ? "1" : "0",
         searchListPicker !== null ? "1" : "0",
         domListPicker !== null ? "1" : "0",
@@ -671,6 +709,8 @@ export function BmxtShell({
       detailBarId,
       paneFocus,
       settingListPicker,
+      bookmarkPicker,
+      historyPicker,
       tabPicker,
       searchListPicker,
       domListPicker,
@@ -932,6 +972,8 @@ export function BmxtShell({
     exitPickerToDetailBar,
     exitDetailBarToTerminal,
     closeSettingPickerColumn,
+    closeBookmarkPickerColumn,
+    closeHistoryPickerColumn,
     focusPickerSlot,
     handleToggleNavActive
   } = usePaneFocusController({
@@ -961,6 +1003,8 @@ export function BmxtShell({
     searchListPicker,
     domListPicker,
     settingListPicker,
+    bookmarkPicker,
+    historyPicker,
     translateEnabled,
     translatePairIdRef,
     tabsPageActiveModeRef,
@@ -980,11 +1024,15 @@ export function BmxtShell({
     searchPickerInputRef,
     domPickerInputRef,
     settingPickerInputRef,
+    bookmarkPickerInputRef,
+    historyPickerInputRef,
     pickersForColumnOrder,
     openPickers,
     focusPrompt,
     closePromptPickerUi,
     setSettingListPicker,
+    setBookmarkListPicker,
+    setHistoryListPicker,
     uiLocale: uiSettings.locale,
     jobRunner,
     appendLogLines,
@@ -1138,6 +1186,8 @@ export function BmxtShell({
     searchListPickerRef,
     domListPickerRef,
     settingListPickerRef,
+    bookmarkPickerRef,
+    historyPickerRef,
     tabsPageActiveModeRef,
     domPageActiveModeRef,
     translatePairIdRef,
@@ -1171,12 +1221,16 @@ export function BmxtShell({
     teardownNav,
     clearSearchLoadingProgress,
     closeSettingPickerColumn,
+    closeBookmarkPickerColumn,
+    closeHistoryPickerColumn,
     replaceUiSettingsState,
     submitConstructedLine,
     setTabPicker,
     setSearchListPicker,
     setDomListPicker,
     setSettingListPicker,
+    setBookmarkListPicker,
+    setHistoryListPicker,
     openSessionListPicker,
     setSubCmdPicker,
     runDomListAndShow,
@@ -1624,6 +1678,12 @@ export function BmxtShell({
           setting={{
             pickerOpen: settingListPicker !== null
           }}
+          bookmark={{
+            pickerOpen: bookmarkPicker !== null
+          }}
+          history={{
+            pickerOpen: historyPicker !== null
+          }}
         />
         <div ref={scrollAnchorRef} className="bmxt-scroll-anchor" aria-hidden />
     </>
@@ -1685,14 +1745,22 @@ export function BmxtShell({
           searchLoadingProgressLines={searchLoadingProgressLines}
           domListPicker={displayDomListPicker}
           settingListPicker={displaySettingListPicker}
+          bookmarkPicker={displayBookmarkPicker}
+          historyPicker={displayHistoryPicker}
           tabsPickerKeyboardActive={tabsPickerKeyboardActive}
           searchPickerKeyboardActive={searchPickerKeyboardActive}
           domPickerKeyboardActive={domPickerKeyboardActive}
           settingPickerKeyboardActive={settingPickerKeyboardActive}
+          bookmarkPickerKeyboardActive={bookmarkPickerKeyboardActive}
+          historyPickerKeyboardActive={historyPickerKeyboardActive}
           tabPickerInputRef={tabPickerInputRef}
           searchPickerInputRef={searchPickerInputRef}
           domPickerInputRef={domPickerInputRef}
           settingPickerInputRef={settingPickerInputRef}
+          bookmarkPickerInputRef={bookmarkPickerInputRef}
+          historyPickerInputRef={historyPickerInputRef}
+          onBookmarkPickerStateChange={onBookmarkPickerStateChange}
+          onHistoryPickerStateChange={onHistoryPickerStateChange}
           onSettingPickerStateChange={onSettingPickerStateChange}
           onSettingPickerRowAction={onSettingPickerRowAction}
           onSettingPickerApplyEdit={onSettingPickerApplyEdit}

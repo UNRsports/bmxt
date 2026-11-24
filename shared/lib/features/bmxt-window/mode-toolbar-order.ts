@@ -8,6 +8,8 @@ export type ModeToolbarId =
   | "search"
   | "dom"
   | "setting"
+  | "bookmark"
+  | "history"
 
 export const MODE_TOOLBAR_IDS: readonly ModeToolbarId[] = [
   "nav",
@@ -15,7 +17,9 @@ export const MODE_TOOLBAR_IDS: readonly ModeToolbarId[] = [
   "tabs",
   "search",
   "dom",
-  "setting"
+  "setting",
+  "bookmark",
+  "history"
 ]
 
 export function isModeToolbarId(v: unknown): v is ModeToolbarId {
@@ -42,6 +46,12 @@ export function deriveModeToolbarOrderFromPickers(
   }
   if (pickers?.setting !== null && pickers?.setting !== undefined) {
     order.push("setting")
+  }
+  if (pickers?.bookmark !== null && pickers?.bookmark !== undefined) {
+    order.push("bookmark")
+  }
+  if (pickers?.history !== null && pickers?.history !== undefined) {
+    order.push("history")
   }
   return order
 }

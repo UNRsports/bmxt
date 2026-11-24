@@ -40,7 +40,7 @@ new-window,,,,,new-window <tabId…> | … | new-window,Effect `tabs_new_window`
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
 browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
 bookmark,,,,,bookmark …,単独 `bookmark` + Enter: msgs + promptPrefix。CRUD・Family 送信・バックアップ。,§9
-bookmark,-list,,rest,,bookmark -list [--folder <id>] [--device <id>|--peers],無 folder: Effect `search_list`（`--bookmark`）。`--folder`: Effect `bookmark_list`（ローカル）。,--peers は search_query 経路
+bookmark,-list,,rest,,bookmark -list [--folder <id>] [--device <id>|--peers],ローカル: UiAction `open_plain_list` list_id=bookmark（フォルダツリー）。`| browse` → bookmark picker。`--device`/`--peers`: Effect `search_list`（flat）。,ツリー管理ウィザード §7
 bookmark,-add,,rest,,bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup],Effect `bookmark_create`（dup_mode）。`--parent` はフォルダ id（Tab 候補）。パイプ: `page.open | bookmark -add`。,
 bookmark,-folder,,rest,,bookmark -folder <title> [--parent <id>],Effect `bookmark_create_folder`。,
 bookmark,-remove,,rest,,bookmark -remove <id…> | … | bookmark -remove,Effect `bookmark_remove`。パイプ: bookmark / bookmark.folder（id）。,
@@ -49,7 +49,7 @@ bookmark,-send,,rest,,bookmark -send <deviceId> [--open|--save|--both] [--parent
 bookmark,-backup,,none,,bookmark -backup,UiAction `bookmark_backup`（ZIP 版付き JSON）。,
 bookmark,-restore,,rest,,bookmark -restore,UiAction `bookmark_restore`（bookmarks.create で再構築）。,
 history,,,,,history …,単独 `history` + Enter: msgs + promptPrefix。一覧・削除・バックアップ。,§9
-history,-list,,rest,,history -list [<pattern>] [--device <id>|--peers],Effect `search_list`（`--history`）。,
+history,-list,,rest,,history -list [<pattern>] [--device <id>|--peers],ローカル: UiAction `open_plain_list` list_id=history（月→日→訪問）。`| browse` → history picker。`--device`/`--peers`: Effect `search_list`（flat）。,ツリー管理ウィザード §7
 history,-delete,,rest,,history -delete <url…> | … | history -delete,Effect `history_delete_url`。,
 history,-delete-range,,rest,,history -delete-range --from <iso|ms> --to <iso|ms>,Effect `history_delete_range`。,
 history,-backup,,none,,history -backup,UiAction `history_backup`（ZIP）。DB 書き戻し不可。,

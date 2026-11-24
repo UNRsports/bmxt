@@ -36,6 +36,8 @@ export type CommandDispatchDeps = {
   searchListPickerRef: React.MutableRefObject<any>
   domListPickerRef: React.MutableRefObject<any>
   settingListPickerRef: React.MutableRefObject<any>
+  bookmarkPickerRef: React.MutableRefObject<any>
+  historyPickerRef: React.MutableRefObject<any>
   tabsPageActiveModeRef: React.MutableRefObject<any>
   domPageActiveModeRef: React.MutableRefObject<any>
   translatePairIdRef: React.MutableRefObject<any>
@@ -73,6 +75,8 @@ export type CommandDispatchDeps = {
   teardownNav: () => Promise<void>
   clearSearchLoadingProgress: () => void
   closeSettingPickerColumn: () => void
+  closeBookmarkPickerColumn: () => void
+  closeHistoryPickerColumn: () => void
   /** EN: Commit UI settings into React state after `setting -save` / CUI apply. */
   replaceUiSettingsState: (settings: import("../../../setting/settings").UiSettings) => void
   /** EN: Picker-built line → set prompt + re-enter dispatch (same as typed Enter). */
@@ -81,6 +85,8 @@ export type CommandDispatchDeps = {
   setSearchListPicker: (sessionId: string, state: any) => void
   setDomListPicker: (sessionId: string, state: any) => void
   setSettingListPicker: (sessionId: string, state: any) => void
+  setBookmarkListPicker: (sessionId: string, state: any) => void
+  setHistoryListPicker: (sessionId: string, state: any) => void
   /** EN: Open the floating session-list candidate panel (pipe `session -list | picker`). */
   openSessionListPicker: () => void
   setSubCmdPicker: (state: any) => void

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
+import type { BookmarkPickerState } from "../../bookmark/bookmark-picker-state"
+import type { HistoryPickerState } from "../../history/history-picker-state"
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
 import {
@@ -63,6 +65,8 @@ export type UsePaneFocusControllerOptions = {
   searchListPicker: SearchListPickerState | null
   domListPicker: DomListPickerState | null
   settingListPicker: SettingListPickerState | null
+  bookmarkPicker: BookmarkPickerState | null
+  historyPicker: HistoryPickerState | null
   translateEnabled: boolean
   translatePairIdRef: React.MutableRefObject<TranslationPairId>
   tabsPageActiveModeRef: React.MutableRefObject<TabsPageActiveMode>
@@ -82,6 +86,8 @@ export type UsePaneFocusControllerOptions = {
   searchPickerInputRef: React.RefObject<HTMLTextAreaElement | null>
   domPickerInputRef: React.RefObject<HTMLTextAreaElement | null>
   settingPickerInputRef: React.RefObject<HTMLTextAreaElement | null>
+  bookmarkPickerInputRef: React.RefObject<HTMLTextAreaElement | null>
+  historyPickerInputRef: React.RefObject<HTMLTextAreaElement | null>
   pickersForColumnOrder: readonly PickerSlotId[]
   openPickers: readonly PickerSlotId[]
   focusPrompt: () => void
@@ -89,6 +95,14 @@ export type UsePaneFocusControllerOptions = {
   setSettingListPicker: (
     forSessionId: string,
     value: SettingListPickerState | null | ((prev: SettingListPickerState | null) => SettingListPickerState | null)
+  ) => void
+  setBookmarkListPicker: (
+    forSessionId: string,
+    value: BookmarkPickerState | null | ((prev: BookmarkPickerState | null) => BookmarkPickerState | null)
+  ) => void
+  setHistoryListPicker: (
+    forSessionId: string,
+    value: HistoryPickerState | null | ((prev: HistoryPickerState | null) => HistoryPickerState | null)
   ) => void
   uiLocale: UiLocale
   jobRunner: JobRunner
@@ -129,12 +143,18 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
         return options.domPickerInputRef
       case "setting":
         return options.settingPickerInputRef
+      case "bookmark":
+        return options.bookmarkPickerInputRef
+      case "history":
+        return options.historyPickerInputRef
     }
   }, [
     options.tabPickerInputRef,
     options.searchPickerInputRef,
     options.domPickerInputRef,
-    options.settingPickerInputRef
+    options.settingPickerInputRef,
+    options.bookmarkPickerInputRef,
+    options.historyPickerInputRef
   ])
 
   const pulsePickerColumn = useCallback((slot: PickerSlotId) => {
@@ -221,6 +241,18 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
     activatePaneFocus("terminal")
   }, [activatePaneFocus, options])
 
+  const closeBookmarkPickerColumn = useCallback(() => {
+    options.setBookmarkListPicker(options.sessionId, null)
+    options.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "bookmark"))
+    activatePaneFocus("terminal")
+  }, [activatePaneFocus, options])
+
+  const closeHistoryPickerColumn = useCallback(() => {
+    options.setHistoryListPicker(options.sessionId, null)
+    options.setModeToolbarOrder((prev) => deactivateModeToolbar(prev, "history"))
+    activatePaneFocus("terminal")
+  }, [activatePaneFocus, options])
+
   const focusTerminalForNavControl = useCallback(() => {
     exitDetailBarToTerminal()
   }, [exitDetailBarToTerminal])
@@ -294,17 +326,27 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
       isSearchPickerOpen: options.searchListPicker !== null,
       isDomPickerOpen: options.domListPicker !== null,
       isSettingPickerOpen: options.settingListPicker !== null,
+      isBookmarkPickerOpen: options.bookmarkPicker !== null,
+      isHistoryPickerOpen: options.historyPicker !== null,
       setTabPicker: options.setTabPicker,
       setSearchListPicker: options.setSearchListPicker,
       setDomListPicker: options.setDomListPicker,
       closeSettingPickerColumn,
+      closeBookmarkPickerColumn,
+      closeHistoryPickerColumn,
       setModeToolbarOrder: options.setModeToolbarOrder,
       activatePaneFocus,
       clearSearchLoadingProgress: options.clearSearchLoadingProgress
     })
     void options.appendLogLines([message])
     options.focusPrompt()
-  }, [activatePaneFocus, closeSettingPickerColumn, options])
+  }, [
+    activatePaneFocus,
+    closeBookmarkPickerColumn,
+    closeHistoryPickerColumn,
+    closeSettingPickerColumn,
+    options
+  ])
 
   const exitNavFromDetailBar = useCallback(() => {
     void (async () => {
@@ -340,9 +382,17 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
       if (id === "dom") {
         return options.domListPicker !== null
       }
+      if (id === "bookmark") {
+        return options.bookmarkPicker !== null
+      }
+      if (id === "history") {
+        return options.historyPicker !== null
+      }
       return options.settingListPicker !== null
     },
     [
+      options.bookmarkPicker,
+      options.historyPicker,
       options.domListPicker,
       options.navArmed,
       options.searchListPicker,
@@ -483,6 +533,8 @@ export function usePaneFocusController(options: UsePaneFocusControllerOptions) {
     exitPickerToDetailBar,
     exitDetailBarToTerminal,
     closeSettingPickerColumn,
+    closeBookmarkPickerColumn,
+    closeHistoryPickerColumn,
     focusPickerSlot,
     handleToggleNavActive
   }

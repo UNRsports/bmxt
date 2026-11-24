@@ -769,6 +769,14 @@ body {
   color: #e3b341;
 }
 
+.bmxt-mode-status-seg--label-bookmark {
+  color: #ff7b72;
+}
+
+.bmxt-mode-status-seg--label-history {
+  color: #a5d6ff;
+}
+
 .bmxt-mode-status-row--focused .bmxt-mode-status {
   position: relative;
   z-index: 1;

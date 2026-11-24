@@ -4,7 +4,7 @@ import type { ModeToolbarId } from "./mode-toolbar-order"
 /** EN: Detail bar slot id (mode toolbar entry shown under the prompt). */
 export type DetailBarId = ModeToolbarId
 
-export const PICKER_DETAIL_BAR_IDS = ["tabs", "search", "dom", "setting"] as const
+export const PICKER_DETAIL_BAR_IDS = ["tabs", "search", "dom", "setting", "bookmark", "history"] as const
 
 export type PickerDetailBarId = (typeof PICKER_DETAIL_BAR_IDS)[number]
 

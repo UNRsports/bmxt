@@ -15,6 +15,14 @@ import {
 } from "../tabs/picker-rows.ts"
 import { settingTokenForPageActiveMode } from "../tabs/page-active-setting.ts"
 import { createSettingListPickerState } from "../setting/setting-list-picker-state.ts"
+import { bookmarkPickerRowsFromListResult } from "../bookmark/bookmark-list-result.ts"
+import { createBookmarkPickerState } from "../bookmark/bookmark-picker-state.ts"
+import { resetBookmarkFoldState } from "../bookmark/fold-state.ts"
+import { historyPickerRowsFromListResult } from "../history/history-list-result.ts"
+import { createHistoryPickerState } from "../history/history-picker-state.ts"
+import { resetHistoryFoldState } from "../history/fold-state.ts"
+import { tBookmark } from "../setting/i18n/ns/bookmark.ts"
+import { tHistory } from "../setting/i18n/ns/history.ts"
 import { tTabs } from "../setting/i18n/ns/tabs.ts"
 import { tSearch } from "../setting/i18n/ns/search.ts"
 import { tDom } from "../setting/i18n/ns/dom.ts"
@@ -72,6 +80,10 @@ export async function openPickerFromListResult(
       return openSessionPicker(deps, locale)
     case "setting":
       return openSettingPicker(deps, locale)
+    case "bookmark":
+      return openBookmarkPicker(listResult, deps, locale)
+    case "history":
+      return openHistoryPicker(listResult, deps, locale)
     default: {
       const _exhaustive: never = resolved.family
       return segmentFailure("runtime", [
@@ -190,4 +202,30 @@ function openSettingPicker(deps: CommandDispatchDeps, locale: UiLocale): Segment
   deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "setting"))
   deps.activatePaneFocus("setting")
   return segmentSuccess([tSetting("setting.picker.hint", locale)])
+}
+
+function openBookmarkPicker(
+  listResult: ListResult,
+  deps: CommandDispatchDeps,
+  locale: UiLocale
+): SegmentOutcome {
+  resetBookmarkFoldState()
+  const rows = bookmarkPickerRowsFromListResult(listResult)
+  deps.setBookmarkListPicker(deps.sessionId, createBookmarkPickerState(rows))
+  deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "bookmark"))
+  deps.activatePaneFocus("bookmark")
+  return segmentSuccess([tBookmark("bookmark.picker.hint", locale)])
+}
+
+function openHistoryPicker(
+  listResult: ListResult,
+  deps: CommandDispatchDeps,
+  locale: UiLocale
+): SegmentOutcome {
+  resetHistoryFoldState()
+  const rows = historyPickerRowsFromListResult(listResult)
+  deps.setHistoryListPicker(deps.sessionId, createHistoryPickerState(rows))
+  deps.setModeToolbarOrder((prev) => activateModeToolbar(prev, "history"))
+  deps.activatePaneFocus("history")
+  return segmentSuccess([tHistory("history.picker.hint", locale)])
 }

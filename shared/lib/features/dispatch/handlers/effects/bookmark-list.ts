@@ -2,7 +2,8 @@ import type { HostEffect } from "../../effect-types"
 import type { DispatchHostContext } from "../../dispatch-context"
 import { effectT } from "../effect-i18n"
 import { resolveBookmarkEntriesForSearch } from "../../../search/cache/search-cache-store"
-import { LIST_OUTPUT_SCHEMA, type ListRecord, type ListResult } from "../../../command-line/list-output/types"
+import { bookmarkPickerRowsToListResult } from "../../../bookmark/bookmark-list-result"
+import { buildBookmarkPickerRowsFromEntries } from "../../../bookmark/picker-rows"
 import { formatListPlainLines } from "../../../command-line/list-output/format-plain-lines"
 
 type E = Extract<HostEffect, { kind: "bookmark_list" }>
@@ -21,69 +22,6 @@ function sanitizeFolderId(raw: string): string | null {
     return null
   }
   return trimmed
-}
-
-function buildBookmarkListResult(
-  folderId: string | null,
-  entries: Awaited<ReturnType<typeof resolveBookmarkEntriesForSearch>>
-): ListResult {
-  const filtered =
-    folderId === null
-      ? entries.filter((e) => !e.isFolder || e.url.length === 0)
-      : entries.filter((e) => e.parentId === folderId)
-
-  const records: ListRecord[] = []
-  let index = 0
-  for (const entry of filtered) {
-    index += 1
-    if (entry.isFolder) {
-      records.push({
-        kind: "search.hit",
-        fields: {
-          index,
-          source: "bookmark.folder",
-          title: entry.title || "(folder)",
-          url: "",
-          tabId: null,
-          hitCount: 0,
-          pattern: "",
-          bookmarkId: entry.bookmarkId,
-          parentId: entry.parentId
-        },
-        display: {
-          label: `[folder] ${entry.title || "(folder)"}`,
-          detail: entry.bookmarkId
-        }
-      })
-      continue
-    }
-    records.push({
-      kind: "search.hit",
-      fields: {
-        index,
-        source: "bookmark",
-        title: entry.title || "(untitled)",
-        url: entry.url,
-        tabId: null,
-        hitCount: 0,
-        pattern: "",
-        bookmarkId: entry.bookmarkId,
-        parentId: entry.parentId,
-        dateAdded: entry.dateAdded
-      },
-      display: {
-        label: entry.title || entry.url,
-        detail: entry.url
-      }
-    })
-  }
-
-  return {
-    schema: LIST_OUTPUT_SCHEMA,
-    command: "bookmark",
-    subcommand: "-list",
-    records
-  }
 }
 
 /**
@@ -106,7 +44,10 @@ export async function applyBookmarkListEffect(
 
   try {
     const entries = await resolveBookmarkEntriesForSearch()
-    const list = buildBookmarkListResult(folderId, entries)
+    // EN: Same bookmark.folder / bookmark.item records as `bookmark -list` (picker rows).
+    // JA: `bookmark -list` と同じ bookmark.folder / bookmark.item レコード。
+    const rows = buildBookmarkPickerRowsFromEntries(entries, { folderId })
+    const list = bookmarkPickerRowsToListResult(rows)
     return formatListPlainLines(list)
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

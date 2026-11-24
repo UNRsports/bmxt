@@ -267,3 +267,131 @@ export function buildSettingSaveCommandLine(): string {
 export function buildSettingCancelCommandLine(): string {
   return "setting -exit -list"
 }
+
+/** EN: Max ids / urls per generated line (matches host effect caps). */
+const MAX_PICKER_BULK_ARGS = 200
+
+// EN: Leading "-" is rejected — the Rust parser treats it as a flag.
+const BOOKMARK_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$/
+const ISO_BOUND_PATTERN = /^[0-9A-Za-z:.+-]{1,64}$/
+
+/**
+ * EN: `bookmark -remove <id…>` (ids are positional; no `#b:` chip exists).
+ * Returns null when empty, too many, or any id fails validation.
+ */
+export function buildBookmarkRemoveCommandLine(ids: readonly string[]): string | null {
+  if (ids.length === 0 || ids.length > MAX_PICKER_BULK_ARGS) {
+    return null
+  }
+  const checked: string[] = []
+  for (const id of ids) {
+    if (!BOOKMARK_ID_PATTERN.test(id)) {
+      return null
+    }
+    checked.push(id)
+  }
+  return `bookmark -remove ${checked.join(" ")}`
+}
+
+/** EN: `open <url>` for a bookmark leaf (http(s) only). */
+export function buildBookmarkOpenCommandLine(urlRaw: string): string | null {
+  const url = normalizePickerOpenUrl(urlRaw)
+  if (url === undefined) {
+    return null
+  }
+  return `open ${shellQuote(url)}`
+}
+
+/**
+ * EN: `bookmark -move <id…> --parent <parentId>`.
+ * Parent must not appear in the id list (no self-move).
+ */
+export function buildBookmarkMoveCommandLine(
+  ids: readonly string[],
+  parentId: string
+): string | null {
+  if (ids.length === 0 || ids.length > MAX_PICKER_BULK_ARGS) {
+    return null
+  }
+  if (!BOOKMARK_ID_PATTERN.test(parentId)) {
+    return null
+  }
+  const checked: string[] = []
+  for (const id of ids) {
+    if (!BOOKMARK_ID_PATTERN.test(id)) {
+      return null
+    }
+    if (id === parentId) {
+      return null
+    }
+    checked.push(id)
+  }
+  return `bookmark -move ${checked.join(" ")} --parent ${parentId}`
+}
+
+/**
+ * EN: `bookmark -send <deviceId> --open|--save|--both <url…>` (item URLs only).
+ */
+export function buildBookmarkSendCommandLine(
+  deviceId: string,
+  urls: readonly string[],
+  mode: "open" | "save" | "both" = "open"
+): string | null {
+  if (!BOOKMARK_ID_PATTERN.test(deviceId)) {
+    return null
+  }
+  if (urls.length === 0 || urls.length > MAX_PICKER_BULK_ARGS) {
+    return null
+  }
+  const quoted: string[] = []
+  for (const raw of urls) {
+    const url = normalizePickerOpenUrl(raw)
+    if (url === undefined) {
+      return null
+    }
+    quoted.push(shellQuote(url))
+  }
+  const modeFlag = mode === "save" ? "--save" : mode === "both" ? "--both" : "--open"
+  return `bookmark -send ${deviceId} ${modeFlag} ${quoted.join(" ")}`
+}
+
+/** EN: `history -delete <url…>` for visit rows (http(s) only). */
+export function buildHistoryDeleteCommandLine(urls: readonly string[]): string | null {
+  if (urls.length === 0 || urls.length > MAX_PICKER_BULK_ARGS) {
+    return null
+  }
+  const quoted: string[] = []
+  for (const raw of urls) {
+    const url = normalizePickerOpenUrl(raw)
+    if (url === undefined) {
+      return null
+    }
+    quoted.push(shellQuote(url))
+  }
+  return `history -delete ${quoted.join(" ")}`
+}
+
+/**
+ * EN: `history -delete-range --from <iso> --to <iso>`.
+ * Bounds must be whitespace-free ISO-8601 or epoch-millisecond strings.
+ */
+export function buildHistoryDeleteRangeCommandLine(
+  fromIso: string,
+  toIso: string
+): string | null {
+  const from = fromIso.trim()
+  const to = toIso.trim()
+  if (!ISO_BOUND_PATTERN.test(from) || !ISO_BOUND_PATTERN.test(to)) {
+    return null
+  }
+  return `history -delete-range --from ${from} --to ${to}`
+}
+
+/** EN: `open <url>` for a history visit (http(s) only). */
+export function buildHistoryOpenCommandLine(urlRaw: string): string | null {
+  const url = normalizePickerOpenUrl(urlRaw)
+  if (url === undefined) {
+    return null
+  }
+  return `open ${shellQuote(url)}`
+}

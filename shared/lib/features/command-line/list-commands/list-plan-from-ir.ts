@@ -3,6 +3,8 @@
  * JA: WASM の構造化フィールドから list match を組み立てる（行の再パースなし）。
  */
 
+import { parseBookmarkListLine } from "../../bookmark/bookmark-list-parse.ts"
+import { parseHistoryListLine } from "../../history/history-list-parse.ts"
 import type { DeviceListScope } from "../../sync/bus/device-list-scope.ts"
 import type { ListCommandId } from "./types.ts"
 
@@ -22,9 +24,10 @@ function scopeFromIr(deviceScope: string, deviceId: string): DeviceListScope {
   return { kind: "local" }
 }
 
-/** EN: Tabs / session / setting open_plain_list → ListPlan. */
+/** EN: Tabs / session / setting / bookmark / history open_plain_list → ListPlan. */
 export function listPlanFromOpenPlainList(action: {
   list_id: string
+  line: string
   show_url: string
   device_scope: string
   device_id: string
@@ -45,6 +48,45 @@ export function listPlanFromOpenPlainList(action: {
   }
   if (listId === "setting") {
     return { listId: "setting", showUrl: false, match: {} }
+  }
+  if (listId === "bookmark") {
+    const line =
+      action.line.trim().length > 0 ? action.line.trim() : "bookmark -list"
+    const parsed = parseBookmarkListLine(line)
+    if (parsed !== null) {
+      return {
+        listId: "bookmark",
+        showUrl: false,
+        match: { folderId: parsed.folderId, scope: parsed.scope }
+      }
+    }
+    return {
+      listId: "bookmark",
+      showUrl: false,
+      match: {
+        folderId: null as string | null,
+        scope: scopeFromIr(action.device_scope, action.device_id)
+      }
+    }
+  }
+  if (listId === "history") {
+    const line = action.line.trim().length > 0 ? action.line.trim() : "history -list"
+    const parsed = parseHistoryListLine(line)
+    if (parsed !== null) {
+      return {
+        listId: "history",
+        showUrl: false,
+        match: { pattern: parsed.pattern, scope: parsed.scope }
+      }
+    }
+    return {
+      listId: "history",
+      showUrl: false,
+      match: {
+        pattern: "",
+        scope: scopeFromIr(action.device_scope, action.device_id)
+      }
+    }
   }
   return null
 }

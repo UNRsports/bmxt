@@ -13,8 +13,10 @@ import {
   saveDomPageActiveMode,
   settingTokenForDomPageActiveMode
 } from "../../dom/page-active-setting"
+import { parseBookmarkListLine } from "../../bookmark/bookmark-list-parse"
 import { parseDomListLine } from "../../dom/dom-list-parse"
 import { canScriptHttpHostPages } from "../../extension-permissions/http-host-access"
+import { parseHistoryListLine } from "../../history/history-list-parse"
 import { openPickerFromListResult } from "../../picker/open-from-list-result"
 import { saveSnapshotFromTab } from "../../snapshot/snapshot-save-tab"
 import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-lines"
@@ -29,6 +31,8 @@ import { tGroup } from "../../setting/i18n/ns/group"
 import { tNav } from "../../setting/i18n/ns/nav"
 import { tSearch } from "../../setting/i18n/ns/search"
 import { tSession } from "../../setting/i18n/ns/session"
+import { tBookmark } from "../../setting/i18n/ns/bookmark"
+import { tHistory } from "../../setting/i18n/ns/history"
 import { tSetting } from "../../setting/i18n/ns/setting"
 import { tShell } from "../../setting/i18n/ns/shell"
 import { tTabs } from "../../setting/i18n/ns/tabs"
@@ -125,7 +129,9 @@ function parseListCommandId(raw: string): ListCommandId | null {
     raw === "dom" ||
     raw === "search" ||
     raw === "session" ||
-    raw === "setting"
+    raw === "setting" ||
+    raw === "bookmark" ||
+    raw === "history"
   ) {
     return raw
   }
@@ -184,6 +190,20 @@ function buildPlainListMatch(listId: ListCommandId, line: string): ListMatchResu
         }
       }
     }
+    case "bookmark": {
+      const parsed = parseBookmarkListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { folderId: parsed.folderId, scope: parsed.scope } }
+    }
+    case "history": {
+      const parsed = parseHistoryListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { pattern: parsed.pattern, scope: parsed.scope } }
+    }
     default: {
       const _exhaustive: never = listId
       return { ok: false, errorLine: String(_exhaustive) }
@@ -241,6 +261,20 @@ function buildPickerListMatch(
           scope: parsed.scope
         }
       }
+    }
+    case "bookmark": {
+      const parsed = parseBookmarkListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { folderId: parsed.folderId, scope: parsed.scope } }
+    }
+    case "history": {
+      const parsed = parseHistoryListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { pattern: parsed.pattern, scope: parsed.scope } }
     }
     default: {
       const _exhaustive: never = listId
@@ -1534,6 +1568,7 @@ function resolveOpenPickerPlan(
 ): { listId: ListCommandId; match: unknown; showUrl: boolean } | null {
   const fromIr = listPlanFromOpenPlainList({
     list_id: action.list_id,
+    line: action.line,
     show_url: action.show_url,
     device_scope: action.device_scope,
     device_id: action.device_id
@@ -1667,6 +1702,18 @@ function closePickerLines(ctx: CommandDispatchContext, slot: string): string[] {
         return [tSetting("setting.picker.closed", ctx.locale)]
       }
       return [tSetting("setting.picker.notOpen", ctx.locale)]
+    case "bookmark":
+      if (ctx.deps.bookmarkPickerRef.current !== null) {
+        ctx.deps.closeBookmarkPickerColumn()
+        return [tBookmark("bookmark.picker.closed", ctx.locale)]
+      }
+      return [tBookmark("bookmark.picker.notOpen", ctx.locale)]
+    case "history":
+      if (ctx.deps.historyPickerRef.current !== null) {
+        ctx.deps.closeHistoryPickerColumn()
+        return [tHistory("history.picker.closed", ctx.locale)]
+      }
+      return [tHistory("history.picker.notOpen", ctx.locale)]
     case "tabs":
       if (ctx.deps.tabPickerRef.current !== null) {
         closeTabPickerEngineForSession(ctx.deps.sessionId)

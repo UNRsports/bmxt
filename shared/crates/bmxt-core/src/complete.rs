@@ -82,7 +82,15 @@ fn third_token_candidates(canonical: &str, second_lower: &str) -> Vec<String> {
 }
 
 /** EN: First commands whose `-list` can feed `| browse`… (aligned with PICKER_LIST_PRODUCER_TOKENS). */
-const PIPE_PRODUCER_FIRST: &[&str] = &["tab", "dom", "session", "setting", "search"];
+const PIPE_PRODUCER_FIRST: &[&str] = &[
+    "tab",
+    "dom",
+    "session",
+    "setting",
+    "search",
+    "bookmark",
+    "history",
+];
 
 /**
  * EN: Pipe consumer completion ids (aligned with PIPE_CONSUMER_COMPLETION_IDS in TS).

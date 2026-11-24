@@ -164,7 +164,7 @@
       ]
     }
   },
-  { "line": "group new 1 2 3", "expect": { "ty": "effects", "effects": [{ "kind": "group_new", "tab_ids": [1, 2, 3] }] } },
+  { "line": "group new 1 2 3", "expect": { "ty": "effects", "effects": [{ "kind": "group_new", "tab_ids": [1, 2, 3], "title": "", "color": "" }] } },
   { "line": "session -next", "expect": { "ty": "effects", "effects": [{ "kind": "session_next" }] } },
   { "line": "session -prev", "expect": { "ty": "effects", "effects": [{ "kind": "session_prev" }] } },
   { "line": "session -new work", "expect": { "ty": "effects", "effects": [{ "kind": "session_new", "name": "work" }] } },

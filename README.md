@@ -265,11 +265,11 @@ BMXt’s shell is **command-line driven**. Specs and implementations should use 
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | Plain search hit list (default scopes = **`--all`** when no scope token). `--peers` merges connected Family peers. Case-insensitive substring (no regex in v1) |
 | `search -list … | browse` | Open a search picker column with in-picker progress, detail view (**→**), and **`[history]` / `[bookmark]`** open-target tree. **`--all`** (default when you run **`search -list `** with no scope token) searches history, bookmarks, open **https** tab text, and saved snapshots in parallel |
 | `search -exit -list` | Close search list picker column in this session (cancels an in-flight **`search-list`** job via the session job runner) |
-| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | List bookmarks (no folder → `search -list --bookmark` path; `--folder` → local tree). Peer scopes reuse Family `search_query` |
+| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | Local: folder-tree list (`open_plain_list`); `| browse` opens bookmark picker. Peers: `search -list --bookmark` path |
 | `bookmark -add` / `-folder` / `-remove` / `-move` | Create URL or folder; remove/move by bookmark id (pipe: `… \| bookmark -remove` / `… \| bookmark -move --parent <id>`) |
 | `bookmark -send <deviceId> [--open\|--save\|--both]` | Family send: open tabs (`open_tabs`), save as bookmarks (`bookmarks_import`), or both (default **`--open`**) |
 | `bookmark -backup` / `-restore` | ZIP backup / restore of the bookmark tree (versioned JSON under `bmxt-browser-backup/`) |
-| `history -list [<pattern>] [--device <id>\|--peers]` | History list via `search -list --history` path |
+| `history -list [<pattern>] [--device <id>\|--peers]` | Local: date-tree list (`open_plain_list`); `| browse` opens history picker. Peers: `search -list --history` path |
 | `history -delete` / `-delete-range` | Delete history by URL(s) or time range (`--from` / `--to` ISO or epoch ms); pipe: `… \| history -delete` |
 | `history -backup` / `-restore [--as-bookmarks]` | ZIP export; restore cannot rewrite Chrome history DB — loads list or creates bookmarks |
 | `nav` | Print usage and restore the prompt to `nav ` (trailing space) for `-enter`, `-exit`, or `-windowclose` |
@@ -446,7 +446,7 @@ Dedicated first command for bookmark **CRUD**, Family send, and local ZIP backup
 
 | Form | Effect |
 |------|--------|
-| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | Plain list. No `--folder` → `search_list` with `--bookmark`. `--folder` → local HostEffect `bookmark_list` (tree filter). |
+| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | Local folder tree via `open_plain_list` (`bookmark.folder` / `bookmark.item`). `| browse` → tree picker (open / remove / move / send). Peers → `search_list --bookmark`. |
 | `bookmark -add <url> [--title …] [--parent <id>]` | HostEffect `bookmark_create` |
 | `bookmark -folder <title> [--parent <id>]` | HostEffect `bookmark_create_folder` |
 | `bookmark -remove <id…>` / `… \| bookmark -remove` | HostEffect `bookmark_remove` (pipe needs `bookmarkId` on `bookmark` / `bookmark.folder` rows) |
@@ -464,7 +464,7 @@ Dedicated first command for history **list**, **delete**, and ZIP backup. Cross-
 
 | Form | Effect |
 |------|--------|
-| `history -list [<pattern>] [--device <id>\|--peers]` | HostEffect `search_list` with `--history` |
+| `history -list [<pattern>] [--device <id>\|--peers]` | Local date tree via `open_plain_list` (month → day → visit). `| browse` → tree picker (open / delete / delete-range). Peers → `search_list --history`. |
 | `history -delete <url…>` / `… \| history -delete` | HostEffect `history_delete_url` |
 | `history -delete-range --from <iso\|ms> --to <iso\|ms>` | HostEffect `history_delete_range` |
 | `history -backup` | UiAction ZIP (`manifest.json` + `history.json`) |
@@ -2026,11 +2026,11 @@ BMXt は **コマンドライン方式**で動作する。仕様・実装・ド�
 | `search -list [--all\|--history\|--bookmark\|--page\|--snapshot] [--device <id>\|--peers] [<pattern>]` | 検索結果のプレーン一覧（スコープ無し時は **`--all`** 相当）。`--peers` は接続ピア横断。部分一致（v1 正規表現なし） |
 | `search -list … | browse` | 検索ピッカー列。走査進捗はピッカー内表示。**→** で詳細一覧または **`[history]` / `[bookmark]`** 開き先ツリー |
 | `search -exit -list` | 当該セッションの search ピッカー列を閉じる（走査中ならセッション job runner 経由で **`search-list`** をキャンセル） |
-| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | ブックマーク一覧（`--folder` なし → `search -list --bookmark` 経路；`--folder` → ローカルツリー）。ピア横断は Family `search_query` |
+| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | ローカル: フォルダツリー一覧（`open_plain_list`）。`| browse` で bookmark picker。ピア: `search -list --bookmark` 経路 |
 | `bookmark -add` / `-folder` / `-remove` / `-move` | URL／フォルダ作成、id 指定の削除／移動（パイプ: `… \| bookmark -remove` / `… \| bookmark -move --parent <id>`） |
 | `bookmark -send <deviceId> [--open\|--save\|--both]` | Family 送信: タブ open（`open_tabs`）、ブックマーク保存（`bookmarks_import`）、または両方（既定 **`--open`**） |
 | `bookmark -backup` / `-restore` | ブックマークツリーの ZIP バックアップ／復元（`bmxt-browser-backup/` 配下の版付き JSON） |
-| `history -list [<pattern>] [--device <id>\|--peers]` | 履歴一覧（`search -list --history` 経路） |
+| `history -list [<pattern>] [--device <id>\|--peers]` | ローカル: 日付ツリー一覧（`open_plain_list`）。`| browse` で history picker。ピア: `search -list --history` 経路 |
 | `history -delete` / `-delete-range` | URL 列または時間範囲（`--from` / `--to` ISO または epoch ms）で履歴削除。パイプ: `… \| history -delete` |
 | `history -backup` / `-restore [--as-bookmarks]` | ZIP エクスポート。復元は Chrome 履歴 DB を書き換えられない — 一覧読込またはブックマーク作成 |
 | `nav` | 利用案内を表示し、続けて `nav `（末尾スペース付き）へ入力復元（`-enter` / `-exit` / `-windowclose` 用） |
@@ -2798,7 +2798,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 | 形式 | 効果 |
 |------|------|
-| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | プレーン一覧。`--folder` なし → `--bookmark` 付き `search_list`。`--folder` → ローカル HostEffect `bookmark_list`（ツリー絞り込み）。 |
+| `bookmark -list [--folder <id>] [--device <id>\|--peers]` | ローカルは `open_plain_list` のフォルダツリー（`bookmark.folder` / `bookmark.item`）。`| browse` → ツリー picker（open / remove / move / send）。ピアは `search_list --bookmark`。 |
 | `bookmark -add <url> [--title …] [--parent <id>]` | HostEffect `bookmark_create` |
 | `bookmark -folder <title> [--parent <id>]` | HostEffect `bookmark_create_folder` |
 | `bookmark -remove <id…>` / `… \| bookmark -remove` | HostEffect `bookmark_remove`（パイプは `bookmark` / `bookmark.folder` 行の `bookmarkId` が必要） |
@@ -2816,7 +2816,7 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 
 | 形式 | 効果 |
 |------|------|
-| `history -list [<pattern>] [--device <id>\|--peers]` | HostEffect `search_list`（`--history`） |
+| `history -list [<pattern>] [--device <id>\|--peers]` | ローカルは `open_plain_list` の日付ツリー（月→日→訪問）。`| browse` → ツリー picker（open / delete / delete-range）。ピアは `search_list --history`。 |
 | `history -delete <url…>` / `… \| history -delete` | HostEffect `history_delete_url` |
 | `history -delete-range --from <iso\|ms> --to <iso\|ms>` | HostEffect `history_delete_range` |
 | `history -backup` | UiAction ZIP（`manifest.json` + `history.json`） |

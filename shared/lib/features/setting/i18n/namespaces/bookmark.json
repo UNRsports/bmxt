@@ -1,0 +1,90 @@
+{
+  "bookmark.picker.action.open": {
+    "ja": "開く",
+    "en": "Open"
+  },
+  "bookmark.picker.action.remove": {
+    "ja": "削除",
+    "en": "Remove"
+  },
+  "bookmark.picker.action.move": {
+    "ja": "移動",
+    "en": "Move"
+  },
+  "bookmark.picker.action.send": {
+    "ja": "送信",
+    "en": "Send"
+  },
+  "bookmark.picker.actionMenu.hint": {
+    "ja": "↑↓ 選択 · Enter 実行 · ← / Esc 取消",
+    "en": "↑↓ choose · Enter run · ← / Esc cancel"
+  },
+  "bookmark.picker.actionMenu.title": {
+    "ja": "ブックマーク操作（{count} 件）",
+    "en": "Bookmark actions ({count})"
+  },
+  "bookmark.picker.closed": {
+    "ja": "bookmark: ピッカーを閉じました",
+    "en": "bookmark: picker closed"
+  },
+  "bookmark.picker.empty": {
+    "ja": "ブックマークがありません。",
+    "en": "No bookmarks."
+  },
+  "bookmark.picker.hint": {
+    "ja": "bookmark -list: ↑↓ 移動 · ←→ 折りたたみ · Space マーク · Enter / → 操作 · Esc プロンプトへ",
+    "en": "bookmark -list: ↑↓ move · ←→ fold · Space mark · Enter / → actions · Esc prompt"
+  },
+  "bookmark.picker.inputAria": {
+    "ja": "ブックマークピッカー入力",
+    "en": "Bookmark picker input"
+  },
+  "bookmark.picker.listAria": {
+    "ja": "ブックマークツリー",
+    "en": "Bookmark tree"
+  },
+  "bookmark.picker.markKindMismatch": {
+    "ja": "bookmark: フォルダとブックマークは同時にマークできません",
+    "en": "bookmark: cannot mark folders and bookmarks together"
+  },
+  "bookmark.picker.move.headline": {
+    "ja": "移動先フォルダを選択 · Enter 確定 · Esc 取消",
+    "en": "Pick destination folder · Enter confirm · Esc cancel"
+  },
+  "bookmark.picker.move.invalid": {
+    "ja": "bookmark: 移動コマンドを組み立てられませんでした",
+    "en": "bookmark: could not build the move command"
+  },
+  "bookmark.picker.move.needFolder": {
+    "ja": "bookmark: 移動先はフォルダを選んでください",
+    "en": "bookmark: choose a folder as the move destination"
+  },
+  "bookmark.picker.move.pickHint": {
+    "ja": "bookmark: 移動先フォルダへ移動し Enter",
+    "en": "bookmark: highlight the destination folder and press Enter"
+  },
+  "bookmark.picker.move.selfParent": {
+    "ja": "bookmark: 自分自身を移動先にはできません",
+    "en": "bookmark: cannot move into itself"
+  },
+  "bookmark.picker.noUrl": {
+    "ja": "bookmark: 開ける URL がありません",
+    "en": "bookmark: this bookmark has no URL to open"
+  },
+  "bookmark.picker.notOpen": {
+    "ja": "bookmark: ピッカーは開いていません",
+    "en": "bookmark: picker is not open"
+  },
+  "bookmark.picker.send.invalid": {
+    "ja": "bookmark: 送信コマンドを組み立てられませんでした",
+    "en": "bookmark: could not build the send command"
+  },
+  "bookmark.picker.send.noPeers": {
+    "ja": "bookmark: 接続中のピアがありません（sync を確認）",
+    "en": "bookmark: no connected peers (check sync)"
+  },
+  "bookmark.picker.send.peerTitle": {
+    "ja": "送信先ピア（{count} 件）",
+    "en": "Send to peer ({count})"
+  }
+}

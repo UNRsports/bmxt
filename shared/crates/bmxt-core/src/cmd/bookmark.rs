@@ -100,47 +100,50 @@ fn run_list(args: &[String]) -> DispatchBundle {
         return usage();
     };
 
-    let mut folder_id = String::new();
     let mut i = 0usize;
     while i < rest.len() {
         if normalize_token(&rest[i]) == "--folder" {
-            let Some(id) = rest.get(i + 1).and_then(|s| sanitize_id(s)) else {
+            // EN: Validate folder id; host listPlan re-parses the full line for match.
+            // JA: folder id を検証。match は host が行全体を再パースする。
+            if rest.get(i + 1).and_then(|s| sanitize_id(s)).is_none() {
                 return usage();
-            };
-            folder_id = id;
+            }
             i += 2;
             continue;
         }
         return usage();
     }
 
-    if !folder_id.is_empty() {
-        return effects(vec![HostEffect::BookmarkList {
-            folder_id,
+    // EN: Cross-device bookmark list stays on search (flat). Local uses folder tree list.
+    // JA: ピア横断は search のフラット一覧。ローカルはフォルダツリー list。
+    if device_scope == "peers" || device_scope == "device" {
+        let peer_parts = vec![
+            "search".to_string(),
+            "-list".to_string(),
+            "--bookmark".to_string(),
+        ];
+        let mut dispatch_parts = peer_parts.clone();
+        if device_scope == "peers" {
+            dispatch_parts.push("--peers".to_string());
+        } else {
+            dispatch_parts.push("--device".to_string());
+            dispatch_parts.push(device_id.clone());
+        }
+        return effects(vec![HostEffect::SearchList {
+            dispatch_line: dispatch_parts.join(" "),
+            peer_dispatch_line: peer_parts.join(" "),
             device_scope,
             device_id,
         }]);
     }
 
-    let peer_parts = vec![
-        "search".to_string(),
-        "-list".to_string(),
-        "--bookmark".to_string(),
-    ];
-    let mut dispatch_parts = peer_parts.clone();
-    if device_scope == "peers" {
-        dispatch_parts.push("--peers".to_string());
-    } else if device_scope == "device" {
-        dispatch_parts.push("--device".to_string());
-        dispatch_parts.push(device_id.clone());
-    }
-
-    effects(vec![HostEffect::SearchList {
-        dispatch_line: dispatch_parts.join(" "),
-        peer_dispatch_line: peer_parts.join(" "),
+    ui(UiAction::OpenPlainList {
+        list_id: "bookmark".to_string(),
+        line: args.join(" "),
+        show_url: "false".to_string(),
         device_scope,
         device_id,
-    }])
+    })
 }
 
 fn run_add(args: &[String]) -> DispatchBundle {
@@ -439,8 +442,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_emits_search_list() {
+    fn list_local_emits_open_plain_list() {
         let bundle = run(&["bookmark".into(), "-list".into()]);
+        match bundle {
+            DispatchBundle::Ui {
+                action:
+                    UiAction::OpenPlainList {
+                        list_id,
+                        line,
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(list_id, "bookmark");
+                assert!(line.contains("bookmark -list"));
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_peers_emits_search_list() {
+        let bundle = run(&["bookmark".into(), "-list".into(), "--peers".into()]);
         match bundle {
             DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::SearchList {

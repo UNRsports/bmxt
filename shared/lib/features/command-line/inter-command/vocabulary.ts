@@ -38,7 +38,12 @@ export const LIST_KIND_TO_BMXT_RULE_KIND = {
   "dom.notice": "dom.notice",
   "session.row": "session.row",
   "setting.field": "setting.field",
-  "search.hit": "search.hit"
+  "search.hit": "search.hit",
+  "bookmark.folder": "bookmark.folder",
+  "bookmark.item": "bookmark",
+  "history.month": "history.month",
+  "history.day": "history.day",
+  "history.visit": "history"
 } as const satisfies Record<ListRecordKind, string>
 
 export type StaticListKind = Exclude<ListRecordKind, "search.hit">

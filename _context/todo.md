@@ -294,6 +294,8 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | **dom** | `-list`・`-setting` は CUI 可 | `dom -list … \| jump`（`dom.node` path） | jump / link activate が picker 直実行 |
 | **setting** | `-set` / `-export` / `-import` / `-bg-import` / `-storage` / … | （列ピッカーは `submitConstructedLine` のみ） | §7 wizard 化済み。FSA／zip／画像はコマンド→UiAction→chooser |
 | **tab** | close / reload / `#t:` / `move` / `new-window` / `group add|new|rename|ungroup` / `tab -activate` / `close --window|--group` / `window rename` | （空白 URL の新タブのみ Chrome create 残） | §7 wizard 化済み。preview は非コマンドのまま |
+| **bookmark** | `-list` tree / `-remove` / `-move` / `-send` / `open` | （new folder/add サブウィザードは任意） | §7: folder ツリー picker + `submitConstructedLine` |
+| **history** | `-list` date tree / `-delete` / `-delete-range` / `open` | | §7: month→day→visit picker + `submitConstructedLine` |
 
 **実装チェック（段階）**
 

@@ -1,4 +1,12 @@
 {
+  "modeStatus.bookmark.hint": {
+    "ja": "↑↓ 移動 · ←→ 折りたたみ · Space マーク · Enter 操作 · 詳細バー Ctrl+C で終了",
+    "en": "↑↓ move · ←→ fold · Space mark · Enter actions · detail bar Ctrl+C exit"
+  },
+  "modeStatus.bookmark.meta": {
+    "ja": "ブックマークツリー",
+    "en": "bookmark tree"
+  },
   "modeStatus.dom.hint": {
     "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · 詳細バー Ctrl+C で終了 · Tab←/→で詳細バー",
     "en": "EOL → focus · ← prompt · Alt page-active · → picker · detail bar Ctrl+C exit · Tab ←/→ detail bar"
@@ -10,6 +18,14 @@
   "modeStatus.dom.permission": {
     "ja": "権限確認",
     "en": "permission"
+  },
+  "modeStatus.history.hint": {
+    "ja": "↑↓ 移動 · ←→ 折りたたみ · Space マーク · Enter 操作 · 詳細バー Ctrl+C で終了",
+    "en": "↑↓ move · ←→ fold · Space mark · Enter actions · detail bar Ctrl+C exit"
+  },
+  "modeStatus.history.meta": {
+    "ja": "履歴ツリー",
+    "en": "history tree"
   },
   "modeStatus.search.hint": {
     "ja": "末尾→で選択 · ← でプロンプト · Alt で page-active · → でピッカー · 詳細バー Ctrl+C で終了 · Tab←/→で詳細バー",

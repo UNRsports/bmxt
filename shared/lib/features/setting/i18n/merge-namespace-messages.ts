@@ -3,6 +3,7 @@
  * JA: namespace 別 JSON を 1 つの lookup に統合（`t()` のソース）。
  */
 
+import bookmark from "./namespaces/bookmark.json"
 import cmd from "./namespaces/cmd.json"
 import common from "./namespaces/common.json"
 import dom from "./namespaces/dom.json"
@@ -12,6 +13,7 @@ import effect from "./namespaces/effect.json"
 import error from "./namespaces/error.json"
 import group from "./namespaces/group.json"
 import help from "./namespaces/help.json"
+import history from "./namespaces/history.json"
 import imeToken from "./namespaces/imeToken.json"
 import modeStatus from "./namespaces/modeStatus.json"
 import nav from "./namespaces/nav.json"
@@ -35,6 +37,7 @@ import type { UiLocale } from "../locale"
 export type LocaleMessageEntry = Partial<Record<UiLocale, string>>
 
 const MERGED = {
+  ...bookmark,
   ...cmd,
   ...common,
   ...dom,
@@ -44,6 +47,7 @@ const MERGED = {
   ...error,
   ...group,
   ...help,
+  ...history,
   ...imeToken,
   ...modeStatus,
   ...nav,

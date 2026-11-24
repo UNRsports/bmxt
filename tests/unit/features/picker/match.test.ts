@@ -41,6 +41,42 @@ describe("resolvePickerFamily", () => {
     assert.deepEqual(resolvePickerFamily(listResult), { ok: true, family: "tabs" })
   })
 
+  it("resolves bookmark and history families from record kinds", () => {
+    const bookmarkResult: ListResult = {
+      schema: LIST_OUTPUT_SCHEMA,
+      command: "bookmark",
+      subcommand: "-list",
+      records: [
+        { kind: "bookmark.folder", fields: {} },
+        { kind: "bookmark.item", fields: {} }
+      ]
+    }
+    assert.deepEqual(resolvePickerFamily(bookmarkResult), { ok: true, family: "bookmark" })
+    const historyResult: ListResult = {
+      schema: LIST_OUTPUT_SCHEMA,
+      command: "history",
+      subcommand: "-list",
+      records: [
+        { kind: "history.month", fields: {} },
+        { kind: "history.day", fields: {} },
+        { kind: "history.visit", fields: {} }
+      ]
+    }
+    assert.deepEqual(resolvePickerFamily(historyResult), { ok: true, family: "history" })
+  })
+
+  it("falls back to the command name for empty bookmark / history lists", () => {
+    const emptyBookmark: ListResult = {
+      schema: LIST_OUTPUT_SCHEMA,
+      command: "bookmark",
+      subcommand: "-list",
+      records: []
+    }
+    assert.deepEqual(resolvePickerFamily(emptyBookmark), { ok: true, family: "bookmark" })
+    const emptyHistory: ListResult = { ...emptyBookmark, command: "history" }
+    assert.deepEqual(resolvePickerFamily(emptyHistory), { ok: true, family: "history" })
+  })
+
   it("rejects mixed families", () => {
     const listResult: ListResult = {
       schema: LIST_OUTPUT_SCHEMA,
