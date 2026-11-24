@@ -103,7 +103,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "setting",
         aliases: &[],
-        usage_primary: "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help",
+        usage_primary: "setting -list | setting -set <key> <value> | setting -export | setting -import | setting -bg-import [--picker] | setting -reset-default | setting -storage internal|external | setting -pick-dir | setting -reload | setting -snapshot-storage bundled|vault | setting -snapshot-pick-dir | setting -sync-guide | setting -save | setting -cancel | setting -exit -list | setting help",
     },
     CmdMeta {
         name: "tutorial",
@@ -113,7 +113,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "sync",
         aliases: &[],
-        usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
+        usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -setname <name> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
     },
     CmdMeta {
         name: "bookmark",
@@ -312,6 +312,46 @@ static BRANCHES_SETTING: &[SubcommandBranch] = &[
         trailing_tokens: &[],
     },
     SubcommandBranch {
+        head: "-export",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-import",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-bg-import",
+        trailing_tokens: &["--picker"],
+    },
+    SubcommandBranch {
+        head: "-reset-default",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-storage",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-pick-dir",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-reload",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-snapshot-storage",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-snapshot-pick-dir",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-sync-guide",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
         head: "-save",
         trailing_tokens: &[],
     },
@@ -363,6 +403,10 @@ static BRANCHES_SYNC: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-connect",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-setname",
         trailing_tokens: &[],
     },
     SubcommandBranch {
@@ -492,9 +536,9 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name" | "help"),
         "snapshot" => matches!(lower.as_str(), "-save"),
         "browse" => false,
-        "setting" => matches!(lower.as_str(), "-list" | "-set" | "-save" | "-cancel" | "-exit" | "help"),
+        "setting" => matches!(lower.as_str(), "-list" | "-set" | "-export" | "-import" | "-bg-import" | "-reset-default" | "-storage" | "-pick-dir" | "-reload" | "-snapshot-storage" | "-snapshot-pick-dir" | "-sync-guide" | "-save" | "-cancel" | "-exit" | "help"),
         "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
-        "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-offer" | "-answer" | "-accept" | "-ping" | "help"),
+        "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-setname" | "-offer" | "-answer" | "-accept" | "-ping" | "help"),
         "bookmark" => matches!(lower.as_str(), "-list" | "-add" | "-folder" | "-remove" | "-move" | "-send" | "-backup" | "-restore" | "help"),
         "history" => matches!(lower.as_str(), "-list" | "-delete" | "-delete-range" | "-backup" | "-restore" | "help"),
         "open" => false,

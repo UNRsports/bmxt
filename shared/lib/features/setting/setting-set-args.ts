@@ -40,7 +40,9 @@ export const SETTING_SET_KEY_TOKENS = [
   "picker-size",
   "picker-font",
   "sync-hold-ms",
-  "cli-door-retry-ms"
+  "cli-door-retry-ms",
+  "bg-image",
+  "picker-bg-image"
 ] as const
 
 export type SettingSetKeyToken = (typeof SETTING_SET_KEY_TOKENS)[number]
@@ -88,7 +90,9 @@ export function settingSetValueCandidates(key: string): readonly string[] | null
     k === "picker-fg" ||
     k === "picker-bg-color" ||
     k === "picker-size" ||
-    k === "picker-font"
+    k === "picker-font" ||
+    k === "bg-image" ||
+    k === "picker-bg-image"
   ) {
     return SETTING_SET_CLEAR_VALUE_TOKENS
   }
@@ -234,6 +238,18 @@ export function settingSetPatchFromArgs(
   if (k === "picker-font") {
     const fontFamily = parseOptionalFontFamily(v)
     return fontFamily === undefined ? null : { picker: { fontFamily } }
+  }
+  if (k === "bg-image") {
+    if (!isClearToken(v)) {
+      return null
+    }
+    return { appearance: { bgImageDataUrl: null } }
+  }
+  if (k === "picker-bg-image") {
+    if (!isClearToken(v)) {
+      return null
+    }
+    return { picker: { bgImageDataUrl: null } }
   }
   return null
 }

@@ -77,14 +77,38 @@ pub enum UiAction {
     feature_id: String,
     mode: String,
     },
+    #[serde(rename = "setting_bg_import")]
+    SettingBgImport {
+    layer: String,
+    },
     #[serde(rename = "setting_cancel")]
     SettingCancel,
+    #[serde(rename = "setting_export")]
+    SettingExport,
+    #[serde(rename = "setting_import")]
+    SettingImport,
+    #[serde(rename = "setting_pick_dir")]
+    SettingPickDir,
+    #[serde(rename = "setting_reload")]
+    SettingReload,
+    #[serde(rename = "setting_reset_default")]
+    SettingResetDefault,
     #[serde(rename = "setting_save")]
     SettingSave,
     #[serde(rename = "setting_set")]
     SettingSet {
     key: String,
     value: String,
+    },
+    #[serde(rename = "setting_snapshot_pick_dir")]
+    SettingSnapshotPickDir,
+    #[serde(rename = "setting_snapshot_storage")]
+    SettingSnapshotStorage {
+    mode: String,
+    },
+    #[serde(rename = "setting_storage")]
+    SettingStorage {
+    mode: String,
     },
     #[serde(rename = "show_help")]
     ShowHelp,
@@ -126,6 +150,10 @@ pub enum UiAction {
     #[serde(rename = "sync_ping")]
     SyncPing {
     device_id: String,
+    },
+    #[serde(rename = "sync_setname")]
+    SyncSetname {
+    name: String,
     },
     #[serde(rename = "sync_setup")]
     SyncSetup,

@@ -79,6 +79,19 @@ import {
   applySettingSetCui
 } from "../../setting/setting-cui-apply"
 import {
+  runSettingBgImportCui,
+  runSettingExportCui,
+  runSettingImportCui,
+  runSettingPickDirCui,
+  runSettingReloadCui,
+  runSettingResetDefaultCui,
+  runSettingSnapshotPickDirCui,
+  runSettingSnapshotStorageCui,
+  runSettingStorageCui,
+  type SettingCuiOpResult
+} from "../../setting/setting-cui-ops.ts"
+import { expandSyncLogLines } from "../../sync/facade/expand-sync-log.ts"
+import {
   exportBookmarkBackup,
   restoreBookmarksFromFile
 } from "../../backup/bookmark-backup.ts"
@@ -293,6 +306,26 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySettingCancel(ctx)
     case "setting_set":
       return applySettingSet(ctx, action.key, action.value)
+    case "setting_export":
+      return applySettingExport(ctx)
+    case "setting_import":
+      return applySettingImport(ctx)
+    case "setting_bg_import":
+      return applySettingBgImport(ctx, action.layer)
+    case "setting_reset_default":
+      return applySettingResetDefault(ctx)
+    case "setting_storage":
+      return applySettingStorage(ctx, action.mode)
+    case "setting_pick_dir":
+      return applySettingPickDir(ctx)
+    case "setting_reload":
+      return applySettingReload(ctx)
+    case "setting_snapshot_storage":
+      return applySettingSnapshotStorage(ctx, action.mode)
+    case "setting_snapshot_pick_dir":
+      return applySettingSnapshotPickDir(ctx)
+    case "sync_setname":
+      return applySyncSetname(ctx, action.name)
     case "sync_bookmark_send":
       return applySyncBookmarkSend(ctx, action.device_id, action.mode, action.payload)
     case "bookmark_backup":
@@ -385,6 +418,26 @@ export async function applyUiActionForSegment(
       return applySettingCancelSegment(ctx)
     case "setting_set":
       return applySettingSetSegment(ctx, action.key, action.value)
+    case "setting_export":
+      return applySettingExportSegment(ctx)
+    case "setting_import":
+      return applySettingImportSegment(ctx)
+    case "setting_bg_import":
+      return applySettingBgImportSegment(ctx, action.layer)
+    case "setting_reset_default":
+      return applySettingResetDefaultSegment(ctx)
+    case "setting_storage":
+      return applySettingStorageSegment(ctx, action.mode)
+    case "setting_pick_dir":
+      return applySettingPickDirSegment(ctx)
+    case "setting_reload":
+      return applySettingReloadSegment(ctx)
+    case "setting_snapshot_storage":
+      return applySettingSnapshotStorageSegment(ctx, action.mode)
+    case "setting_snapshot_pick_dir":
+      return applySettingSnapshotPickDirSegment(ctx)
+    case "sync_setname":
+      return applySyncSetnameSegment(ctx, action.name)
     case "sync_bookmark_send":
       return applySyncBookmarkSendSegment(ctx, action.device_id, action.mode, action.payload)
     case "bookmark_backup":
@@ -523,6 +576,249 @@ async function applySettingSetSegment(
     ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
   }
   return segmentSuccess(result.lines)
+}
+
+function applySettingOpDraft(ctx: CommandDispatchContext, result: SettingCuiOpResult): void {
+  if (result.nextDraft) {
+    ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  }
+}
+
+function applySettingExport(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingExportCui(ctx.deps.uiSettings, ctx.locale)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingExportSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await runSettingExportCui(ctx.deps.uiSettings, ctx.locale)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingImport(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingImportCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingImportSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await runSettingImportCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingBgImport(ctx: CommandDispatchContext, layer: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingBgImportCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.uiSettings,
+      layer,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingBgImportSegment(
+  ctx: CommandDispatchContext,
+  layer: string
+): Promise<SegmentOutcome> {
+  const result = await runSettingBgImportCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.uiSettings,
+    layer,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingResetDefault(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingResetDefaultCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.uiSettings,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingResetDefaultSegment(
+  ctx: CommandDispatchContext
+): Promise<SegmentOutcome> {
+  const result = await runSettingResetDefaultCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.uiSettings,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingStorage(ctx: CommandDispatchContext, mode: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingStorageCui(
+      ctx.deps.settingListPickerRef.current,
+      mode,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingStorageSegment(
+  ctx: CommandDispatchContext,
+  mode: string
+): Promise<SegmentOutcome> {
+  const result = await runSettingStorageCui(
+    ctx.deps.settingListPickerRef.current,
+    mode,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingPickDir(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingPickDirCui(ctx.locale)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingPickDirSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await runSettingPickDirCui(ctx.locale)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingReload(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingReloadCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingReloadSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await runSettingReloadCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingSnapshotStorage(ctx: CommandDispatchContext, mode: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingSnapshotStorageCui(
+      ctx.deps.settingListPickerRef.current,
+      mode,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingSnapshotStorageSegment(
+  ctx: CommandDispatchContext,
+  mode: string
+): Promise<SegmentOutcome> {
+  const result = await runSettingSnapshotStorageCui(
+    ctx.deps.settingListPickerRef.current,
+    mode,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingSnapshotPickDir(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingSnapshotPickDirCui(ctx.locale)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingSnapshotPickDirSegment(
+  ctx: CommandDispatchContext
+): Promise<SegmentOutcome> {
+  const result = await runSettingSnapshotPickDirCui(ctx.locale)
+  return segmentSuccess(result.lines)
+}
+
+function applySyncSetname(ctx: CommandDispatchContext, name: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await getSyncService().setDisplayName(name)
+    await ctx.deps.appendLogLines([
+      `> ${ctx.trimmed}`,
+      ...expandSyncLogLines(result.lines, ctx.locale)
+    ])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySyncSetnameSegment(
+  ctx: CommandDispatchContext,
+  name: string
+): Promise<SegmentOutcome> {
+  const result = await getSyncService().setDisplayName(name)
+  return segmentSuccess(expandSyncLogLines(result.lines, ctx.locale))
 }
 
 function syncSink(ctx: CommandDispatchContext) {

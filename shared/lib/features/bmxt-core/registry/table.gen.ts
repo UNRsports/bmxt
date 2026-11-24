@@ -94,7 +94,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "setting",
     aliases: [] as const,
-    usagePrimary: "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help"
+    usagePrimary: "setting -list | setting -set <key> <value> | setting -export | setting -import | setting -bg-import [--picker] | setting -reset-default | setting -storage internal|external | setting -pick-dir | setting -reload | setting -snapshot-storage bundled|vault | setting -snapshot-pick-dir | setting -sync-guide | setting -save | setting -cancel | setting -exit -list | setting help"
   },
   {
     name: "tutorial",
@@ -104,7 +104,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "sync",
     aliases: [] as const,
-    usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help"
+    usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -setname <name> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help"
   },
   {
     name: "bookmark",

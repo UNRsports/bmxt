@@ -76,6 +76,16 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "setting": [
     { head: "-list", trailingTokens: [] as const, tail: "none" },
     { head: "-set", trailingTokens: [] as const, tail: "rest" },
+    { head: "-export", trailingTokens: [] as const, tail: "none" },
+    { head: "-import", trailingTokens: [] as const, tail: "none" },
+    { head: "-bg-import", trailingTokens: ["--picker"] as const, tail: "none" },
+    { head: "-reset-default", trailingTokens: [] as const, tail: "none" },
+    { head: "-storage", trailingTokens: [] as const, tail: "rest" },
+    { head: "-pick-dir", trailingTokens: [] as const, tail: "none" },
+    { head: "-reload", trailingTokens: [] as const, tail: "none" },
+    { head: "-snapshot-storage", trailingTokens: [] as const, tail: "rest" },
+    { head: "-snapshot-pick-dir", trailingTokens: [] as const, tail: "none" },
+    { head: "-sync-guide", trailingTokens: [] as const, tail: "none" },
     { head: "-save", trailingTokens: [] as const, tail: "none" },
     { head: "-cancel", trailingTokens: [] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
@@ -92,6 +102,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-pair", trailingTokens: [] as const, tail: "rest" },
     { head: "-members", trailingTokens: [] as const, tail: "none" },
     { head: "-connect", trailingTokens: [] as const, tail: "rest" },
+    { head: "-setname", trailingTokens: [] as const, tail: "rest" },
     { head: "-offer", trailingTokens: [] as const, tail: "none" },
     { head: "-answer", trailingTokens: [] as const, tail: "rest" },
     { head: "-accept", trailingTokens: [] as const, tail: "rest" },
@@ -223,7 +234,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "setting": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-set" || lower === "-save" || lower === "-cancel" || lower === "-exit" || lower === "help"
+      return lower === "-list" || lower === "-set" || lower === "-export" || lower === "-import" || lower === "-bg-import" || lower === "-reset-default" || lower === "-storage" || lower === "-pick-dir" || lower === "-reload" || lower === "-snapshot-storage" || lower === "-snapshot-pick-dir" || lower === "-sync-guide" || lower === "-save" || lower === "-cancel" || lower === "-exit" || lower === "help"
     }
     case "tutorial": {
       const lower = token.toLowerCase()
@@ -231,7 +242,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "sync": {
       const lower = token.toLowerCase()
-      return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-connect" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-ping" || lower === "help"
+      return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-connect" || lower === "-setname" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-ping" || lower === "help"
     }
     case "bookmark": {
       const lower = token.toLowerCase()

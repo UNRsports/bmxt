@@ -1,6 +1,6 @@
 /**
- * EN: IME live overlay for `setting -set` key → value candidate cascade.
- * JA: `setting -set` のキー→値候補カスケード用 IME live overlay。
+ * EN: IME live overlay for `setting -set` / `-storage` / `-snapshot-storage` candidates.
+ * JA: `setting -set` / `-storage` / `-snapshot-storage` の IME 候補 overlay。
  */
 
 import { wordBounds } from "../format/word-bounds.ts"
@@ -15,8 +15,8 @@ import type {
 import { SETTING_SET_KEY_TOKENS, settingSetValueCandidates } from "./setting-set-args.ts"
 
 /**
- * EN: `setting -set ` → closed key menu; `setting -set <key> ` → discrete value menu.
- * JA: `setting -set ` でキー候補、`setting -set <key> ` で離散値候補。
+ * EN: Closed value menus after `setting -set` / `-storage` / `-snapshot-storage`.
+ * JA: `setting -set` / `-storage` / `-snapshot-storage` の閉集合値メニュー。
  */
 export function resolveSettingSetImeOverlay(
   line: string,
@@ -33,27 +33,57 @@ export function resolveSettingSetImeOverlay(
   if (tokensBefore[0]!.toLowerCase() !== "setting") {
     return null
   }
-  if (tokensBefore[1]!.toLowerCase() !== "-set") {
-    return null
-  }
 
   const prefix = line.slice(l, cursor)
   const matchMode: CandidateMatchMode = opts?.candidateMatch ?? "prefix"
+  const second = tokensBefore[1]!.toLowerCase()
 
   if (tokensBefore.length === 2) {
-    const cands = matchCandidates([...SETTING_SET_KEY_TOKENS], prefix, matchMode)
-    if (cands.length === 0) {
-      return null
+    if (second === "-set") {
+      const cands = matchCandidates([...SETTING_SET_KEY_TOKENS], prefix, matchMode)
+      if (cands.length === 0) {
+        return null
+      }
+      return {
+        tokenStart: l,
+        tokenEnd: r,
+        prefix,
+        candidates: cands,
+        tier: "third"
+      }
     }
-    return {
-      tokenStart: l,
-      tokenEnd: r,
-      prefix,
-      candidates: cands,
-      tier: "third"
+    if (second === "-storage") {
+      const cands = matchCandidates(["internal", "external"], prefix, matchMode)
+      if (cands.length === 0) {
+        return null
+      }
+      return {
+        tokenStart: l,
+        tokenEnd: r,
+        prefix,
+        candidates: cands,
+        tier: "third"
+      }
     }
+    if (second === "-snapshot-storage") {
+      const cands = matchCandidates(["bundled", "vault"], prefix, matchMode)
+      if (cands.length === 0) {
+        return null
+      }
+      return {
+        tokenStart: l,
+        tokenEnd: r,
+        prefix,
+        candidates: cands,
+        tier: "third"
+      }
+    }
+    return null
   }
 
+  if (second !== "-set") {
+    return null
+  }
   const values = settingSetValueCandidates(tokensBefore[2]!)
   if (values === null || values.length === 0) {
     return null

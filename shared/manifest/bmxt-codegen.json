@@ -302,7 +302,7 @@
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
-      "usagePrimary": "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help",
+      "usagePrimary": "setting -list | setting -set <key> <value> | setting -export | setting -import | setting -bg-import [--picker] | setting -reset-default | setting -storage internal|external | setting -pick-dir | setting -reload | setting -snapshot-storage bundled|vault | setting -snapshot-pick-dir | setting -sync-guide | setting -save | setting -cancel | setting -exit -list | setting help",
       "subcommands": [
         {
           "head": "-list",
@@ -311,6 +311,49 @@
         {
           "head": "-set",
           "tail": "rest"
+        },
+        {
+          "head": "-export",
+          "tail": "none"
+        },
+        {
+          "head": "-import",
+          "tail": "none"
+        },
+        {
+          "head": "-bg-import",
+          "trailingTokens": [
+            "--picker"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "-reset-default",
+          "tail": "none"
+        },
+        {
+          "head": "-storage",
+          "tail": "rest"
+        },
+        {
+          "head": "-pick-dir",
+          "tail": "none"
+        },
+        {
+          "head": "-reload",
+          "tail": "none"
+        },
+        {
+          "head": "-snapshot-storage",
+          "tail": "rest"
+        },
+        {
+          "head": "-snapshot-pick-dir",
+          "tail": "none"
+        },
+        {
+          "head": "-sync-guide",
+          "tail": "none"
         },
         {
           "head": "-save",
@@ -357,7 +400,7 @@
       "module": "sync",
       "canonicalName": "sync",
       "aliases": [],
-      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
+      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -setname <name> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
       "subcommands": [
         {
           "head": "-setup",
@@ -377,6 +420,10 @@
         },
         {
           "head": "-connect",
+          "tail": "rest"
+        },
+        {
+          "head": "-setname",
           "tail": "rest"
         },
         {
@@ -1097,6 +1144,68 @@
       "fields": {
         "key": "string",
         "value": "string"
+      }
+    },
+    {
+      "kind": "setting_export",
+      "rustVariant": "SettingExport",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_import",
+      "rustVariant": "SettingImport",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_bg_import",
+      "rustVariant": "SettingBgImport",
+      "shape": "record",
+      "fields": {
+        "layer": "string"
+      }
+    },
+    {
+      "kind": "setting_reset_default",
+      "rustVariant": "SettingResetDefault",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_storage",
+      "rustVariant": "SettingStorage",
+      "shape": "record",
+      "fields": {
+        "mode": "string"
+      }
+    },
+    {
+      "kind": "setting_pick_dir",
+      "rustVariant": "SettingPickDir",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_reload",
+      "rustVariant": "SettingReload",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_snapshot_storage",
+      "rustVariant": "SettingSnapshotStorage",
+      "shape": "record",
+      "fields": {
+        "mode": "string"
+      }
+    },
+    {
+      "kind": "setting_snapshot_pick_dir",
+      "rustVariant": "SettingSnapshotPickDir",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_setname",
+      "rustVariant": "SyncSetname",
+      "shape": "record",
+      "fields": {
+        "name": "string"
       }
     },
     {

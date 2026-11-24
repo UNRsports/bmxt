@@ -292,7 +292,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | **session** | `-switch` / `-next` / `-prev` / `-new` / `-setting-name` あり | list Enter → `session -switch <name>` の `submitLine` 再入場 | 最も近い。雛形 |
 | **search** | `-list` + `\| open` / `\| jump` + `--into-window` / `--into-group` | （残任意なし・本線完了） | picker Enter は同形行を submit |
 | **dom** | `-list`・`-setting` は CUI 可 | `dom -list … \| jump`（`dom.node` path） | jump / link activate が picker 直実行 |
-| **setting** | `-list` 読み取り専用 | `setting -set …` + `-save` / `-cancel` | 現状 UI 編集が本線（README）。FSA はジェスチャ上限 |
+| **setting** | `-set` / `-export` / `-import` / `-bg-import` / `-storage` / … | （列ピッカーは `submitConstructedLine` のみ） | §7 wizard 化済み。FSA／zip／画像はコマンド→UiAction→chooser |
 | **tab**（参考） | close / reload / nav / `#t:` / `move` / `new-window` / `group add` パイプ可 | `:edit` / plain Enter focus 等（任意） | 7e で bulk 本線は CUI 化済み |
 
 **実装チェック（段階）**

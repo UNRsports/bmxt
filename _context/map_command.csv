@@ -77,7 +77,17 @@ translate,-setting,--ja-en,none,,translate -setting --ja-en,ペア ja-en。UiAct
 translate,-setting,--en-ja,none,,translate -setting --en-ja,ペア en-ja。UiAction pair=en-ja。,
 setting,,,,,setting …,単独 `setting` + Enter: msgs + promptPrefix `setting `。第二候補に `help`。,
 setting,-list,,none,,setting -list,プレーン `setting.field`（読み取り専用・案内付き。locale / appearance / **host-ui** / storage 等）。ピッカーは `setting -list | browse`。,0.8.2: host-ui（auto|desktop|mobile）
-setting,-set,,rest,,setting -set <key> <value>,UiAction `setting_set`。即永続化（locale / edit-picker / ime-candidate-help / prompt-fire / search-legend / host-ui / fg / bg-color / size / font / search-*-highlight / picker-*）。画像はピッカーのみ。,§7 CUI immediate
+setting,-set,,rest,,setting -set <key> <value>,UiAction `setting_set`。即永続化（locale / edit-picker / ime-candidate-help / prompt-fire / search-legend / host-ui / fg / bg-color / size / font / search-*-highlight / picker-* / bg-image clear）。列ピッカーは同形行を `submitConstructedLine`。,§7 CUI wizard
+setting,-export,,none,,setting -export,UiAction `setting_export`。設定 zip 書き出し。,§7
+setting,-import,,none,,setting -import,UiAction `setting_import`。zip ファイルピッカー→即保存。,§7
+setting,-bg-import,,rest,,setting -bg-import [--picker],UiAction `setting_bg_import`。背景画像ファイルピッカー（`--picker` はピッカー列レイヤ）。,§7
+setting,-reset-default,,none,,setting -reset-default,UiAction `setting_reset_default`。外観既定へ戻す。,§7
+setting,-storage,,rest,,setting -storage internal|external,UiAction `setting_storage`。UI 設定保存先（external は FSA chooser）。,§7
+setting,-pick-dir,,none,,setting -pick-dir,UiAction `setting_pick_dir`。外部保存ディレクトリ再選択。,§7
+setting,-reload,,none,,setting -reload,UiAction `setting_reload`。外部バンドル再読込。,§7
+setting,-snapshot-storage,,rest,,setting -snapshot-storage bundled|vault,UiAction `setting_snapshot_storage`。snapshot 保存先。,§7
+setting,-snapshot-pick-dir,,none,,setting -snapshot-pick-dir,UiAction `setting_snapshot_pick_dir`。vault ディレクトリ再選択。,§7
+setting,-sync-guide,,none,,setting -sync-guide,msgs のみ（Family セットアップ案内）。,§7
 setting,-save,,none,,setting -save,UiAction `setting_save`。互換: 設定列を閉じるのみ（変更は適用時に既に保存済み）。,§7
 setting,-cancel,,none,,setting -cancel,UiAction `setting_cancel`。互換: 設定列を閉じるのみ（破棄する下書きなし）。,§7
 setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,

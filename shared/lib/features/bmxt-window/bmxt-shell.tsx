@@ -1011,7 +1011,7 @@ export function BmxtShell({
     appendLogLines,
     setSettingListPicker,
     settingListPickerRef,
-    replaceUiSettingsState
+    submitConstructedLine: submitConstructedLineEarly
   })
 
   useEffect(() => {

@@ -452,16 +452,64 @@
     "en": "       setting -set <key> <value> — save immediately (locale / fg / size / prompt-fire / …)"
   },
   "cmd.setting.usage.line4": {
-    "ja": "       setting -save | setting -cancel — 設定列を閉じる（互換エイリアス）",
-    "en": "       setting -save | setting -cancel — close settings column (compat aliases)"
+    "ja": "       setting -export | setting -import — 設定 zip の書き出し／読み込み",
+    "en": "       setting -export | setting -import — export / import settings zip"
   },
   "cmd.setting.usage.line5": {
-    "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
-    "en": "       setting -exit -list — close settings picker in this BMXt pane"
+    "ja": "       setting -bg-import [--picker] | setting -reset-default — 背景画像／外観既定へ戻す",
+    "en": "       setting -bg-import [--picker] | setting -reset-default — background image / restore appearance defaults"
+  },
+  "cmd.setting.usage.line6": {
+    "ja": "       setting -storage internal|external | -pick-dir | -reload — UI 設定の保存先",
+    "en": "       setting -storage internal|external | -pick-dir | -reload — UI settings storage"
+  },
+  "cmd.setting.usage.line7": {
+    "ja": "       setting -snapshot-storage bundled|vault | -snapshot-pick-dir | -sync-guide",
+    "en": "       setting -snapshot-storage bundled|vault | -snapshot-pick-dir | -sync-guide"
+  },
+  "cmd.setting.usage.line8": {
+    "ja": "       setting -save | -cancel | -exit -list — 設定列を閉じる",
+    "en": "       setting -save | -cancel | -exit -list — close settings column"
   },
   "cmd.setting.error.setUsage": {
     "ja": "error: usage: setting -set <key> <value>",
     "en": "error: usage: setting -set <key> <value>"
+  },
+  "cmd.setting.error.extraArgs": {
+    "ja": "error: setting {option} に余分な引数があります",
+    "en": "error: setting {option} takes no extra arguments"
+  },
+  "cmd.setting.error.bgImportUsage": {
+    "ja": "error: usage: setting -bg-import [--picker]",
+    "en": "error: usage: setting -bg-import [--picker]"
+  },
+  "cmd.setting.error.storageUsage": {
+    "ja": "error: usage: setting -storage internal|external",
+    "en": "error: usage: setting -storage internal|external"
+  },
+  "cmd.setting.error.snapshotStorageUsage": {
+    "ja": "error: usage: setting -snapshot-storage bundled|vault",
+    "en": "error: usage: setting -snapshot-storage bundled|vault"
+  },
+  "cmd.setting.cui.exportDone": {
+    "ja": "setting: exported {filename}",
+    "en": "setting: exported {filename}"
+  },
+  "cmd.setting.cui.importDone": {
+    "ja": "setting: import complete",
+    "en": "setting: import complete"
+  },
+  "cmd.setting.cui.importCancelled": {
+    "ja": "setting: import cancelled",
+    "en": "setting: import cancelled"
+  },
+  "cmd.setting.cui.resetDone": {
+    "ja": "setting: appearance restored to defaults",
+    "en": "setting: appearance restored to defaults"
+  },
+  "cmd.sync.error.setnameUsage": {
+    "ja": "error: usage: sync -setname <name>",
+    "en": "error: usage: sync -setname <name>"
   },
   "cmd.snapshot.error.internal": {
     "ja": "error: 不明な snapshot オプション (internal): {option}",
@@ -686,6 +734,10 @@
   "cmd.sync.usage.line3b": {
     "ja": "  sync -connect <deviceId> — 名簿メンバーへ再握手（役割自動・ウィザード）",
     "en": "  sync -connect <deviceId> — reconnect to a roster member (auto role · wizard)"
+  },
+  "cmd.sync.usage.line3c": {
+    "ja": "  sync -setname <name> — Family 表示名を設定",
+    "en": "  sync -setname <name> — set Family display name"
   },
   "cmd.sync.usage.line4": {
     "ja": "  sync -offer — WebRTC オファーコードを作成（相手に渡す）",
