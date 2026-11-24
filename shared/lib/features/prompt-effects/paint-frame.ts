@@ -1,3 +1,8 @@
+import { getPromptEffectCanvasContext } from "./canvas-context"
+import {
+  computePromptParticleBounds,
+  quantizePromptEffectBounds
+} from "./particle-bounds"
 import type { PromptEffectTheme } from "./types"
 import type { PromptParticle } from "./types"
 
@@ -9,31 +14,67 @@ function resolveStageCssSize(): { cssW: number; cssH: number } {
   return { cssW, cssH }
 }
 
+/** EN: Collapse the canvas element so an empty buffer does not cover the viewport. */
+function clearPromptEffectCanvasHost(canvas: HTMLCanvasElement): void {
+  if (canvas.width !== 0 || canvas.height !== 0) {
+    canvas.width = 0
+    canvas.height = 0
+  }
+  canvas.style.left = "0px"
+  canvas.style.top = "0px"
+  canvas.style.width = "0px"
+  canvas.style.height = "0px"
+}
+
 /**
- * EN: Resize canvas to the viewport stage, clear, and step/paint all particles via the theme.
- * JA: ビューポート全面に Canvas を合わせ、クリア後にテーマで粒子を step／描画する。
+ * EN: Size canvas to the particle AABB (not the full viewport), clear, step/paint.
+ * JA: 粒子 AABB に Canvas を合わせ（全画面ではない）、クリア後に step／描画する。
  */
 export function paintPromptEffectFrame(
   canvas: HTMLCanvasElement,
   theme: PromptEffectTheme,
   particles: PromptParticle[]
 ): PromptParticle[] {
+  if (particles.length === 0) {
+    clearPromptEffectCanvasHost(canvas)
+    return particles
+  }
+
   const { cssW, cssH } = resolveStageCssSize()
+  const rawBounds = computePromptParticleBounds(particles)
+  if (!rawBounds) {
+    clearPromptEffectCanvasHost(canvas)
+    return []
+  }
+  const bounds = quantizePromptEffectBounds(rawBounds, cssW, cssH)
+  if (!bounds) {
+    clearPromptEffectCanvasHost(canvas)
+    return particles
+  }
+
+  const boxW = Math.max(1, Math.floor(bounds.maxX - bounds.minX))
+  const boxH = Math.max(1, Math.floor(bounds.maxY - bounds.minY))
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
-  const pixelW = Math.floor(cssW * dpr)
-  const pixelH = Math.floor(cssH * dpr)
+  const pixelW = Math.max(1, Math.floor(boxW * dpr))
+  const pixelH = Math.max(1, Math.floor(boxH * dpr))
+
   if (canvas.width !== pixelW || canvas.height !== pixelH) {
     canvas.width = pixelW
     canvas.height = pixelH
-    canvas.style.width = `${cssW}px`
-    canvas.style.height = `${cssH}px`
   }
-  const ctx = canvas.getContext("2d")
+  canvas.style.left = `${bounds.minX}px`
+  canvas.style.top = `${bounds.minY}px`
+  canvas.style.width = `${boxW}px`
+  canvas.style.height = `${boxH}px`
+
+  const ctx = getPromptEffectCanvasContext(canvas)
   if (!ctx) {
     return particles
   }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  ctx.clearRect(0, 0, cssW, cssH)
+
+  // EN: Map viewport CSS coords into the AABB-sized backing store.
+  ctx.setTransform(dpr, 0, 0, dpr, -bounds.minX * dpr, -bounds.minY * dpr)
+  ctx.clearRect(bounds.minX, bounds.minY, boxW, boxH)
   ctx.globalCompositeOperation = "lighter"
 
   const next: PromptParticle[] = []
@@ -44,5 +85,9 @@ export function paintPromptEffectFrame(
     }
   }
   ctx.globalCompositeOperation = "source-over"
+
+  if (next.length === 0) {
+    clearPromptEffectCanvasHost(canvas)
+  }
   return next
 }

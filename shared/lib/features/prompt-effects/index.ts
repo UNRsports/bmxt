@@ -8,6 +8,14 @@ export {
   resolvePromptEffectTheme,
   type PromptEffectThemeId
 } from "./registry"
+export {
+  computePromptParticleBounds,
+  quantizePromptEffectBounds,
+  promptParticlePaintRadius,
+  PROMPT_EFFECT_BOUNDS_PAD_PX,
+  PROMPT_EFFECT_BOUNDS_QUANT_PX,
+  type PromptEffectPaintBounds
+} from "./particle-bounds"
 export type {
   PromptEffectEventKind,
   PromptEffectOrigin,

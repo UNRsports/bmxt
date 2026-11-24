@@ -148,19 +148,22 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
       : null
   )
 
-  const subCmdPickerAnchorEpisode = useMemo(
+  /**
+   * EN: Layout-only episode for picker host measure — slot + list length, not every
+   *     candidate string (avoids force-remasure on each filter keystroke).
+   * JA: ホスト測位用。スロット＋件数のみ（候補文字列ごとの強制 remasure を避ける）。
+   */
+  const subCmdPickerLayoutEpisode = useMemo(
     () =>
       subCmdPicker === null
         ? null
-        : `${subCmdPicker.tier}\0${subCmdPicker.tokenStart}\0${subCmdPicker.candidates.join("\0")}`,
+        : `${subCmdPicker.tier}\0${subCmdPicker.tokenStart}\0${subCmdPicker.candidates.length}`,
     [subCmdPicker]
   )
 
-  const sessionListMenuAnchorEpisode = useMemo(
+  const sessionListLayoutEpisode = useMemo(
     () =>
-      sessionListPickerHi === null
-        ? null
-        : sessionListPickerRows.map((r) => r.sessionId).join("\0"),
+      sessionListPickerHi === null ? null : String(sessionListPickerRows.length),
     [sessionListPickerHi, sessionListPickerRows]
   )
 
@@ -511,54 +514,112 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
     options.localCompletion
   ])
 
+  const lastPickerCaretGeomKeyRef = useRef("")
+
+  const applyMeasuredPickerPos = useCallback((): void => {
+    if (!promptPickerOpen) {
+      return
+    }
+    const cell = options.cursorMirrorCellRef.current
+    if (!cell) {
+      return
+    }
+    const cr = cell.getBoundingClientRect()
+    const geomKey = [
+      Math.round(cr.left),
+      Math.round(cr.top),
+      Math.round(cr.width),
+      Math.round(cr.height),
+      fillViewportForHelp ? 1 : 0,
+      window.innerWidth,
+      window.innerHeight
+    ].join("|")
+    // EN: Skip layout + stylesheet work when caret/stage geometry is unchanged.
+    //     List-length / fill-mode changes still force a measure via dedicated effect.
+    if (geomKey === lastPickerCaretGeomKeyRef.current) {
+      return
+    }
+    lastPickerCaretGeomKeyRef.current = geomKey
+    const next = measureFloatingPickerHostPosition(cell, options.subCmdPickerHostRef.current, {
+      fillRemainingViewport: fillViewportForHelp
+    })
+    if (!next) {
+      return
+    }
+    setSubCmdPickerPos((prev) => {
+      if (
+        prev &&
+        prev.left === next.left &&
+        prev.top === next.top &&
+        prev.width === next.width &&
+        prev.height === next.height
+      ) {
+        return prev
+      }
+      return next
+    })
+  }, [
+    fillViewportForHelp,
+    options.cursorMirrorCellRef,
+    options.subCmdPickerHostRef,
+    promptPickerOpen
+  ])
+
+  const forceMeasurePickerPos = useCallback((): void => {
+    lastPickerCaretGeomKeyRef.current = ""
+    applyMeasuredPickerPos()
+  }, [applyMeasuredPickerPos])
+
+  // EN: Scroll/resize listeners stay mounted for the whole open episode (no per-key churn).
   useLayoutEffect(() => {
     if (!promptPickerOpen) {
       setSubCmdPickerPos(null)
+      lastPickerCaretGeomKeyRef.current = ""
       return
     }
-    const measure = () => {
-      const next = measureFloatingPickerHostPosition(
-        options.cursorMirrorCellRef.current,
-        options.subCmdPickerHostRef.current,
-        { fillRemainingViewport: fillViewportForHelp }
-      )
-      if (!next) {
-        return
-      }
-      setSubCmdPickerPos((prev) => {
-        if (
-          prev &&
-          prev.left === next.left &&
-          prev.top === next.top &&
-          prev.width === next.width &&
-          prev.height === next.height
-        ) {
-          return prev
-        }
-        return next
-      })
+    forceMeasurePickerPos()
+    const onScrollOrResize = (): void => {
+      forceMeasurePickerPos()
     }
-    measure()
-    const raf = requestAnimationFrame(measure)
     const sc = options.scrollRef.current
-    sc?.addEventListener("scroll", measure, { passive: true })
-    window.addEventListener("resize", measure)
+    sc?.addEventListener("scroll", onScrollOrResize, { passive: true })
+    window.addEventListener("resize", onScrollOrResize)
+    return () => {
+      sc?.removeEventListener("scroll", onScrollOrResize)
+      window.removeEventListener("resize", onScrollOrResize)
+    }
+  }, [forceMeasurePickerPos, options.scrollRef, promptPickerOpen])
+
+  // EN: Caret may have moved — geom-gated (no stylesheet rewrite if rect unchanged).
+  //     Do not depend on `line`; cursorPos covers typing caret motion.
+  useLayoutEffect(() => {
+    if (!promptPickerOpen) {
+      return
+    }
+    applyMeasuredPickerPos()
+  }, [applyMeasuredPickerPos, options.cursorPos, options.mode, promptPickerOpen])
+
+  // EN: Host content size / fill mode changed — force measure (+ rAF for non-help offsetWidth).
+  useLayoutEffect(() => {
+    if (!promptPickerOpen) {
+      return
+    }
+    forceMeasurePickerPos()
+    if (fillViewportForHelp) {
+      return
+    }
+    const raf = requestAnimationFrame(() => {
+      forceMeasurePickerPos()
+    })
     return () => {
       cancelAnimationFrame(raf)
-      sc?.removeEventListener("scroll", measure)
-      window.removeEventListener("resize", measure)
     }
   }, [
     fillViewportForHelp,
-    subCmdPickerAnchorEpisode,
-    sessionListMenuAnchorEpisode,
-    options.line,
-    options.cursorPos,
-    options.mode,
+    forceMeasurePickerPos,
     promptPickerOpen,
-    options.scrollRef,
-    options.cursorMirrorCellRef,
-    options.subCmdPickerHostRef
+    sessionListLayoutEpisode,
+    subCmdPickerLayoutEpisode
   ])
 
   const closeSessionListPicker = useCallback(() => {

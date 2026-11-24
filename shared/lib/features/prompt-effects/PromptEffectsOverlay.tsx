@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef } from "react"
+import { getPromptEffectCanvasContext } from "./canvas-context"
 import { paintPromptEffectFrame } from "./paint-frame"
 import {
   DEFAULT_PROMPT_EFFECT_THEME_ID,
@@ -20,8 +21,10 @@ export type PromptEffectsOverlayProps = {
 }
 
 /**
- * EN: Full-window canvas host for prompt type/delete particle themes (gated by settings).
- * JA: プロンプト入力／削除パーティクルテーマの全画面 Canvas ホスト（設定でゲート）。
+ * EN: Canvas host for prompt type/delete particle themes (gated by settings).
+ *     Each frame sizes the bitmap to the particle AABB, not the full viewport.
+ * JA: プロンプト入力／削除パーティクルテーマの Canvas ホスト（設定でゲート）。
+ *     毎フレーム粒子 AABB にビットマップを合わせ、ビューポート全面にはしない。
  */
 export function PromptEffectsOverlay({
   enabled,
@@ -84,11 +87,17 @@ export function PromptEffectsOverlay({
       prevCompLenRef.current = 0
       const canvas = canvasRef.current
       if (canvas) {
-        const ctx = canvas.getContext("2d")
+        const ctx = getPromptEffectCanvasContext(canvas)
         if (ctx) {
           ctx.setTransform(1, 0, 0, 1, 0, 0)
           ctx.clearRect(0, 0, canvas.width, canvas.height)
         }
+        canvas.width = 0
+        canvas.height = 0
+        canvas.style.left = "0px"
+        canvas.style.top = "0px"
+        canvas.style.width = "0px"
+        canvas.style.height = "0px"
       }
       return
     }

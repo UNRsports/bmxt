@@ -4,6 +4,9 @@ import { fireHeatColor, fireShatterColor } from "./colors"
 /**
  * EN: Step physics and paint one fire-theme particle. False when expired.
  * JA: fire テーマ粒子の物理更新と描画。寿命切れなら false。
+ *
+ * Flame uses two solid discs (not createRadialGradient) — Gecko pays heavily for
+ * per-particle radial gradients under `lighter` on a large canvas.
  */
 export function stepAndPaintFireParticle(
   ctx: CanvasRenderingContext2D,
@@ -22,18 +25,13 @@ export function stepAndPaintFireParticle(
     particle.vy -= 0.06 + Math.random() * 0.08
     const alpha = Math.min(1, lifeRatio * 1.25) * 0.85
     const radius = particle.size * (0.55 + lifeRatio * 0.7)
-    const grad = ctx.createRadialGradient(
-      particle.x,
-      particle.y,
-      0,
-      particle.x,
-      particle.y,
-      radius
-    )
-    grad.addColorStop(0, fireHeatColor(particle.heat, alpha))
-    grad.addColorStop(0.45, fireHeatColor(particle.heat * 0.75, alpha * 0.55))
-    grad.addColorStop(1, fireHeatColor(particle.heat * 0.35, 0))
-    ctx.fillStyle = grad
+    // EN: Soft outer glow (cheaper than radial gradient under additive blend).
+    ctx.fillStyle = fireHeatColor(particle.heat * 0.55, alpha * 0.28)
+    ctx.beginPath()
+    ctx.arc(particle.x, particle.y, radius * 1.55, 0, Math.PI * 2)
+    ctx.fill()
+    // EN: Hot core disc.
+    ctx.fillStyle = fireHeatColor(particle.heat, alpha)
     ctx.beginPath()
     ctx.arc(particle.x, particle.y, radius, 0, Math.PI * 2)
     ctx.fill()
