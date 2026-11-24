@@ -4,6 +4,12 @@ import type { ListRecord, ListResult } from "../command-line/list-output/types.t
 import { LIST_OUTPUT_SCHEMA } from "../command-line/list-output/types.ts"
 import type { HistoryPickerRow } from "./picker-rows.ts"
 
+/**
+ * EN: Same-object handoff for `history -list | browse` — skip serialize→deserialize of 10k rows.
+ * JA: 同一 ListResult 参照なら再構築を避け、browse 開時の往復コストを省く。
+ */
+const rowsByListResult = new WeakMap<ListResult, readonly HistoryPickerRow[]>()
+
 export function historyPickerRowsToListResult(rows: readonly HistoryPickerRow[]): ListResult {
   const records: ListRecord[] = []
   for (const row of rows) {
@@ -63,15 +69,21 @@ export function historyPickerRowsToListResult(rows: readonly HistoryPickerRow[])
       ].join("\t")
     })
   }
-  return {
+  const listResult: ListResult = {
     schema: LIST_OUTPUT_SCHEMA,
     command: "history",
     subcommand: "-list",
     records
   }
+  rowsByListResult.set(listResult, rows)
+  return listResult
 }
 
 export function historyPickerRowsFromListResult(listResult: ListResult): HistoryPickerRow[] {
+  const cached = rowsByListResult.get(listResult)
+  if (cached !== undefined) {
+    return cached.slice()
+  }
   const rows: HistoryPickerRow[] = []
   for (const record of listResult.records) {
     if (record.kind === "history.month") {

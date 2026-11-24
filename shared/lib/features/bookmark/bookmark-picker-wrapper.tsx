@@ -88,8 +88,8 @@ export function BookmarkPickerWrapper({
   )
   const views = useMemo(
     () => buildBookmarkTreeViews(state, visibleIndices),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- foldRevision signals external fold-state change
-    [state, visibleIndices, foldRevision]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- foldRevision signals external fold-state; omit `state`/`hi` so arrow nav does not rebuild all views
+    [state.rows, state.markedFolderIds, state.markedItemIds, visibleIndices, foldRevision]
   )
   const hi = views.length === 0 ? 0 : Math.min(Math.max(0, state.hi), views.length - 1)
 

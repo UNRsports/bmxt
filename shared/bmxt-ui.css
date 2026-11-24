@@ -2159,6 +2159,20 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   will-change: transform;
 }
 
+/* tree picker (history / bookmark): fixed row height for virtual window */
+.bmxt-tab-picker-list--tree-virtual .bmxt-tab-picker-row {
+  box-sizing: border-box;
+  min-height: var(--bmxt-tree-picker-row-height, 40px);
+  margin-top: 0;
+}
+
+.bmxt-tab-picker-list--tree-virtual .bmxt-tab-picker-tab-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+}
+
 /* dom -list picker */
 .bmxt-dom-picker .bmxt-tab-picker-head {
   margin-bottom: 10px;

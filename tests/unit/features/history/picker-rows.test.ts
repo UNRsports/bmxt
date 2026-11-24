@@ -12,6 +12,10 @@ import {
   resetHistoryFoldState
 } from "../../../../shared/lib/features/history/fold-state.ts"
 import {
+  historyPickerRowsFromListResult,
+  historyPickerRowsToListResult
+} from "../../../../shared/lib/features/history/history-list-result.ts"
+import {
   createHistoryPickerState,
   historyActionTargetRows,
   toggleHistoryRowMark
@@ -219,5 +223,23 @@ describe("history picker state and actions", () => {
       monthKeys: []
     })
     assert.deepEqual(kinds(afterAllDay), ["month:2026-10", "day:2026-10-30", "visit:https://d.example/"])
+  })
+})
+
+describe("history ListResult handoff", () => {
+  it("round-trips rows and reuses the same-object cache for browse", () => {
+    const rows = buildRows(ENTRIES)
+    const listResult = historyPickerRowsToListResult(rows)
+    const fromSame = historyPickerRowsFromListResult(listResult)
+    assert.deepEqual(kinds(fromSame), kinds(rows))
+
+    const cloned = {
+      schema: listResult.schema,
+      command: listResult.command,
+      subcommand: listResult.subcommand,
+      records: listResult.records
+    }
+    const fromClone = historyPickerRowsFromListResult(cloned)
+    assert.deepEqual(kinds(fromClone), kinds(rows))
   })
 })

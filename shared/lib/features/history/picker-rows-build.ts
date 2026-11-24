@@ -52,6 +52,37 @@ export function historyDayKeyFromMs(ms: number): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
+const monthFormatters = new Map<HistoryRowsLocale, Intl.DateTimeFormat>()
+const dayFormatters = new Map<HistoryRowsLocale, Intl.DateTimeFormat>()
+
+function monthFormatter(locale: HistoryRowsLocale): Intl.DateTimeFormat {
+  const cached = monthFormatters.get(locale)
+  if (cached !== undefined) {
+    return cached
+  }
+  const formatter = new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
+    year: "numeric",
+    month: "long"
+  })
+  monthFormatters.set(locale, formatter)
+  return formatter
+}
+
+function dayFormatter(locale: HistoryRowsLocale): Intl.DateTimeFormat {
+  const cached = dayFormatters.get(locale)
+  if (cached !== undefined) {
+    return cached
+  }
+  const formatter = new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  })
+  dayFormatters.set(locale, formatter)
+  return formatter
+}
+
 function formatMonthLabel(monthKey: string, locale: HistoryRowsLocale): string {
   const parts = monthKey.split("-")
   const year = Number(parts[0])
@@ -61,10 +92,7 @@ function formatMonthLabel(monthKey: string, locale: HistoryRowsLocale): string {
   }
   const date = new Date(year, month - 1, 1)
   try {
-    return new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
-      year: "numeric",
-      month: "long"
-    }).format(date)
+    return monthFormatter(locale).format(date)
   } catch {
     return monthKey
   }
@@ -88,12 +116,7 @@ function formatDayLabel(dayKey: string, locale: HistoryRowsLocale): string {
   }
   const date = new Date(year, month - 1, day)
   try {
-    return new Intl.DateTimeFormat(locale === "ja" ? "ja-JP" : "en-US", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric"
-    }).format(date)
+    return dayFormatter(locale).format(date)
   } catch {
     return dayKey
   }
