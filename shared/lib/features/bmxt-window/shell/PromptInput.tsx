@@ -2,11 +2,13 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { tPrompt } from "../../setting/i18n/ns/prompt"
 import { tSession } from "../../setting/i18n/ns/session"
 import type { UiLocale } from "../../setting/locale"
+import { useUiSettings } from "../../setting/use-ui-settings"
 import { CSP_DYNAMIC_SCOPE_ATTR } from "../csp-dynamic-stylesheet"
 import { TokenPickerPanel, type TokenPickerModel } from "../token-picker-panel"
 import { SessionListCandidatePanel, type SessionCandidatePanelVariant, type SessionListRow } from "../../session"
 import { renderPromptMirrorChipsOnly, renderPromptMirrorLine } from "./prompt-mirror-chips"
 import type { NavReloadTabChipMeta } from "../../nav/nav-reload-tab-token"
+import { PromptEffectsOverlay } from "../../prompt-effects"
 
 type PromptMirrorSegments = {
   before: string
@@ -103,6 +105,8 @@ export function PromptInput({
   onPickSessionIndex,
   onDismissOutside
 }: PromptInputProps) {
+  const { settings: uiSettings } = useUiSettings()
+  const promptFireEnabled = uiSettings.promptFire === true
   const navPromptValueControlled = !navPageTyping
   const showNavTypingPlaceholder = navPageTyping && line.trim() === "" && !isComposing
   const showSessionNameTypingPlaceholder = sessionNameTyping && !isComposing
@@ -238,6 +242,15 @@ export function PromptInput({
             })
           )}
         </div>
+        <PromptEffectsOverlay
+          enabled={promptFireEnabled}
+          themeId="fire"
+          fieldRef={promptFieldRef}
+          caretRef={cursorMirrorCellRef}
+          line={line}
+          cursorPos={cursorPos}
+          composition={mirror.composition}
+        />
         <textarea
           ref={imeRef}
           className="bmxt-prompt-ime"

@@ -165,6 +165,7 @@ describe("setting list picker draft", () => {
       locale: "en",
       hostUiMode: "auto",
       imeCandidateHelp: true,
+      promptFire: false,
       searchLegendMode: "text",
       appearance: testAppearance({
         fg: "#ffffff",
@@ -174,6 +175,7 @@ describe("setting list picker draft", () => {
     assert.equal(state.draft.locale, "en")
     assert.equal(state.draft.hostUiMode, "auto")
     assert.equal(state.draft.imeCandidateHelp, true)
+    assert.equal(state.draft.promptFire, false)
     assert.equal(state.draft.searchLegendMode, "text")
     assert.equal(state.draft.appearance.fg, "#ffffff")
     assert.equal(state.draft.appearance.fontSize, "14px")
@@ -184,6 +186,7 @@ describe("setting list picker draft", () => {
       locale: "ja",
       hostUiMode: "auto",
       imeCandidateHelp: true,
+      promptFire: false,
       searchLegendMode: "text",
       appearance: testAppearance(null)
     })
@@ -201,6 +204,7 @@ describe("setting list picker draft", () => {
       locale: "en",
       hostUiMode: "desktop",
       imeCandidateHelp: true,
+      promptFire: false,
       searchLegendMode: "text",
       appearance: testAppearance(null)
     })
@@ -210,6 +214,7 @@ describe("setting list picker draft", () => {
         locale: "ja",
         hostUiMode: "mobile",
         imeCandidateHelp: false,
+        promptFire: true,
         searchLegendMode: "text_emoji",
         appearance: { fg: "#aabbcc" }
       }
@@ -220,6 +225,7 @@ describe("setting list picker draft", () => {
     assert.equal(next.draft.locale, "ja")
     assert.equal(next.draft.hostUiMode, "mobile")
     assert.equal(next.draft.imeCandidateHelp, false)
+    assert.equal(next.draft.promptFire, true)
     assert.equal(next.draft.searchLegendMode, "text_emoji")
     assert.equal(next.draft.appearance.fg, "#aabbcc")
   })
@@ -238,6 +244,14 @@ describe("setting list picker draft", () => {
   })
   it("maps ime-candidate-help to imeCandidateHelp view", () => {
     assert.equal(settingMainRowTargetView("ime-candidate-help"), "imeCandidateHelp")
+  })
+  it("maps prompt-fire to promptFire view", () => {
+    assert.equal(settingMainRowTargetView("prompt-fire"), "promptFire")
+  })
+  it("setting -set prompt-fire accepts on/off", () => {
+    assert.deepEqual(settingSetPatchFromArgs("prompt-fire", "on"), { promptFire: true })
+    assert.deepEqual(settingSetPatchFromArgs("prompt-fire", "off"), { promptFire: false })
+    assert.equal(settingSetPatchFromArgs("prompt-fire", "maybe"), null)
   })
   it("maps search-legend to searchLegend view", () => {
     assert.equal(settingMainRowTargetView("search-legend"), "searchLegend")

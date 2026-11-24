@@ -35,6 +35,9 @@ export type SettingPickerRowId =
   | "ime-candidate-help"
   | "ime-candidate-help-on"
   | "ime-candidate-help-off"
+  | "prompt-fire"
+  | "prompt-fire-on"
+  | "prompt-fire-off"
   | "search-legend"
   | "search-legend-text"
   | "search-legend-emoji"
@@ -164,6 +167,7 @@ export function settingPickerInitialHi(
   snapshotStorageConfig?: SnapshotStorageConfig,
   hostUiMode: HostUiMode = "auto",
   imeCandidateHelp = true,
+  promptFire = false,
   searchLegendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE,
   _syncSummary?: SyncPickerSummary
 ): number {
@@ -175,6 +179,9 @@ export function settingPickerInitialHi(
   }
   if (view === "imeCandidateHelp") {
     return imeCandidateHelp ? 0 : 1
+  }
+  if (view === "promptFire") {
+    return promptFire ? 0 : 1
   }
   if (view === "searchLegend") {
     if (searchLegendMode === "emoji") {
@@ -369,6 +376,7 @@ export function buildSettingPickerRows(
   snapshotStorageConfig?: SnapshotStorageConfig,
   hostUiMode: HostUiMode = "auto",
   imeCandidateHelp = true,
+  promptFire = false,
   searchLegendMode: SearchLegendMode = DEFAULT_SEARCH_LEGEND_MODE,
   syncSummary?: SyncPickerSummary
 ): SettingPickerRow[] {
@@ -399,6 +407,19 @@ export function buildSettingPickerRows(
       {
         id: "ime-candidate-help-off",
         line: tSetting("setting.picker.imeCandidateHelpOff", locale)
+      }
+    ]
+  }
+
+  if (view === "promptFire") {
+    return [
+      {
+        id: "prompt-fire-on",
+        line: tSetting("setting.picker.promptFireOn", locale)
+      },
+      {
+        id: "prompt-fire-off",
+        line: tSetting("setting.picker.promptFireOff", locale)
       }
     ]
   }
@@ -538,6 +559,14 @@ export function buildSettingPickerRows(
         value: imeCandidateHelp
           ? tSetting("setting.picker.imeCandidateHelpStateOn", locale)
           : tSetting("setting.picker.imeCandidateHelpStateOff", locale)
+      })
+    },
+    {
+      id: "prompt-fire",
+      line: tSetting("setting.picker.main.promptFire", locale, {
+        value: promptFire
+          ? tSetting("setting.picker.promptFireStateOn", locale)
+          : tSetting("setting.picker.promptFireStateOff", locale)
       })
     },
     {
@@ -723,6 +752,7 @@ export function settingPickerHeadline(
     language: "setting.picker.headline.language",
     editPicker: "setting.picker.headline.editPicker",
     imeCandidateHelp: "setting.picker.headline.imeCandidateHelp",
+    promptFire: "setting.picker.headline.promptFire",
     searchLegend: "setting.picker.headline.searchLegend",
     hostUi: "setting.picker.headline.hostUi",
     storageMode: "setting.picker.headline.storageMode",

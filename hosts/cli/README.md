@@ -39,7 +39,7 @@ Outbound sync tickets (`sync -setup` invite · `sync -offer` / `-accept` answer)
 Same grammar as the extension (`bmxt-core`):
 
 - `setting -list` — print committed (or draft) scalar fields
-- `setting -set <key> <value>` — patch in-memory draft (`locale` · `edit-picker` · `ime-candidate-help` · `search-legend` · `host-ui`)
+- `setting -set <key> <value>` — patch in-memory draft (`locale` · `edit-picker` · `ime-candidate-help` · `prompt-fire` · `search-legend` · `host-ui`)
 - `setting -save` / `setting -cancel` — commit draft to disk / discard
 - `setting -list | browse` — **not supported** on CLI (use `-set`/`-save` or the browser window)
 
@@ -148,7 +148,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 拡張と同じ文法（`bmxt-core`）:
 
 - `setting -list` — committed（または下書き）スカラーを印刷
-- `setting -set <key> <value>` — インメモリ下書き（`locale` · `edit-picker` · `ime-candidate-help` · `search-legend` · `host-ui`）
+- `setting -set <key> <value>` — インメモリ下書き（`locale` · `edit-picker` · `ime-candidate-help` · `prompt-fire` · `search-legend` · `host-ui`）
 - `setting -save` / `setting -cancel` — ディスクへ保存 / 破棄
 - `setting -list | browse` — **CLI 非対応**（`-set`/`-save` か拡張窓を使う）
 

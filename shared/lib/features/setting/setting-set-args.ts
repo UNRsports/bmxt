@@ -39,6 +39,10 @@ export function settingSetPatchFromArgs(
     const b = parseBoolToken(v)
     return b === null ? null : { imeCandidateHelp: b }
   }
+  if (k === "prompt-fire") {
+    const b = parseBoolToken(v)
+    return b === null ? null : { promptFire: b }
+  }
   if (k === "search-legend") {
     return { searchLegendMode: normalizeSearchLegendMode(v) }
   }

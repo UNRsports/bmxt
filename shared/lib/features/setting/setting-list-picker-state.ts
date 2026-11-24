@@ -13,6 +13,7 @@ export type SettingListPickerView =
   | "language"
   | "editPicker"
   | "imeCandidateHelp"
+  | "promptFire"
   | "searchLegend"
   | "hostUi"
   | "fontSize"
@@ -55,6 +56,7 @@ export type SettingDraftPatch = {
   locale?: UiLocale
   editPicker?: boolean
   imeCandidateHelp?: boolean
+  promptFire?: boolean
   searchLegendMode?: SearchLegendMode
   hostUiMode?: HostUiMode
   appearance?: Partial<UiAppearanceLayer>
@@ -68,6 +70,7 @@ export function createSettingListPickerState(committed: UiSettings): SettingList
       locale: committed.locale,
       hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: committed.imeCandidateHelp !== false,
+      promptFire: committed.promptFire === true,
       searchLegendMode: normalizeSearchLegendMode(
         committed.searchLegendMode ?? DEFAULT_SEARCH_LEGEND_MODE
       ),
@@ -103,6 +106,9 @@ function applyDraftPatch(
   }
   if (patch.imeCandidateHelp !== undefined) {
     draft = { ...draft, imeCandidateHelp: patch.imeCandidateHelp }
+  }
+  if (patch.promptFire !== undefined) {
+    draft = { ...draft, promptFire: patch.promptFire }
   }
   if (patch.searchLegendMode !== undefined) {
     draft = {
@@ -152,6 +158,7 @@ export function settingPickerRevertDraft(
       locale: committed.locale,
       hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: committed.imeCandidateHelp !== false,
+      promptFire: committed.promptFire === true,
       searchLegendMode: normalizeSearchLegendMode(
         committed.searchLegendMode ?? DEFAULT_SEARCH_LEGEND_MODE
       ),

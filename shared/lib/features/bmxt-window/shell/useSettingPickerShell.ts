@@ -116,6 +116,20 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
         )
         return
       }
+      if (row.id === "prompt-fire-on") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { promptFire: true })
+        )
+        return
+      }
+      if (row.id === "prompt-fire-off") {
+        options.setSettingListPicker(
+          options.sessionId,
+          settingPickerApplyDraftToMain(current, { promptFire: false })
+        )
+        return
+      }
       if (row.id === "search-legend-text") {
         options.setSettingListPicker(
           options.sessionId,
@@ -164,6 +178,7 @@ export function useSettingPickerShell(options: UseSettingPickerShellOptions) {
           settingPickerApplyDraftToMain(current, {
             editPicker: false,
             imeCandidateHelp: true,
+            promptFire: false,
             searchLegendMode: "text",
             appearance: {
               fg: null,

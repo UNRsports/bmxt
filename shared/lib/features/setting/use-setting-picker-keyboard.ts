@@ -129,6 +129,7 @@ export function useSettingPickerKeyboard({
           snapshotStorageConfig,
           state.draft.hostUiMode,
           state.draft.imeCandidateHelp,
+          state.draft.promptFire,
           state.draft.searchLegendMode,
           syncSummary
         )
@@ -158,6 +159,7 @@ export function useSettingPickerKeyboard({
     state.draft.locale,
     state.draft.hostUiMode,
     state.draft.imeCandidateHelp,
+    state.draft.promptFire,
     state.draft.searchLegendMode,
     storageConfig,
     snapshotStorageConfig,

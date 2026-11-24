@@ -448,8 +448,8 @@
     "en": "       setting -list | browse     — open settings picker column"
   },
   "cmd.setting.usage.line3": {
-    "ja": "       setting -set <key> <value> — 下書きへ反映（locale / edit-picker / …）",
-    "en": "       setting -set <key> <value> — apply to draft (locale / edit-picker / …)"
+    "ja": "       setting -set <key> <value> — 下書きへ反映（locale / edit-picker / prompt-fire / …）",
+    "en": "       setting -set <key> <value> — apply to draft (locale / edit-picker / prompt-fire / …)"
   },
   "cmd.setting.usage.line4": {
     "ja": "       setting -save | setting -cancel — 下書きを保存 / 破棄して列を閉じる",

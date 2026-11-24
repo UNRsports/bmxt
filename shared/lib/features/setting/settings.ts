@@ -31,6 +31,9 @@ import {
 /** EN: Default on — show usage help beside IME candidate tokens. */
 export const DEFAULT_IME_CANDIDATE_HELP = true
 
+/** EN: Default off — opt-in prompt typing fire particles. */
+export const DEFAULT_PROMPT_FIRE = false
+
 export type UiSettings = {
   locale: UiLocale
   appearance: UiAppearance
@@ -45,6 +48,11 @@ export type UiSettings = {
    */
   imeCandidateHelp: boolean
   /**
+   * EN: When true, typed prompt chars get fire wrap; deleted chars glitter-shatter.
+   * JA: true のとき入力は炎ラップ、削除はキラキラ砕け散り。
+   */
+  promptFire: boolean
+  /**
    * EN: Search picker / `search -list` scope legend style (text / emoji / both).
    * JA: 検索ピッカーおよび `search -list` のスコープ凡例表示（テキスト／絵文字／併用）。
    */
@@ -56,6 +64,13 @@ function pickImeCandidateHelpFromPartial(raw: Record<string, unknown>): boolean 
     return DEFAULT_IME_CANDIDATE_HELP
   }
   return raw.imeCandidateHelp !== false
+}
+
+function pickPromptFireFromPartial(raw: Record<string, unknown>): boolean {
+  if (!("promptFire" in raw)) {
+    return DEFAULT_PROMPT_FIRE
+  }
+  return raw.promptFire === true
 }
 
 function pickSearchLegendModeFromPartial(raw: Record<string, unknown>): SearchLegendMode {
@@ -84,6 +99,7 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
       appearance: normalizeUiAppearance(null),
       hostUiMode: DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+      promptFire: DEFAULT_PROMPT_FIRE,
       searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
     }
   }
@@ -93,6 +109,7 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
     appearance: normalizeUiAppearance(raw.appearance),
     hostUiMode: pickHostUiModeFromPartial(record),
     imeCandidateHelp: pickImeCandidateHelpFromPartial(record),
+    promptFire: pickPromptFireFromPartial(record),
     searchLegendMode: pickSearchLegendModeFromPartial(record)
   }
 }
@@ -116,6 +133,7 @@ export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings
     appearance: DEFAULT_UI_APPEARANCE,
     hostUiMode: DEFAULT_HOST_UI_MODE,
     imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+    promptFire: DEFAULT_PROMPT_FIRE,
     searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
   })
   await saveUiSettingsToChromeStorage(defaults)
@@ -134,6 +152,7 @@ export async function applyDefaultUiSettingsToInternalCache(): Promise<UiSetting
     appearance: DEFAULT_UI_APPEARANCE,
     hostUiMode: DEFAULT_HOST_UI_MODE,
     imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+    promptFire: DEFAULT_PROMPT_FIRE,
     searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
   })
   await saveUiSettingsToChromeStorage(defaults)

@@ -8,6 +8,7 @@ const baseSettings: UiSettings = {
   locale: "ja",
   hostUiMode: "auto",
   imeCandidateHelp: true,
+  promptFire: false,
   searchLegendMode: "text",
   appearance: {} as UiSettings["appearance"]
 }
@@ -23,6 +24,7 @@ describe("effectiveCommandLocale", () => {
         locale: "en",
         hostUiMode: "auto",
         imeCandidateHelp: true,
+        promptFire: false,
         searchLegendMode: "text",
         appearance: baseSettings.appearance
       },

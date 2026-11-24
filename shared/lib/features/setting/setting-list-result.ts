@@ -18,6 +18,7 @@ export function buildSettingListResult(
     undefined,
     uiSettings.hostUiMode,
     uiSettings.imeCandidateHelp,
+    uiSettings.promptFire,
     uiSettings.searchLegendMode
   ).filter((row) => !PLAIN_LIST_EXCLUDED_ROW_IDS.has(row.id))
   const records: ListRecord[] = rows.map((row) => ({

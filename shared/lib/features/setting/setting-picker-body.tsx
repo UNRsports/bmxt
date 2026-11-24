@@ -128,6 +128,7 @@ export function SettingPickerBody({
         snapshotStorageConfig,
         state.draft.hostUiMode,
         state.draft.imeCandidateHelp,
+        state.draft.promptFire,
         state.draft.searchLegendMode,
         syncSummary
       ),
@@ -137,6 +138,7 @@ export function SettingPickerBody({
       state.draft.appearance,
       state.draft.hostUiMode,
       state.draft.imeCandidateHelp,
+      state.draft.promptFire,
       state.draft.searchLegendMode,
       storageConfig,
       snapshotStorageConfig,

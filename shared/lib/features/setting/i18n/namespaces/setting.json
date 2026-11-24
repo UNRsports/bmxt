@@ -227,6 +227,10 @@
     "ja": "setting -list · ime-candidate-help（候補ヘルプ） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · ime-candidate-help · ↑↓ · Enter/→ select · ← list"
   },
+  "setting.picker.headline.promptFire": {
+    "ja": "setting -list · prompt-fire（入力炎／削除キラキラ） · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · prompt-fire · ↑↓ · Enter/→ select · ← list"
+  },
   "setting.picker.headline.searchLegend": {
     "ja": "setting -list · search-legend（検索凡例） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · search-legend · ↑↓ · Enter/→ select · ← list"
@@ -355,6 +359,22 @@
     "ja": "オン",
     "en": "on"
   },
+  "setting.picker.promptFireOff": {
+    "ja": "オフ — 入力炎・削除キラキラなし（既定）",
+    "en": "off — no typing fire or delete sparkle (default)"
+  },
+  "setting.picker.promptFireOn": {
+    "ja": "オン — 入力は炎、削除はキラキラと砕け散る",
+    "en": "on — fire while typing; glitter shatter on delete"
+  },
+  "setting.picker.promptFireStateOff": {
+    "ja": "オフ",
+    "en": "off"
+  },
+  "setting.picker.promptFireStateOn": {
+    "ja": "オン",
+    "en": "on"
+  },
   "setting.picker.searchLegendText": {
     "ja": "テキストのみ — [history] など（既定）",
     "en": "text only — [history], etc. (default)"
@@ -446,6 +466,10 @@
   "setting.picker.main.imeCandidateHelp": {
     "ja": "ime-candidate-help（候補メニューのヘルプ）: {value}",
     "en": "ime-candidate-help: {value}"
+  },
+  "setting.picker.main.promptFire": {
+    "ja": "prompt-fire（入力炎／削除キラキラ）: {value}",
+    "en": "prompt-fire: {value}"
   },
   "setting.picker.main.searchLegend": {
     "ja": "search-legend（検索結果の凡例）: {value}",
@@ -818,6 +842,10 @@
   "setting.summary.imeCandidateHelp": {
     "ja": "ime-candidate-help: {value}",
     "en": "ime-candidate-help: {value}"
+  },
+  "setting.summary.promptFire": {
+    "ja": "prompt-fire: {value}",
+    "en": "prompt-fire: {value}"
   },
   "setting.summary.searchLegend": {
     "ja": "search-legend: {value}",

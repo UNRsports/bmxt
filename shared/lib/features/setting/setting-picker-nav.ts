@@ -10,6 +10,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "editPicker"
     case "ime-candidate-help":
       return "imeCandidateHelp"
+    case "prompt-fire":
+      return "promptFire"
     case "search-legend":
       return "searchLegend"
     case "host-ui":
@@ -75,6 +77,7 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
     view === "language" ||
     view === "editPicker" ||
     view === "imeCandidateHelp" ||
+    view === "promptFire" ||
     view === "searchLegend" ||
     view === "hostUi" ||
     view === "storageMode" ||

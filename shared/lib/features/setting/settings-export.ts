@@ -63,6 +63,8 @@ export type SettingsExportJson = {
   extraKeysMode?: unknown
   /** EN: Optional; missing → true (show IME candidate help). */
   imeCandidateHelp?: boolean
+  /** EN: Optional; missing → false (prompt typing fire off). */
+  promptFire?: boolean
   /** EN: Optional; missing → text (bracket text only). */
   searchLegendMode?: SearchLegendMode
   appearance: SettingsExportAppearanceV2
@@ -133,13 +135,15 @@ function bgImageFileName(
 }
 
 export function buildSettingsExportJson(settings: UiSettings): SettingsExportJson {
-  const { locale, appearance, hostUiMode, imeCandidateHelp, searchLegendMode } = settings
+  const { locale, appearance, hostUiMode, imeCandidateHelp, promptFire, searchLegendMode } =
+    settings
   return {
     version: 2,
     exportedAt: new Date().toISOString(),
     locale,
     hostUiMode,
     imeCandidateHelp,
+    promptFire,
     searchLegendMode,
     appearance: {
       fg: appearance.fg,
@@ -321,6 +325,7 @@ export function parseSettingsExportJson(
       o.hostUiMode !== undefined ? o.hostUiMode : o.extraKeysMode
     ),
     imeCandidateHelp: o.imeCandidateHelp !== false,
+    promptFire: o.promptFire === true,
     searchLegendMode: normalizeSearchLegendMode(o.searchLegendMode)
   }
 }
