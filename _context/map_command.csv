@@ -6,7 +6,7 @@
 # BMXt POSIX Profile I/O (todo §13–§15): stdout/stderr/exit completion buffer; CLI CommandIo + InteractionMode; bmxt exec POST /v1/exec; gates = EXIT_* only · channel routing · Interactive-only UI · check:cli-command-io · closed pipe consumers. Contract: _context/cli-peer/CONTRACT.md.
 # Budget: bmxt_core_bg.wasm ≤ 400 KiB. New commands: prefer reuse vocabulary (templates/new-command.checklist.md); extend catalogs only when required; follow Profile gates (todo §15).
 clear,,,,,clear,WASM `run` → Effect: clear_log。`RUN_CMD` 経由で SW は **`setLog`** patch（アクティブ session のログを `> clear` + 完了行のみに置換）を UI に返し UI が適用。SW はログを保持しない。,
-close,,,,c,close | close <tabId> | … | close,引数なし: UiAction `nav_confirm_close` → y/n → `close --confirmed`。数値 tabId: Effect `close_tab`（パイプ内部）。タブ候補 UI なし。,pipe consumer は語彙 `acceptsKinds` で接続。0.8.0: tab/nav 配下から独立 first
+close,,,,c,close | close <tabId> | close --window <id…> | close --group <id> | … | close,引数なし: UiAction `nav_confirm_close` → y/n → `close --confirmed`。数値 tabId: Effect `close_tab`。`--window`: Effect `close_window`。`--group`: Effect `close_group`。,pipe consumer は語彙 `acceptsKinds` で接続。0.8.0: tab/nav 配下から独立 first
 back,,,,,back | … | back,引数なし=操作先アクティブ即時。Effect `tab_go_back` { tab_ids: [] }。パイプ右辺 `back` は page.open → 内部で `back <tabId>`。タブ候補 UI なし。,独立 first。0.8.0: tab/nav 配下から独立。複数指定はパイプのみ（左辺は `tab -list` または `tab:` チップ `#t:…`）
 forward,,,,,forward | … | forward,引数なし=操作先即時。Effect `tab_go_forward`。パイプ `… | forward`。タブ候補 UI なし。,独立 first。0.8.0
 reload,,,,,reload | … | reload,引数なし=操作先即時。Effect `tab_reload`。パイプ `… | reload`。旧 `#t:` チップ候補は廃止。,独立 first。0.8.0
@@ -31,8 +31,10 @@ search,-list,--bookmark,rest,,（同上）,scope `--bookmark`。,
 search,-list,--page,rest,,（同上）,scope `--page`。,
 search,-list,--snapshot,rest,,（同上）,scope `--snapshot`。,
 search,-exit,-list,none,,search -exit -list,UiAction `search_exit_list`。,
-group,new,,,,group new | group new <tabId> [tabId …],tabId 無し: UiAction `group_new_from_selection`。tabId あり: Effect `group_new`。,語彙: UiAction / Effect
+group,new,,,,group new | group new <tabId>… [--title …] [--color …],tabId 無し: UiAction `group_new_from_selection`。tabId あり: Effect `group_new`（title/color 任意）。,語彙: UiAction / Effect
 group,add,,,,group add <groupId> <tabId…>,Effect `group_add`。既存グループへタブ追加。,§7e。タブピッカー group 選択 Enter も同形行を submit
+group,rename,,,,group rename <groupId> <title>,Effect `group_rename`。タブグループのタイトル変更。,§7e picker :edit
+group,ungroup,,,,group ungroup <groupId>,Effect `group_ungroup`。グループ解除（タブは残す）。,§7e picker :edit
 move,,,,,move --window <id> [tabId…] | move --group <gid> --window <id> [tabId…] | move --ungroup --window <id> [tabId…] | … | move …,Effect `tabs_move`。パイプ右辺は page.open。,§7e。タブピッカー :move は typed 行を submit
 new-window,,,,,new-window <tabId…> | … | new-window,Effect `tabs_new_window`。パイプ右辺は page.open。,§7e。タブピッカー new-window も同形行を submit
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
@@ -57,6 +59,7 @@ jump,,,,,jump --tab <id> (--path|--needle…) | … | jump,UiAction `jump_target
 tab,,,,,tab …,単独 `tab` + Enter: msgs + promptPrefix `tab `（require_second_token）。第二候補に `help`（マニュアル）と列挙・設定系。履歴・reload・close は独立コマンド `back`/`forward`/`reload`/`close`（browse 非依存の直接操作）。,0.8.0: 旧 `tabs` 改名。履歴等はいったん tab 配下→その後独立化
 tab,-list,,rest,,tab -list [-url] [--device <id>|--peers] | tab -exit -list,**プレーン:** Effect `tabs_list` → ListResult（tabs.window/group/tab）。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `tab -list | browse`。パイプ時 page.window/group/open。`| tab -send <id>` でグループ維持コピー送信。,語彙: ListResult→bmxtRule。0.9.0: `--device`/`--peers` + ピッカー絞り込み修正
 tab,-setting,,none,,tab -setting | tab -setting -page-active --auto\|--manual,不完全: msgs + promptPrefix。完了: UiAction `tabs_setting` { mode }（適用のみ）。ホストセンチネル `__HOST_PAGE_ACTIVE__`。,
+tab,-activate,,,,tab -activate <tabId>,Effect `tabs_activate`。指定タブを前面化。,§7e picker Enter
 tab,-setting,-page-active,none,,tab -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `tab -setting -page-active `。,
 tab,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。mode=auto。,
 tab,-setting,-page-active,--manual,none,,（同上）,第四 `--manual`。mode=manual。,
@@ -156,3 +159,4 @@ tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | …
 （内部）,posix-conformance,,,,tests/unit/.../posix-profile.test.ts + hosts/cli posix_io_tests,"Profile conformance（exit・チャネル・pipe 閉じ語彙・redirect）。CLI NonInteractive ガード。",§13 / §15
 （内部）,posix-profile-gates,,,,scripts/check-cli-command-io.mjs + skill bmxt-add-command + new-command.checklist.md,"追加時 5 規律の機械ゲート（CI `check:cli-command-io` · skill/checklist）。",§15
 （内部）,command-templates,,,,manifest/templates/,新コマンド checklist・reuse 例・list/pipe steps・Profile gates。scaffold が案内。,
+window,rename,,,,window rename <windowId> <name>,UiAction `window_rename`。拡張ストレージの窓表示名。,§7e picker :edit

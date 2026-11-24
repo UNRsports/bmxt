@@ -40,9 +40,17 @@ pub enum HostEffect {
     CloseCurrentTab,
     #[serde(rename = "close_current_window")]
     CloseCurrentWindow,
+    #[serde(rename = "close_group")]
+    CloseGroup {
+    group_id: i64,
+    },
     #[serde(rename = "close_tab")]
     CloseTab {
     tab_id: i64,
+    },
+    #[serde(rename = "close_window")]
+    CloseWindow {
+    window_ids: Vec<i64>,
     },
     #[serde(rename = "dom_list")]
     DomList {
@@ -64,7 +72,18 @@ pub enum HostEffect {
     },
     #[serde(rename = "group_new")]
     GroupNew {
+    color: String,
     tab_ids: Vec<i64>,
+    title: String,
+    },
+    #[serde(rename = "group_rename")]
+    GroupRename {
+    group_id: i64,
+    title: String,
+    },
+    #[serde(rename = "group_ungroup")]
+    GroupUngroup {
+    group_id: i64,
     },
     #[serde(rename = "history_delete_range")]
     HistoryDeleteRange {
@@ -144,6 +163,10 @@ pub enum HostEffect {
     #[serde(rename = "tab_reload")]
     TabReload {
     tab_ids: Vec<i64>,
+    },
+    #[serde(rename = "tabs_activate")]
+    TabsActivate {
+    tab_id: i64,
     },
     #[serde(rename = "tabs_list")]
     TabsList {

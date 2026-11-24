@@ -4,13 +4,17 @@
  */
 
 export type HostEffect =
+  | { color: string; kind: "group_new"; tab_ids: number[]; title: string }
   | { device_id: string; device_scope: string; dispatch_line: string; kind: "search_list"; peer_dispatch_line: string }
   | { device_id: string; device_scope: string; folder_id: string; kind: "bookmark_list" }
   | { device_id: string; device_scope: string; kind: "tabs_list"; show_url: string }
   | { dup_mode: string; kind: "bookmark_create"; parent_id: string; title: string; url: string }
   | { end_ms: string; kind: "history_delete_range"; start_ms: string }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
+  | { group_id: number; kind: "close_group" }
   | { group_id: number; kind: "group_add"; tab_ids: number[] }
+  | { group_id: number; kind: "group_rename"; title: string }
+  | { group_id: number; kind: "group_ungroup" }
   | { group_id: number; kind: "open_url_into_group"; url: string; window_id: number }
   | { group_id: number; kind: "tabs_move"; tab_ids: number[]; window_id: number }
   | { ids: string; index: string; kind: "bookmark_move"; parent_id: string }
@@ -20,8 +24,8 @@ export type HostEffect =
   | { kind: "close_current_tab" }
   | { kind: "close_current_window" }
   | { kind: "close_tab"; tab_id: number }
+  | { kind: "close_window"; window_ids: number[] }
   | { kind: "exit_pane" }
-  | { kind: "group_new"; tab_ids: number[] }
   | { kind: "history_delete_url"; urls: string }
   | { kind: "navigate_current_tab"; url: string }
   | { kind: "open_url_into_window"; url: string; window_id: number }
@@ -39,6 +43,7 @@ export type HostEffect =
   | { kind: "tab_go_back"; tab_ids: number[] }
   | { kind: "tab_go_forward"; tab_ids: number[] }
   | { kind: "tab_reload"; tab_ids: number[] }
+  | { kind: "tabs_activate"; tab_id: number }
   | { kind: "tabs_move_url"; url: string }
   | { kind: "tabs_new_window"; tab_ids: number[] }
   | { kind: "tabs_nu" }
@@ -89,6 +94,7 @@ export type UiActionIR =
   | { kind: "bookmark_restore"; as_bookmarks: string }
   | { kind: "history_backup" }
   | { kind: "history_restore"; as_bookmarks: string }
+  | { kind: "window_rename"; name: string; window_id: number }
 
 export type DispatchBundle = {
   ty: "lines" | "effects" | "ui" | "msgs"

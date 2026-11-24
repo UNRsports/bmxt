@@ -293,7 +293,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | **search** | `-list` + `\| open` / `\| jump` + `--into-window` / `--into-group` | （残任意なし・本線完了） | picker Enter は同形行を submit |
 | **dom** | `-list`・`-setting` は CUI 可 | `dom -list … \| jump`（`dom.node` path） | jump / link activate が picker 直実行 |
 | **setting** | `-set` / `-export` / `-import` / `-bg-import` / `-storage` / … | （列ピッカーは `submitConstructedLine` のみ） | §7 wizard 化済み。FSA／zip／画像はコマンド→UiAction→chooser |
-| **tab**（参考） | close / reload / nav / `#t:` / `move` / `new-window` / `group add` パイプ可 | `:edit` / plain Enter focus 等（任意） | 7e で bulk 本線は CUI 化済み |
+| **tab** | close / reload / `#t:` / `move` / `new-window` / `group add|new|rename|ungroup` / `tab -activate` / `close --window|--group` / `window rename` | （空白 URL の新タブのみ Chrome create 残） | §7 wizard 化済み。preview は非コマンドのまま |
 
 **実装チェック（段階）**
 
@@ -302,14 +302,15 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **7b 突合:** session / search open·jump / dom jump / setting save·cancel は同一コマンド面（picker は行組み立てのみ）
 - [x] **7c 切替:** session / search / dom / setting(save·cancel) Enter → `submitConstructedLine` → `submitLine`
 - [x] **7d 削除:** search Enter の `openSearchPickerEntry` 直呼びを除去。dom/setting も submit 経路へ。`map_command.csv` / i18n 更新
-- [x] **7e:** tab bulk（`move` / `group add` / `new-window`）+ search destination（`open --into-window` / `--into-group`）。picker は `submitConstructedLine`。`:edit` / plain Enter focus は任意後続
+- [x] **7e:** tab bulk（`move` / `group add` / `new-window`）+ search destination（`open --into-window` / `--into-group`）。picker は `submitConstructedLine`
+- [x] **7f:** tab close/reload/`open --into-window` / `tab -activate` / `close --window|--group` / `group rename|ungroup|new --title|--color` / `window rename` を CUI+submit 化。`:edit` / plain Enter / window close / group-new meta も submit。空白 URL 新タブのみ Chrome create 例外
 
 **手元スモーク（7c 以降）**
 
 - [ ] 各 family: plain `-list` と `… \| browse` の入口が従来どおり
 - [ ] 同じ作用を typed のみ / picker Enter のみで実行し、結果が一致する
 - [ ] picker 操作後に history / ログへ想定どおりコマンド行が残る（方針どおり）
-- [ ] 直実行モジュールに残存呼び出しがない（grep / テスト）
+- [x] 直実行モジュールに残存呼び出しがない（grep: picker Enter 経路は `submitConstructedLine`。例外は空白 URL `tabs.create` と preview）
 
 **参照:** 本会話の整理 · `shared/lib/features/command-line/inter-command/` · `shared/lib/features/picker/open-from-list-result.ts` · pipe consumers（`browse` / `close` 等）· skill `bmxt-add-command`
 

@@ -11,6 +11,7 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.tabs.usage.line4",
     "cmd.tabs.usage.line5",
     "cmd.tabs.usage.line6",
+    "cmd.tabs.usage.line7",
 ];
 
 /** EN: Host fills this param from live UI state before expand-msgs. */
@@ -24,6 +25,7 @@ fn norm_tabs_flag(arg: &str) -> Option<&'static str> {
         "-list" => Some("-list"),
         "-exit" => Some("-exit"),
         "-setting" => Some("-setting"),
+        "-activate" => Some("-activate"),
         "-moveurl" => Some("-moveurl"),
         "-nowurl" => Some("-nowurl"),
         "-send" => Some("-send"),
@@ -192,6 +194,18 @@ pub fn run(args: &[String]) -> DispatchBundle {
             })
         }
         "-setting" => run_tabs_setting(args),
+        "-activate" => {
+            if args.len() != 3 {
+                return usage_msgs(msg_key("cmd.tabs.error.activateUsage"));
+            }
+            let tab_id = match args[2].parse::<i64>() {
+                Ok(id) if id >= 0 => id,
+                _ => {
+                    return usage_msgs(msg_key("cmd.tabs.error.activateUsage"));
+                }
+            };
+            effects(vec![HostEffect::TabsActivate { tab_id }])
+        }
         "-nowurl" => {
             if args.len() > 2 {
                 return usage_msgs(msg_key("cmd.tabs.error.tooManyArgs"));

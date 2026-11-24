@@ -33,6 +33,8 @@ import { tSetting } from "../../setting/i18n/ns/setting"
 import { tShell } from "../../setting/i18n/ns/shell"
 import { tTabs } from "../../setting/i18n/ns/tabs"
 import { tTranslate } from "../../setting/i18n/ns/translate"
+import { tWindows } from "../../setting/i18n/ns/windows"
+import { setWindowDisplayName } from "../../extension-storage/window-display-names"
 import { translateOnLogLine } from "../../setting/i18n/resolvers"
 import { closeTabPickerEngineForSession, openTabPickerEngineForSession } from "../../tabs/engine"
 import { buildTabPickerRowsBundle, resolveInitialTabPickerHighlightIndex } from "../../tabs/picker-rows"
@@ -336,6 +338,8 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applyHistoryBackup(ctx)
     case "history_restore":
       return applyHistoryRestore(ctx, action.as_bookmarks)
+    case "window_rename":
+      return applyWindowRename(ctx, action.window_id, action.name)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -448,6 +452,8 @@ export async function applyUiActionForSegment(
       return applyHistoryBackupSegment(ctx)
     case "history_restore":
       return applyHistoryRestoreSegment(ctx, action.as_bookmarks)
+    case "window_rename":
+      return applyWindowRenameSegment(ctx, action.window_id, action.name)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -1167,6 +1173,65 @@ function applySessionSettingName(ctx: CommandDispatchContext, name: string): boo
   recordOnly(ctx)
   ctx.deps.saveSessionDisplayName(name, [`> ${ctx.trimmed}`])
   return true
+}
+
+function applyWindowRename(
+  ctx: CommandDispatchContext,
+  windowId: number,
+  name: string
+): boolean {
+  if (!Number.isInteger(windowId) || windowId < 0) {
+    void ctx.deps.appendLogLines([
+      `> ${ctx.trimmed}`,
+      tWindows("windows.rename.invalid", ctx.locale)
+    ])
+    finishCommand(ctx)
+    return true
+  }
+  const trimmed = name.trim()
+  void (async () => {
+    try {
+      await setWindowDisplayName(windowId, trimmed)
+      await ctx.deps.appendLogLines([
+        `> ${ctx.trimmed}`,
+        tWindows("windows.rename.done", ctx.locale, {
+          windowId: String(windowId),
+          name: trimmed.length > 0 ? trimmed : "(cleared)"
+        })
+      ])
+    } catch {
+      await ctx.deps.appendLogLines([
+        `> ${ctx.trimmed}`,
+        tWindows("windows.rename.failed", ctx.locale, { windowId: String(windowId) })
+      ])
+    }
+  })()
+  finishCommand(ctx)
+  return true
+}
+
+async function applyWindowRenameSegment(
+  ctx: CommandDispatchContext,
+  windowId: number,
+  name: string
+): Promise<SegmentOutcome> {
+  if (!Number.isInteger(windowId) || windowId < 0) {
+    return segmentFailure("usage", [tWindows("windows.rename.invalid", ctx.locale)])
+  }
+  const trimmed = name.trim()
+  try {
+    await setWindowDisplayName(windowId, trimmed)
+    return segmentSuccess([
+      tWindows("windows.rename.done", ctx.locale, {
+        windowId: String(windowId),
+        name: trimmed.length > 0 ? trimmed : "(cleared)"
+      })
+    ])
+  } catch {
+    return segmentFailure("runtime", [
+      tWindows("windows.rename.failed", ctx.locale, { windowId: String(windowId) })
+    ])
+  }
 }
 
 async function applySessionSettingNameSegment(

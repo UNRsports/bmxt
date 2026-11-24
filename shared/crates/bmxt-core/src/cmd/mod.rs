@@ -35,6 +35,8 @@ pub mod move_cmd;
 
 pub mod new_window;
 
+pub mod window_cmd;
+
 mod helpers;
 
 pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
@@ -68,6 +70,7 @@ pub fn run_command(canonical: &str, args: &[String]) -> DispatchBundle {
         "jump" => jump::run(args),
         "move" => move_cmd::run(args),
         "new-window" => new_window::run(args),
+        "window" => window_cmd::run(args),
         _ => crate::ir::msgs(vec![crate::ir::msg_param(
             "cmd.error.internalUnhandled",
             "command",

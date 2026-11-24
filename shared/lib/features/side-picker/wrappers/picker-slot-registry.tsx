@@ -57,7 +57,7 @@ export type PickerColumnHostContext = {
   /** EN: Dom picker Enter → `jump --tab … --path …` via submitLine. */
   onSubmitDomJumpCommand?: (line: string) => void
   /** EN: Tab bulk move/group/new-window → typed line via submitLine. */
-  submitConstructedLine?: (line: string) => void
+  submitConstructedLine: (line: string) => void
   onTabsPickerFocusTabId?: (tabId: number | null) => void
   onRefreshDomViewport?: (
     state: Extract<DomListPickerState, { kind: "lines" }>

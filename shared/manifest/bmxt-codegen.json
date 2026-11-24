@@ -14,7 +14,7 @@
       "module": "back",
       "canonicalName": "back",
       "aliases": [],
-      "usagePrimary": "back | \u2026 | back",
+      "usagePrimary": "back | … | back",
       "subcommands": []
     },
     {
@@ -23,7 +23,7 @@
       "aliases": [
         "c"
       ],
-      "usagePrimary": "close | close <tabId> | \u2026 | close",
+      "usagePrimary": "close | close <tabId> | close --window <id…> | close --group <id> | … | close",
       "subcommands": []
     },
     {
@@ -107,10 +107,28 @@
       "module": "group",
       "canonicalName": "group",
       "aliases": [],
-      "usagePrimary": "group new [tabId…] | group add <groupId> <tabId…>",
+      "usagePrimary": "group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>",
       "subcommands": [
-        { "head": "new", "tail": "rest" },
-        { "head": "add", "tail": "rest" }
+        {
+          "head": "new",
+          "trailingTokens": [
+            "--title",
+            "--color"
+          ],
+          "tail": "rest"
+        },
+        {
+          "head": "add",
+          "tail": "rest"
+        },
+        {
+          "head": "rename",
+          "tail": "rest"
+        },
+        {
+          "head": "ungroup",
+          "tail": "rest"
+        }
       ]
     },
     {
@@ -126,21 +144,21 @@
       "module": "forward",
       "canonicalName": "forward",
       "aliases": [],
-      "usagePrimary": "forward | \u2026 | forward",
+      "usagePrimary": "forward | … | forward",
       "subcommands": []
     },
     {
       "module": "reload",
       "canonicalName": "reload",
       "aliases": [],
-      "usagePrimary": "reload | \u2026 | reload",
+      "usagePrimary": "reload | … | reload",
       "subcommands": []
     },
     {
       "module": "tabs",
       "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url\u2026> [--group <title>] [--close] | tab help",
+      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -activate <tabId> | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
       "subcommands": [
         {
           "head": "-list",
@@ -164,6 +182,10 @@
             "-page-active"
           ],
           "tail": "none"
+        },
+        {
+          "head": "-activate",
+          "tail": "rest"
         },
         {
           "head": "-moveurl",
@@ -456,12 +478,21 @@
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--folder", "--device", "--peers"],
+          "trailingTokens": [
+            "--folder",
+            "--device",
+            "--peers"
+          ],
           "tail": "rest"
         },
         {
           "head": "-add",
-          "trailingTokens": ["--title", "--parent", "--force", "--skip-dup"],
+          "trailingTokens": [
+            "--title",
+            "--parent",
+            "--force",
+            "--skip-dup"
+          ],
           "tail": "rest"
         },
         {
@@ -486,7 +517,9 @@
         },
         {
           "head": "-restore",
-          "trailingTokens": ["--as-bookmarks"],
+          "trailingTokens": [
+            "--as-bookmarks"
+          ],
           "tail": "rest"
         },
         {
@@ -503,7 +536,10 @@
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--device", "--peers"],
+          "trailingTokens": [
+            "--device",
+            "--peers"
+          ],
           "tail": "rest"
         },
         {
@@ -512,7 +548,10 @@
         },
         {
           "head": "-delete-range",
-          "trailingTokens": ["--from", "--to"],
+          "trailingTokens": [
+            "--from",
+            "--to"
+          ],
           "tail": "rest"
         },
         {
@@ -521,7 +560,9 @@
         },
         {
           "head": "-restore",
-          "trailingTokens": ["--as-bookmarks"],
+          "trailingTokens": [
+            "--as-bookmarks"
+          ],
           "tail": "rest"
         },
         {
@@ -557,6 +598,18 @@
       "aliases": [],
       "usagePrimary": "new-window <tabId…> | … | new-window",
       "subcommands": []
+    },
+    {
+      "module": "window_cmd",
+      "canonicalName": "window",
+      "aliases": [],
+      "usagePrimary": "window rename <windowId> <name>",
+      "subcommands": [
+        {
+          "head": "rename",
+          "tail": "rest"
+        }
+      ]
     }
   ],
   "effects": [
@@ -656,7 +709,9 @@
       "rustVariant": "GroupNew",
       "shape": "record",
       "fields": {
-        "tab_ids": "vec_i32"
+        "tab_ids": "vec_i32",
+        "title": "string",
+        "color": "string"
       },
       "tsHandlerFile": "group-new",
       "tsHandlerExport": "applyGroupNewEffect"
@@ -935,6 +990,57 @@
       },
       "tsHandlerFile": "tabs-list",
       "tsHandlerExport": "applyTabsListEffect"
+    },
+    {
+      "kind": "tabs_activate",
+      "rustVariant": "TabsActivate",
+      "shape": "record",
+      "fields": {
+        "tab_id": "i32"
+      },
+      "tsHandlerFile": "tabs-activate",
+      "tsHandlerExport": "applyTabsActivateEffect"
+    },
+    {
+      "kind": "close_window",
+      "rustVariant": "CloseWindow",
+      "shape": "record",
+      "fields": {
+        "window_ids": "vec_i32"
+      },
+      "tsHandlerFile": "close-window",
+      "tsHandlerExport": "applyCloseWindowEffect"
+    },
+    {
+      "kind": "close_group",
+      "rustVariant": "CloseGroup",
+      "shape": "record",
+      "fields": {
+        "group_id": "i32"
+      },
+      "tsHandlerFile": "close-group",
+      "tsHandlerExport": "applyCloseGroupEffect"
+    },
+    {
+      "kind": "group_ungroup",
+      "rustVariant": "GroupUngroup",
+      "shape": "record",
+      "fields": {
+        "group_id": "i32"
+      },
+      "tsHandlerFile": "group-ungroup",
+      "tsHandlerExport": "applyGroupUngroupEffect"
+    },
+    {
+      "kind": "group_rename",
+      "rustVariant": "GroupRename",
+      "shape": "record",
+      "fields": {
+        "group_id": "i32",
+        "title": "string"
+      },
+      "tsHandlerFile": "group-rename",
+      "tsHandlerExport": "applyGroupRenameEffect"
     }
   ],
   "uiActions": [
@@ -1242,6 +1348,15 @@
       "shape": "record",
       "fields": {
         "as_bookmarks": "string"
+      }
+    },
+    {
+      "kind": "window_rename",
+      "rustVariant": "WindowRename",
+      "shape": "record",
+      "fields": {
+        "window_id": "i32",
+        "name": "string"
       }
     }
   ]

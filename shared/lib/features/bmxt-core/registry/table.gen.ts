@@ -19,7 +19,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "close",
     aliases: ["c"] as const,
-    usagePrimary: "close | close <tabId> | … | close"
+    usagePrimary: "close | close <tabId> | close --window <id…> | close --group <id> | … | close"
   },
   {
     name: "dom",
@@ -39,7 +39,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "group",
     aliases: [] as const,
-    usagePrimary: "group new [tabId…] | group add <groupId> <tabId…>"
+    usagePrimary: "group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>"
   },
   {
     name: "help",
@@ -59,7 +59,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "tab",
     aliases: [] as const,
-    usagePrimary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help"
+    usagePrimary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -activate <tabId> | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help"
   },
   {
     name: "nav",
@@ -135,6 +135,11 @@ export const COMMANDS: readonly CmdMeta[] = [
     name: "new-window",
     aliases: [] as const,
     usagePrimary: "new-window <tabId…> | … | new-window"
+  },
+  {
+    name: "window",
+    aliases: [] as const,
+    usagePrimary: "window rename <windowId> <name>"
   }
 ]
 

@@ -47,3 +47,4 @@ export type UiActionIR =
   | { kind: "bookmark_restore"; as_bookmarks: string }
   | { kind: "history_backup" }
   | { kind: "history_restore"; as_bookmarks: string }
+  | { kind: "window_rename"; name: string; window_id: number }

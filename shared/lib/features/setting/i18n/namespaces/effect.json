@@ -179,7 +179,6 @@
     "ja": "Translator",
     "en": "Translator"
   },
-
   "effect.tabsNu.noUrl": {
     "ja": "(現在のタブに URL がありません — 通常ウィンドウでページを開くか、タブ ID コンテキストを指定してください)",
     "en": "(no URL for current tab — focus a normal window with a page, or pass a tab id context)"
@@ -367,5 +366,81 @@
   "effect.historyDeleteRange.failed": {
     "ja": "error: 履歴範囲削除に失敗しました — {message}",
     "en": "error: history range delete failed — {message}"
+  },
+  "effect.tabsActivate.done": {
+    "ja": "タブ {tabId} を前面にしました",
+    "en": "activated tab {tabId}"
+  },
+  "effect.tabsActivate.invalid": {
+    "ja": "無効なタブ ID: {tabId}",
+    "en": "invalid tab id: {tabId}"
+  },
+  "effect.tabsActivate.failed": {
+    "ja": "タブ {tabId} の前面化に失敗: {reason}",
+    "en": "failed to activate tab {tabId}: {reason}"
+  },
+  "effect.closeWindow.done": {
+    "ja": "ウィンドウ {windowId} を閉じました",
+    "en": "closed window {windowId}"
+  },
+  "effect.closeWindow.failed": {
+    "ja": "ウィンドウ {windowId} を閉じられません: {reason}",
+    "en": "failed to close window {windowId}: {reason}"
+  },
+  "effect.closeWindow.noTargets": {
+    "ja": "閉じるウィンドウがありません",
+    "en": "no windows to close"
+  },
+  "effect.closeGroup.done": {
+    "ja": "グループ {groupId} のタブ {count} 件を閉じました",
+    "en": "closed {count} tab(s) in group {groupId}"
+  },
+  "effect.closeGroup.empty": {
+    "ja": "グループ {groupId} にタブがありません",
+    "en": "group {groupId} has no tabs"
+  },
+  "effect.closeGroup.invalid": {
+    "ja": "無効なグループ ID: {groupId}",
+    "en": "invalid group id: {groupId}"
+  },
+  "effect.closeGroup.failed": {
+    "ja": "グループ {groupId} の削除に失敗: {reason}",
+    "en": "failed to close group {groupId}: {reason}"
+  },
+  "effect.groupUngroup.done": {
+    "ja": "グループ {groupId} を解除しました",
+    "en": "ungrouped group {groupId}"
+  },
+  "effect.groupUngroup.empty": {
+    "ja": "グループ {groupId} にタブがありません",
+    "en": "group {groupId} has no tabs"
+  },
+  "effect.groupUngroup.invalid": {
+    "ja": "無効なグループ ID: {groupId}",
+    "en": "invalid group id: {groupId}"
+  },
+  "effect.groupUngroup.failed": {
+    "ja": "グループ {groupId} の解除に失敗: {reason}",
+    "en": "failed to ungroup {groupId}: {reason}"
+  },
+  "effect.groupRename.done": {
+    "ja": "グループ {groupId} を「{title}」に改名しました",
+    "en": "renamed group {groupId} to \"{title}\""
+  },
+  "effect.groupRename.invalid": {
+    "ja": "無効なグループ ID: {groupId}",
+    "en": "invalid group id: {groupId}"
+  },
+  "effect.groupRename.failed": {
+    "ja": "グループ {groupId} の改名に失敗: {reason}",
+    "en": "failed to rename group {groupId}: {reason}"
+  },
+  "effect.groupNew.noTabs": {
+    "ja": "グループ化するタブがありません",
+    "en": "no tabs to group"
+  },
+  "effect.groupNew.metaFailed": {
+    "ja": "グループ {groupId} は作成しましたがタイトル／色の設定に失敗しました",
+    "en": "created group {groupId} but failed to set title/color"
   }
 }

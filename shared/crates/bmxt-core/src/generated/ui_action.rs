@@ -159,4 +159,9 @@ pub enum UiAction {
     SyncSetup,
     #[serde(rename = "sync_status")]
     SyncStatus,
+    #[serde(rename = "window_rename")]
+    WindowRename {
+    name: String,
+    window_id: i64,
+    },
 }

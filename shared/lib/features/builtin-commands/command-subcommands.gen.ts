@@ -31,8 +31,10 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "group": [
-    { head: "new", trailingTokens: [] as const, tail: "rest" },
-    { head: "add", trailingTokens: [] as const, tail: "rest" }
+    { head: "new", trailingTokens: ["--title","--color"] as const, tail: "rest" },
+    { head: "add", trailingTokens: [] as const, tail: "rest" },
+    { head: "rename", trailingTokens: [] as const, tail: "rest" },
+    { head: "ungroup", trailingTokens: [] as const, tail: "rest" }
   ] as const,
   "help": [] as const,
   "forward": [] as const,
@@ -41,6 +43,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-list", trailingTokens: ["-url","--device","--peers"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
+    { head: "-activate", trailingTokens: [] as const, tail: "rest" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" },
     { head: "-send", trailingTokens: [] as const, tail: "rest" },
@@ -131,7 +134,10 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "open": [] as const,
   "jump": [] as const,
   "move": [] as const,
-  "new-window": [] as const
+  "new-window": [] as const,
+  "window": [
+    { head: "rename", trailingTokens: [] as const, tail: "rest" }
+  ] as const
 }
 
 export function getSubcommandBranches(canonicalName: string): readonly CommandSubcommandBranch[] {
@@ -198,7 +204,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "group": {
       const lower = token.toLowerCase()
-      return lower === "new" || lower === "add"
+      return lower === "new" || lower === "add" || lower === "rename" || lower === "ungroup"
     }
     case "help":
       return false
@@ -208,7 +214,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "tab": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "-send" || lower === "help"
+      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-activate" || lower === "-moveurl" || lower === "-nowurl" || lower === "-send" || lower === "help"
     }
     case "nav": {
       const lower = token.toLowerCase()
@@ -260,6 +266,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "new-window":
       return false
+    case "window": {
+      const lower = token.toLowerCase()
+      return lower === "rename"
+    }
     default:
       return false
   }

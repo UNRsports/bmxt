@@ -28,7 +28,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "close",
         aliases: &["c"],
-        usage_primary: "close | close <tabId> | … | close",
+        usage_primary: "close | close <tabId> | close --window <id…> | close --group <id> | … | close",
     },
     CmdMeta {
         name: "dom",
@@ -48,7 +48,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "group",
         aliases: &[],
-        usage_primary: "group new [tabId…] | group add <groupId> <tabId…>",
+        usage_primary: "group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>",
     },
     CmdMeta {
         name: "help",
@@ -68,7 +68,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "tab",
         aliases: &[],
-        usage_primary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
+        usage_primary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -activate <tabId> | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
     },
     CmdMeta {
         name: "nav",
@@ -145,6 +145,11 @@ pub const COMMANDS: &[CmdMeta] = &[
         aliases: &[],
         usage_primary: "new-window <tabId…> | … | new-window",
     },
+    CmdMeta {
+        name: "window",
+        aliases: &[],
+        usage_primary: "window rename <windowId> <name>",
+    },
 ];
 
 static BRANCHES_DOM: &[SubcommandBranch] = &[
@@ -184,10 +189,18 @@ static BRANCHES_SEARCH: &[SubcommandBranch] = &[
 static BRANCHES_GROUP: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "new",
-        trailing_tokens: &[],
+        trailing_tokens: &["--title", "--color"],
     },
     SubcommandBranch {
         head: "add",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "rename",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "ungroup",
         trailing_tokens: &[],
     },
 ];
@@ -204,6 +217,10 @@ static BRANCHES_TAB: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-setting",
         trailing_tokens: &["-page-active"],
+    },
+    SubcommandBranch {
+        head: "-activate",
+        trailing_tokens: &[],
     },
     SubcommandBranch {
         head: "-moveurl",
@@ -497,6 +514,13 @@ static BRANCHES_HISTORY: &[SubcommandBranch] = &[
     },
 ];
 
+static BRANCHES_WINDOW: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "rename",
+        trailing_tokens: &[],
+    },
+];
+
 pub fn all_command_metas() -> &'static [CmdMeta] {
     COMMANDS
 }
@@ -525,11 +549,11 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "help"),
         "exit" => false,
         "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
-        "group" => matches!(lower.as_str(), "new" | "add"),
+        "group" => matches!(lower.as_str(), "new" | "add" | "rename" | "ungroup"),
         "help" => false,
         "forward" => false,
         "reload" => false,
-        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "-send" | "help"),
+        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-activate" | "-moveurl" | "-nowurl" | "-send" | "help"),
         "nav" => matches!(lower.as_str(), "-enter" | "-exit" | "-windowclose"),
         "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting" | "help"),
         "aboutbmxt" => matches!(lower.as_str(), "-system"),
@@ -545,6 +569,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "jump" => false,
         "move" => false,
         "new-window" => false,
+        "window" => matches!(lower.as_str(), "rename"),
         _ => false,
     }
 }
@@ -578,6 +603,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "jump" => &[],
         "move" => &[],
         "new-window" => &[],
+        "window" => BRANCHES_WINDOW,
         _ => &[],
     }
 }

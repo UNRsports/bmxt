@@ -24,8 +24,8 @@
     "en": "error: invalid reload argument (active tab: `reload`; multiple: `tab -list | reload`)"
   },
   "cmd.close.usage": {
-    "ja": "usage: close  — 操作先タブを閉じる（y/n）。複数タブは `tab -list | close`。明示 ID は `close <tabId>`",
-    "en": "usage: close  — close the target tab (y/n). For multiple tabs: `tab -list | close`. Explicit id: `close <tabId>`"
+    "ja": "usage: close | close <tabId> | close --window <id…> | close --group <id>  — 操作先タブを閉じる（y/n）。複数タブは `tab -list | close`",
+    "en": "usage: close | close <tabId> | close --window <id…> | close --group <id>  — close target tab (y/n). Multiple: `tab -list | close`"
   },
   "cmd.common.availableOptions": {
     "ja": "{command}: 利用可能なオプション",
@@ -104,12 +104,12 @@
     "en": "Interactive: in BMXt type  group new  and Enter (no tab ids)."
   },
   "cmd.group.usage.line": {
-    "ja": "usage: group new | group new <tabId>… | group add <groupId> <tabId>…",
-    "en": "usage: group new | group new <tabId>… | group add <groupId> <tabId>…"
+    "ja": "usage: group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>",
+    "en": "usage: group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>"
   },
   "cmd.group.usage.nonInteractive": {
-    "ja": "Non-interactive: group new <tabId>… | group add <groupId> <tabId>…",
-    "en": "Non-interactive: group new <tabId>… | group add <groupId> <tabId>…"
+    "ja": "Non-interactive: group new <tabId>… [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>",
+    "en": "Non-interactive: group new <tabId>… [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>"
   },
   "cmd.move.usage.line1": {
     "ja": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]",
@@ -1682,5 +1682,17 @@
   "cmd.sync.list.peerFailedFooterItem": {
     "ja": "  - {deviceId} ({detail})",
     "en": "  - {deviceId} ({detail})"
+  },
+  "cmd.tabs.usage.line7": {
+    "ja": "        tab -activate <tabId> — 指定タブを前面にする",
+    "en": "        tab -activate <tabId> — bring the tab to the front"
+  },
+  "cmd.tabs.error.activateUsage": {
+    "ja": "usage: tab -activate <tabId>",
+    "en": "usage: tab -activate <tabId>"
+  },
+  "cmd.window.usage.line": {
+    "ja": "usage: window rename <windowId> <name>",
+    "en": "usage: window rename <windowId> <name>"
   }
 }

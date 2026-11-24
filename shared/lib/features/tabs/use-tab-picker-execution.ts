@@ -10,26 +10,16 @@ import {
   validatePickerExecute,
   resolvePickerTarget,
   resolvePickerGroupTarget,
-  resolvePickerNewWindowOrder,
   resolvePickerConfirmPlan,
-  resolvePickerMovePlan,
-  resolvePickerCreateGroupPlan
+  resolvePickerMovePlan
 } from "./state-machine"
 import {
-  EXECUTION_REGISTRY,
+  type ExecutionContext,
   type ExecutionIntent,
-  executeCloseAction,
-  executeGroupAction,
-  executeMoveAction,
-  executeNewWindowAction
+  executeGroupAction
 } from "./controller/execute-actions"
-import {
-  executeCreateGroupInPlaceAction,
-  executeCreateNewGroupAction
-} from "./controller/create-new-group"
 import { NEW_GROUP_COLORS, NEW_GROUP_LIST_SENTINEL } from "./tab-picker-overlay-constants"
 import type { BulkSubMode, GroupChoice, SelectKind } from "./tab-picker-overlay-types"
-import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 import { implicitWindowIdFromPickerHi } from "./tab-picker-bulk-window"
 import { resolvePickerExecutionTabIds } from "./picker-selected-tab-ids"
 import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
@@ -40,13 +30,17 @@ import {
   classifyPickerSelection
 } from "./remote-picker-ops.ts"
 import { runRemoteTabsOp } from "./run-remote-tabs-op.ts"
-import { sendSelectedTabsToFamilyPeer } from "./family-move-dest.ts"
 import { resolveFamilySendDestination } from "./resolve-family-send-dest.ts"
-import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 import {
+  buildCloseWindowsCommandLine,
+  buildGroupNewCommandLine,
+  buildOpenIntoWindowCommandLine,
+  buildTabActivateCommandLine,
+  buildTabCloseCommandLine,
   buildTabGroupAddCommandLine,
   buildTabMoveCommandLine,
-  buildTabNewWindowCommandLine
+  buildTabNewWindowCommandLine,
+  buildTabReloadCommandLine
 } from "../picker/build-picker-command-line.ts"
 
 export type TabPickerExecutionParams = {
@@ -81,8 +75,8 @@ export type TabPickerExecutionParams = {
   onNewTabUrlPanelDone?: () => void
   /** URL からタブ作成後、ピッカーでそのタブ行をハイライトする（refresh 前に呼ぶ） */
   onPickerHighlightCreatedTab?: (tabId: number) => void
-  /** EN: Prefer typed command re-entry for local move / group / new-window / Family send. */
-  submitConstructedLine?: (line: string) => void
+  /** EN: Typed command re-entry for local move / group / new-window / Family send / close / reload. */
+  submitConstructedLine: (line: string) => void
 }
 
 export function useTabPickerExecution(p: TabPickerExecutionParams) {
@@ -160,6 +154,14 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         setActiveTabId(row.tabId)
         return
       }
+      if (submitLine) {
+        const line = buildTabActivateCommandLine(plan.tabId)
+        if (line !== null) {
+          setActiveTabId(plan.tabId)
+          submitLine(line)
+          return
+        }
+      }
     }
     if (plan.kind === "focusWindow") {
       const row = rows.find((r) => r.kind === "window" && r.windowId === plan.windowId)
@@ -176,7 +178,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     if (activeId !== null) {
       setActiveTabId(activeId)
     }
-  }, [hi, rows, setActiveTabId, visibleRowIndices])
+  }, [hi, rows, setActiveTabId, submitLine, visibleRowIndices])
 
   const executeBulkClose = useCallback(async () => {
     const classified = classifyPickerSelection(rows, selectedTabIds, markedWindowIds)
@@ -194,11 +196,23 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           })
         }
       } else if (classified.kind === "local") {
-        await executeCloseAction({
-          markedKind,
-          markedWindowIds: classified.windowIds,
-          selectedTabIds: classified.tabIds
-        })
+        if (!submitLine) {
+          await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
+        } else if (markedKind === "window" && classified.windowIds.length > 0) {
+          const line = buildCloseWindowsCommandLine(classified.windowIds)
+          if (line !== null) {
+            clearMarkedViaReducer()
+            submitLine(line)
+            return
+          }
+        } else if (classified.tabIds.length > 0) {
+          const line = buildTabCloseCommandLine(classified.tabIds)
+          if (line !== null) {
+            clearMarkedViaReducer()
+            submitLine(line)
+            return
+          }
+        }
       } else if (classified.kind === "mixed") {
         await onAppendLog?.([tTabs("tabs.picker.remote.mixedDevices", locale)])
       }
@@ -215,7 +229,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     onAppendLog,
     onRefreshRows,
     rows,
-    selectedTabIds
+    selectedTabIds,
+    submitLine
   ])
 
   const executeFamilySendAtDest = useCallback(
@@ -241,20 +256,9 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       if (classified.kind !== "local") {
         return false
       }
-      if (submitLine) {
-        const chips = classified.tabIds.map((id) => `#t:${id}`).join(" ")
-        const closeFlag = closeAfter ? " --close" : ""
-        submitLine(`${chips} | tab -send ${dest.deviceId}${closeFlag}`)
-        return true
-      }
-      const result = await sendSelectedTabsToFamilyPeer({
-        deviceId: dest.deviceId,
-        rows,
-        selectedTabIds: classified.tabIds,
-        closeAfter,
-        peerWindowId: dest.peerWindowId
-      })
-      await onAppendLog?.(expandSyncLogLines(result.lines, locale))
+      const chips = classified.tabIds.map((id) => `#t:${id}`).join(" ")
+      const closeFlag = closeAfter ? " --close" : ""
+      submitLine(`${chips} | tab -send ${dest.deviceId}${closeFlag}`)
       return true
     },
     [locale, onAppendLog, rows, submitLine, visibleRowIndices]
@@ -303,7 +307,9 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           }
         }
       } else if (classified.kind === "local") {
-        if (submitLine && plan.targetWindowId !== null) {
+        if (!submitLine || plan.targetWindowId === null) {
+          await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
+        } else {
           const line = buildTabMoveCommandLine(classified.tabIds, {
             windowId: plan.targetWindowId,
             groupId:
@@ -317,8 +323,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
             submitLine(line)
             return
           }
+          await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
         }
-        await executeMoveAction({ plan, selectedTabIds: classified.tabIds })
       } else if (classified.kind === "mixed") {
         await onAppendLog?.([tTabs("tabs.picker.remote.mixedDevices", locale)])
       }
@@ -372,38 +378,25 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       }
       return
     }
-    if (submitLine && resolved.groupId !== null) {
-      const line = buildTabGroupAddCommandLine(selectedTabIds, resolved.groupId)
-      if (line !== null) {
-        clearMarkedViaReducer()
-        setGroupNewPhase("tabs")
-        submitLine(line)
-        return
-      }
+    if (!submitLine || resolved.groupId === null) {
+      await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
+      return
     }
-    try {
-      await executeGroupAction({
-        target: resolved,
-        selectedTabIds,
-        onOpenCreateNewMeta: () => {
-          newGroupTabIdsRef.current = [...selectedTabIds]
-          setNewGroupTitle("")
-          setNewGroupColorIndex(0)
-          setGroupNewPhase("meta")
-        }
-      })
-    } catch {
-      /* e.g. tabs in another window than the group */
+    const line = buildTabGroupAddCommandLine(selectedTabIds, resolved.groupId)
+    if (line === null) {
+      await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
+      return
     }
     clearMarkedViaReducer()
     setGroupNewPhase("tabs")
-    await onRefreshRows?.()
+    submitLine(line)
   }, [
     clearMarkedViaReducer,
     groupChoices,
     groupPickIndex,
+    locale,
     newGroupTabIdsRef,
-    onRefreshRows,
+    onAppendLog,
     selectedTabIds,
     setGroupNewPhase,
     setNewGroupColorIndex,
@@ -415,37 +408,21 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     if (selectedTabIds.length === 0) {
       return
     }
-    if (submitLine) {
-      const line = buildTabNewWindowCommandLine(selectedTabIds)
-      if (line !== null) {
-        clearMarkedViaReducer()
-        submitLine(line)
-        return
-      }
+    if (!submitLine) {
+      await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
+      return
     }
-    try {
-      const tabs = await Promise.all(selectedTabIds.map((id) => chrome.tabs.get(id)))
-      const base = resolvePickerNewWindowOrder(
-        tabs
-          .filter((t): t is chrome.tabs.Tab & { id: number } => t.id !== undefined)
-          .map((t) => ({ id: t.id, windowId: t.windowId ?? 0, index: t.index ?? 0 }))
-      )
-      const order = {
-        orderedIds: base.orderedIds,
-        tabGroupIdsToMoveAsUnits:
-          markedKind === "group" ? chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys) : []
-      }
-      await executeNewWindowAction({ selectedTabIds, order })
-    } catch {
-      /* e.g. incognito mismatch, tab already closed */
+    const line = buildTabNewWindowCommandLine(selectedTabIds)
+    if (line === null) {
+      await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
+      return
     }
     clearMarkedViaReducer()
-    await onRefreshRows?.()
+    submitLine(line)
   }, [
     clearMarkedViaReducer,
-    markedGroupKeys,
-    markedKind,
-    onRefreshRows,
+    locale,
+    onAppendLog,
     selectedTabIds,
     submitLine
   ])
@@ -459,50 +436,49 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     if (color === undefined) {
       return
     }
-
+    if (!submitLine) {
+      await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
+      return
+    }
+    const line = buildGroupNewCommandLine(tabIds, {
+      title: newGroupTitle,
+      color
+    })
+    if (line === null) {
+      await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
+      return
+    }
     groupCreateInFlightRef.current = true
     try {
-      const createParams = {
-        tabIds,
-        title: newGroupTitle,
-        color,
-        locale,
-        onAppendLog
-      }
-      const ok =
-        variant === "groupNew"
-          ? await executeCreateNewGroupAction({
-              ...createParams,
-              resolveCreateGroupPlan: resolvePickerCreateGroupPlan
-            })
-          : await executeCreateGroupInPlaceAction(createParams)
-      if (ok) {
-        newGroupTabIdsRef.current = []
-        clearMarkedViaReducer()
-        await onRefreshRows?.()
-      } else {
-        await onRefreshRows?.()
-      }
+      newGroupTabIdsRef.current = []
+      clearMarkedViaReducer()
       setGroupNewPhase("tabs")
-    } catch {
-      setGroupNewPhase("tabs")
+      submitLine(line)
     } finally {
       groupCreateInFlightRef.current = false
     }
   }, [
     clearMarkedViaReducer,
     groupCreateInFlightRef,
+    locale,
     newGroupColorIndex,
     newGroupTabIdsRef,
     newGroupTitle,
     onAppendLog,
-    onRefreshRows,
     setGroupNewPhase,
-    variant
+    submitLine
   ])
 
   const executeOpenNewTabFromUrl = useCallback(
     (windowId: number, urlRaw: string) => {
+      if (submitLine) {
+        const line = buildOpenIntoWindowCommandLine(windowId, urlRaw)
+        if (line !== null) {
+          onNewTabUrlPanelDone?.()
+          submitLine(line)
+          return
+        }
+      }
       const url = normalizePickerOpenUrl(urlRaw)
       // tabs.create の index は 0 以上のみ（-1 は無効）。末尾追加は index を省略する。
       const props: chrome.tabs.CreateProperties = { windowId }
@@ -566,12 +542,13 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       })
     },
     [
+      locale,
       onAppendLog,
       onNewTabUrlPanelDone,
       onPickerHighlightCreatedTab,
       onRefreshRows,
       setActiveTabId,
-      locale
+      submitLine
     ]
   )
 
@@ -613,7 +590,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         execMarkedKind = "window"
         execMarkedWindowIds = [implicitWid]
       }
-      const ctx: Parameters<(typeof EXECUTION_REGISTRY)[ExecutionIntent]>[0] = {
+      const ctx: ExecutionContext = {
         markedKind: execMarkedKind,
         markedWindowIds: execMarkedWindowIds,
         selectedTabIds: execTabIds
@@ -658,20 +635,6 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           setNewGroupTitle("")
           setNewGroupColorIndex(0)
           setGroupNewPhase("meta")
-        }
-      } else if (intent === "executeNewWindow") {
-        const tabs = await Promise.all(execTabIds.map((id) => chrome.tabs.get(id)))
-        const base = resolvePickerNewWindowOrder(
-          tabs
-            .filter((t): t is chrome.tabs.Tab & { id: number } => t.id !== undefined)
-            .map((t) => ({ id: t.id, windowId: t.windowId ?? 0, index: t.index ?? 0 }))
-        )
-        ctx.newWindowOrder = {
-          orderedIds: base.orderedIds,
-          tabGroupIdsToMoveAsUnits:
-            snapshot.markedKind === "group"
-              ? chromeTabGroupIdsFromMarkedGroupKeys(snapshot.markedGroupKeys)
-              : []
         }
       }
       try {
@@ -721,21 +684,111 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
             setBulkSubMode(null)
             return
           }
+        } else if (classified.kind === "local" && submitLine) {
+          if (
+            intent === "executeClose" &&
+            execMarkedKind === "window" &&
+            classified.windowIds.length > 0
+          ) {
+            const line = buildCloseWindowsCommandLine(classified.windowIds)
+            if (line !== null) {
+              clearMarkedViaReducer()
+              setBulkSubMode(null)
+              submitLine(line)
+              return
+            }
+          }
+          if (
+            intent === "executeClose" &&
+            execMarkedKind !== "window" &&
+            classified.tabIds.length > 0
+          ) {
+            const line = buildTabCloseCommandLine(classified.tabIds)
+            if (line !== null) {
+              clearMarkedViaReducer()
+              setBulkSubMode(null)
+              submitLine(line)
+              return
+            }
+          }
+          if (intent === "executeReload" && classified.tabIds.length > 0) {
+            const line = buildTabReloadCommandLine(classified.tabIds)
+            if (line !== null) {
+              clearMarkedViaReducer()
+              setBulkSubMode(null)
+              submitLine(line)
+              return
+            }
+          }
+          if (intent === "executeMove" && ctx.movePlan && ctx.movePlan.targetWindowId !== null) {
+            const line = buildTabMoveCommandLine(classified.tabIds, {
+              windowId: ctx.movePlan.targetWindowId,
+              groupId:
+                ctx.movePlan.shouldGroupToTargetAfterMove && ctx.movePlan.targetGroupId !== null
+                  ? ctx.movePlan.targetGroupId
+                  : undefined,
+              ungroup: ctx.movePlan.shouldUngroupAfterMove
+            })
+            if (line !== null) {
+              clearMarkedViaReducer()
+              setBulkSubMode(null)
+              submitLine(line)
+              return
+            }
+          }
+          if (
+            intent === "executeGroup" &&
+            ctx.groupTarget &&
+            !ctx.groupTarget.createNew &&
+            ctx.groupTarget.groupId !== null
+          ) {
+            const line = buildTabGroupAddCommandLine(classified.tabIds, ctx.groupTarget.groupId)
+            if (line !== null) {
+              clearMarkedViaReducer()
+              setBulkSubMode(null)
+              setGroupNewPhase("tabs")
+              submitLine(line)
+              return
+            }
+          }
+          if (intent === "executeNewWindow" && classified.tabIds.length > 0) {
+            const line = buildTabNewWindowCommandLine(classified.tabIds)
+            if (line !== null) {
+              clearMarkedViaReducer()
+              setBulkSubMode(null)
+              submitLine(line)
+              return
+            }
+          }
+          if (intent === "executeGroup" && ctx.groupTarget?.createNew) {
+            ctx.onOpenCreateNewMeta?.()
+            return
+          }
+          await onAppendLog?.([
+            `error: ${tTabs("tabs.picker.error.executeFailed", locale)}`
+          ])
+          setBulkSubMode(null)
+          return
+        } else if (
+          classified.kind === "local" &&
+          intent === "executeGroup" &&
+          ctx.groupTarget?.createNew
+        ) {
+          ctx.onOpenCreateNewMeta?.()
+          return
         } else {
-          await EXECUTION_REGISTRY[intent](ctx)
+          await onAppendLog?.([
+            `error: ${tTabs("tabs.picker.error.executeFailed", locale)}`
+          ])
+          setBulkSubMode(null)
+          return
         }
       } catch {
         setBulkSubMode(null)
         return
       }
-      if (intent === "executeGroup" && ctx.groupTarget?.createNew) {
-        return
-      }
       clearMarkedViaReducer()
       setBulkSubMode(null)
-      if (intent === "executeGroup") {
-        setGroupNewPhase("tabs")
-      }
       await onRefreshRows?.()
     },
     [
@@ -743,6 +796,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       executeFamilySendAtDest,
       groupChoices,
       groupPickIndex,
+      locale,
       moveCloseAfter,
       newGroupTabIdsRef,
       onAppendLog,
@@ -752,7 +806,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       setGroupNewPhase,
       setNewGroupColorIndex,
       setNewGroupTitle,
-      locale,
+      submitLine,
       visibleRowIndices
     ]
   )

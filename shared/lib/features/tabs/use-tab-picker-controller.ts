@@ -94,7 +94,7 @@ type Props = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId: string
   onFocusTabIdChange?: (tabId: number | null) => void
-  submitConstructedLine?: (line: string) => void
+  submitConstructedLine: (line: string) => void
 }
 
 export type TabPickerOverlayProps = Props
@@ -461,7 +461,7 @@ export function useTabPickerController({
     applyReducedState,
     clearMarkedViaReducer,
     onAppendLog,
-    onRefreshRows
+    submitConstructedLine
   })
 
   const onPickerHighlightCreatedTab = useCallback(
