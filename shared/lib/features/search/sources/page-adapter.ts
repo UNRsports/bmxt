@@ -1,6 +1,8 @@
 /**
  * EN: Scans non-discarded http(s) tabs only; skips chrome-extension:// etc.
+ *     Tab body reads run with bounded concurrency (pool), results assembled in priority order.
  * JA: 破棄されていない http(s) タブのみ。chrome-extension:// 等は除外。
+ *     本文読取は上限付き並行。結果は優先順（アクティブ→最近）で組み立てる。
  */
 
 import type { SearchPageMatch } from "../../side-picker/model/picker-entry"
@@ -14,6 +16,7 @@ import { isGoogleSheetsUrl } from "../../url/parse-google-sheets-url"
 import { isScriptablePageUrl } from "../../url/is-scriptable-page-url"
 import { MAX_MATCHES_PER_TAB, MAX_PAGE_TEXT_CHARS, PAGE_SCAN_PREFIX_CHARS } from "../limits"
 import { linesForSearchPageTab } from "./page-find-blocks"
+import { runPageScanPool } from "./page-scan-pool"
 import {
   formatSearchPageProgress,
   shouldEmitSearchPageProgress,
@@ -28,6 +31,12 @@ const MAX_EMPTY_PREVIEW_LINES = 24
  * JA: タブあたりの壁時計上限（ページ内マッチ収集／空パターンのプレビュー読取）。
  */
 const TAB_SCAN_BUDGET_MS = 4500
+
+/**
+ * EN: Max concurrent tab body reads. Keeps Chrome scripting load bounded while cutting wall time.
+ * JA: 同時に読むタブ数の上限。scripting 負荷を抑えつつ壁時計を短縮する。
+ */
+const PAGE_TAB_SCAN_CONCURRENCY = 6
 
 type SearchPageLongTab = {
   tabId: number
@@ -49,6 +58,15 @@ type TabScanOutcome =
       text: string | null
       ok: boolean
     }
+
+type TabScanSlot = {
+  tabId: number
+  windowId: number
+  title: string
+  url: string
+  sheetsTab: boolean
+  outcome: TabScanOutcome
+}
 
 function withTabScanBudget(
   work: Promise<TabScanOutcome>,
@@ -120,6 +138,45 @@ function appendLongPageNotices(
   out.push(tSearch("search.pageLongSkipped.rerunHint", uiLocale))
 }
 
+function linesFromSlot(slot: TabScanSlot, matchAll: boolean): string[] {
+  const { tabId, windowId, title, url, outcome } = slot
+  if (matchAll) {
+    if (outcome.kind !== "preview" || outcome.text === null) {
+      return []
+    }
+    const previewLines = outcome.text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .slice(0, MAX_EMPTY_PREVIEW_LINES)
+    const matches: SearchPageMatch[] =
+      previewLines.length > 0
+        ? previewLines.map((pl, i) => ({
+            lineNo: i + 1,
+            snippet: pl.slice(0, 500),
+            occurrence: 0
+          }))
+        : [{ lineNo: 0, snippet: "(no visible text in body.innerText)", occurrence: 0 }]
+    return linesForSearchPageTab({
+      tabId,
+      windowId,
+      title: title || "(untitled)",
+      url: url || "(no url)",
+      matches
+    })
+  }
+  if (outcome.kind !== "matches" || outcome.matches.length === 0) {
+    return []
+  }
+  return linesForSearchPageTab({
+    tabId,
+    windowId,
+    title: title || "(untitled)",
+    url: url || "(no url)",
+    matches: outcome.matches
+  })
+}
+
 export async function searchPageLines(
   pattern: string,
   onProgress?: (message: string) => Promise<void>,
@@ -182,100 +239,120 @@ export async function searchPageLines(
   }
 
   const tabs = prioritized
-  const out: string[] = []
-  const longPages: SearchPageLongTab[] = []
-  let scanned = 0
-  let skipped = 0
-  let skippedLong = 0
-  let skippedSheets = 0
-  let truncatedSheets = 0
-  let tabsChecked = 0
-  let cancelled = false
   const matchAll = !pattern.trim()
   const tabTotal = tabs.length
+  const slots: Array<TabScanSlot | undefined> = new Array(tabTotal)
+  let scanned = 0
+  let skipped = 0
+  let tabsChecked = 0
 
   await emit({ phase: "start", tabIndex: 0, tabTotal, scanned: 0, skipped: 0 })
 
-  for (let tabIndex = 0; tabIndex < tabs.length; tabIndex += 1) {
-    if (shouldCancel?.()) {
-      cancelled = true
-      tabsChecked = tabIndex
-      break
-    }
-    const tab = tabs[tabIndex]!
-    const tabId = tab.id
-    if (tabId === undefined) {
+  const pool = await runPageScanPool(
+    tabTotal,
+    PAGE_TAB_SCAN_CONCURRENCY,
+    async (tabIndex) => {
+      const tab = tabs[tabIndex]
+      if (!tab || tab.id === undefined) {
+        return
+      }
+      const tabId = tab.id
+      const url = tab.url ?? ""
+      const title = tab.title ?? ""
+      const windowId = typeof tab.windowId === "number" ? tab.windowId : 0
+      const sheetsTab = isGoogleSheetsUrl(url)
+
+      // EN: Pre-read tick — show which ordinal is in flight (completed+1 style via post-update).
+      // JA: 読取前 tick。完了後の集計で進捗を進める。
+      if (!shouldCancel?.() && onProgressInfo) {
+        await onProgressInfo({
+          phase: "tick",
+          tabIndex: Math.min(tabTotal, tabsChecked + 1),
+          tabTotal,
+          scanned,
+          skipped
+        })
+      }
+
+      const outcome = await withTabScanBudget(
+        (async (): Promise<TabScanOutcome> => {
+          if (matchAll) {
+            if (sheetsTab) {
+              const sheetsPreview = await readSheetsPreviewFromOpenTab(
+                tab,
+                unlimit ? 0 : 1_500_000
+              )
+              if (sheetsPreview.kind === "ok") {
+                return { kind: "preview", text: sheetsPreview.text, ok: true }
+              }
+              return { kind: "preview", text: null, ok: false }
+            }
+            const body = await readOpenTabInnerText(tab, maxPageTextChars || PAGE_SCAN_PREFIX_CHARS)
+            return { kind: "preview", text: body, ok: body !== null }
+          }
+          const collected = await collectPageMatchesFromOpenTab(tab, pattern, {
+            maxMatches: MAX_MATCHES_PER_TAB,
+            maxTextChars: sheetsTab ? (unlimit ? 0 : undefined) : maxPageTextChars
+          })
+          if (collected === null) {
+            return { kind: "matches", matches: [], truncatedLong: false, ok: false }
+          }
+          const truncatedLong = sheetsTab
+            ? collected.truncated === true
+            : collected.truncated ||
+              (!unlimit && collected.bodyLength > MAX_PAGE_TEXT_CHARS)
+          return {
+            kind: "matches",
+            matches: collected.matches,
+            truncatedLong,
+            length: collected.bodyLength,
+            ok: true
+          }
+        })(),
+        shouldCancel,
+        sheetsTab ? SHEETS_TAB_SCAN_BUDGET_MS : TAB_SCAN_BUDGET_MS
+      )
+
+      slots[tabIndex] = {
+        tabId,
+        windowId,
+        title,
+        url,
+        sheetsTab,
+        outcome
+      }
+
+      tabsChecked += 1
+      if (outcome.ok) {
+        scanned += 1
+      } else {
+        skipped += 1
+      }
+      await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
+    },
+    shouldCancel
+  )
+
+  if (pool.cancelled || shouldCancel?.()) {
+    // EN: Do not emit "done"/tick after Ctrl+C — progress UI must stay quiet.
+    // JA: Ctrl+C 後に完了・tick 進捗を出さない。
+    return [
+      `(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped)`
+    ]
+  }
+
+  const out: string[] = []
+  const longPages: SearchPageLongTab[] = []
+  let skippedLong = 0
+  let skippedSheets = 0
+  let truncatedSheets = 0
+
+  for (let i = 0; i < slots.length; i += 1) {
+    const slot = slots[i]
+    if (!slot) {
       continue
     }
-    tabsChecked = tabIndex + 1
-    const url = tab.url ?? ""
-    const title = tab.title ?? ""
-    const windowId = typeof tab.windowId === "number" ? tab.windowId : 0
-
-    // EN: Advance busy UI before the read so a hung tab is visible; log lines stay post-read.
-    if (!shouldCancel?.() && onProgressInfo) {
-      await onProgressInfo({
-        phase: "tick",
-        tabIndex: tabsChecked,
-        tabTotal,
-        scanned,
-        skipped
-      })
-    }
-    if (shouldCancel?.()) {
-      cancelled = true
-      break
-    }
-
-    const sheetsTab = isGoogleSheetsUrl(url)
-    const outcome = await withTabScanBudget(
-      (async (): Promise<TabScanOutcome> => {
-        if (matchAll) {
-          if (sheetsTab) {
-            const sheetsPreview = await readSheetsPreviewFromOpenTab(
-              tab,
-              // EN: 0 = unlimit; otherwise Sheets helper applies its larger default via 0→default? 
-              //     Pass a sentinel: use PAGE_SCAN_PREFIX only as hint; helper remaps undefined-like.
-              // JA: 0 は unlimit。通常は Sheets 既定予算を使うため DEFAULT 相当を渡す。
-              unlimit ? 0 : 1_500_000
-            )
-            if (sheetsPreview.kind === "ok") {
-              return { kind: "preview", text: sheetsPreview.text, ok: true }
-            }
-            return { kind: "preview", text: null, ok: false }
-          }
-          const body = await readOpenTabInnerText(tab, maxPageTextChars || PAGE_SCAN_PREFIX_CHARS)
-          return { kind: "preview", text: body, ok: body !== null }
-        }
-        const collected = await collectPageMatchesFromOpenTab(tab, pattern, {
-          maxMatches: MAX_MATCHES_PER_TAB,
-          // EN: Sheets uses its own default cell budget when maxTextChars is omitted.
-          // JA: Sheets は maxTextChars 省略時に独自のセル文字数上限を使う。
-          maxTextChars: sheetsTab ? (unlimit ? 0 : undefined) : maxPageTextChars
-        })
-        if (collected === null) {
-          return { kind: "matches", matches: [], truncatedLong: false, ok: false }
-        }
-        const truncatedLong = sheetsTab
-          ? collected.truncated === true
-          : collected.truncated ||
-            (!unlimit && collected.bodyLength > MAX_PAGE_TEXT_CHARS)
-        return {
-          kind: "matches",
-          matches: collected.matches,
-          truncatedLong,
-          length: collected.bodyLength,
-          ok: true
-        }
-      })(),
-      shouldCancel,
-      sheetsTab ? SHEETS_TAB_SCAN_BUDGET_MS : TAB_SCAN_BUDGET_MS
-    )
-    if (shouldCancel?.()) {
-      cancelled = true
-      break
-    }
-
+    const { outcome, sheetsTab, tabId, title, url } = slot
     if (outcome.kind === "matches" && outcome.truncatedLong && outcome.length !== undefined) {
       if (sheetsTab) {
         truncatedSheets += 1
@@ -289,65 +366,10 @@ export async function searchPageLines(
         })
       }
     }
-
-    const ok = outcome.ok
-    if (ok) {
-      scanned += 1
-    } else {
-      skipped += 1
-      if (isGoogleSheetsUrl(url)) {
-        skippedSheets += 1
-      }
+    if (!outcome.ok && sheetsTab) {
+      skippedSheets += 1
     }
-    await emit({ phase: "tick", tabIndex: tabsChecked, tabTotal, scanned, skipped })
-
-    if (matchAll) {
-      if (outcome.kind !== "preview" || outcome.text === null) {
-        continue
-      }
-      const previewLines = outcome.text
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .slice(0, MAX_EMPTY_PREVIEW_LINES)
-      const matches: SearchPageMatch[] =
-        previewLines.length > 0
-          ? previewLines.map((pl, i) => ({
-              lineNo: i + 1,
-              snippet: pl.slice(0, 500),
-              occurrence: 0
-            }))
-          : [{ lineNo: 0, snippet: "(no visible text in body.innerText)", occurrence: 0 }]
-      out.push(
-        ...linesForSearchPageTab({
-          tabId,
-          windowId,
-          title: title || "(untitled)",
-          url: url || "(no url)",
-          matches
-        })
-      )
-      continue
-    }
-
-    if (outcome.kind !== "matches" || outcome.matches.length === 0) {
-      continue
-    }
-    out.push(
-      ...linesForSearchPageTab({
-        tabId,
-        windowId,
-        title: title || "(untitled)",
-        url: url || "(no url)",
-        matches: outcome.matches
-      })
-    )
-  }
-
-  if (cancelled) {
-    // EN: Do not emit "done"/tick after Ctrl+C — progress UI must stay quiet.
-    // JA: Ctrl+C 後に完了・tick 進捗を出さない。
-    return [`(cancelled — checked ${tabsChecked}/${tabTotal} tab(s); ${scanned} read, ${skipped} skipped)`]
+    out.push(...linesFromSlot(slot, matchAll))
   }
 
   await emit({ phase: "done", tabIndex: tabsChecked || tabTotal, tabTotal, scanned, skipped })
@@ -374,10 +396,7 @@ export async function searchPageLines(
     `(${matchAll ? scanned : pageCount} page(s), ${lineHitCount} line hit(s); scanned ${scanned} tab(s), skipped ${skipped}${longSuffix}; ${tabTotal} tab(s) checked)`
   )
   if (skippedSheets > 0) {
-    out.push(
-      tSearch("search.sheets.loadFailed", uiLocale) +
-        ` (${skippedSheets})`
-    )
+    out.push(tSearch("search.sheets.loadFailed", uiLocale) + ` (${skippedSheets})`)
   }
   if (truncatedSheets > 0) {
     out.push(tSearch("search.sheets.truncatedHint", uiLocale))
