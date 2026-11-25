@@ -892,12 +892,12 @@ CLI / 拡張 同一文法（bmxt-core）
 
 **実装チェック（段階）**
 
-- [ ] **16.0 契約:** 本節方針を `_context/cli-peer/CONTRACT.md`（または本節参照）に追記。§9 スコープ外の `bookmarks_ops` を本節へ移管済みであること
-- [ ] **16.1 拡張 picker send モード（A1）:** bookmark picker から `--open\|--save\|--both` を選択可能。typed CUI と同形行を `submitConstructedLine`
-- [ ] **16.2 CLI flat 一覧（B1）:** `OpenPlainList` / `OpenPicker` で `list_id` ∈ {bookmark, history} を許可し `search_query` へ寄せる。Interactive flat browse → `open_tabs`。NonInteractive は stdout のみ。i18n `listLimited` / `pickerLimited` 更新
-- [ ] **16.3 CLI Family send（B2）:** Rust wire に `bookmarks_import` / `_result` · `BusClient` · adapter `UiAction::SyncBookmarkSend`（`--open`/`--save`/`--both`）。pipe `| bookmark -send` は URL materialize 後に同経路
-- [ ] **16.4 peer `bookmarks_ops`（B3 · 拡張+CLI）:** wire（TS+Rust）· `apply-remote-bookmarks-ops` · search hit に optional `bookmarkId` · CLI の `BookmarkCreate`/`_Folder`/`_Remove`/`_Move` → `bookmarks_ops_on` · pipe `BookmarkRemove`/`Move`/`Add`/`Send`
-- [ ] **16.5 検証（A2）:** §9 手元スモーク（ローカル CRUD · send · Chrome↔Firefox · backup）再実施。`remote-bookmarks-import` / backup の薄い unit。`check:cli-command-io` · `verify:host-blind` · cargo/tsc
+- [x] **16.0 契約:** 本節方針を `_context/cli-peer/CONTRACT.md`（または本節参照）に追記。§9 スコープ外の `bookmarks_ops` を本節へ移管済みであること
+- [x] **16.1 拡張 picker send モード（A1）:** bookmark picker から `--open\|--save\|--both` を選択可能。typed CUI と同形行を `submitConstructedLine`
+- [x] **16.2 CLI flat 一覧（B1）:** `OpenPlainList` / `OpenPicker` で `list_id` ∈ {bookmark, history} を許可し `search_query` へ寄せる。Interactive flat browse → `open_tabs`。NonInteractive は stdout のみ。i18n `listLimited` / `pickerLimited` 更新
+- [x] **16.3 CLI Family send（B2）:** Rust wire に `bookmarks_import` / `_result` · `BusClient` · adapter `UiAction::SyncBookmarkSend`（`--open`/`--save`/`--both`）。pipe `| bookmark -send` は URL materialize 後に同経路
+- [x] **16.4 peer `bookmarks_ops`（B3 · 拡張+CLI）:** wire（TS+Rust）· `apply-remote-bookmarks-ops` · search hit に optional `bookmarkId` · CLI の `BookmarkCreate`/`_Folder`/`_Remove`/`_Move` → `bookmarks_ops_on` · pipe `BookmarkSend`（Remove/Move/Add は HostEffect 経路）
+- [x] **16.5 検証（A2）:** `apply-remote-bookmarks-ops` unit · `check:cli-command-io` · `verify:host-blind` · `cargo check -p bmxt-cli` · `tsc`。§9 手元スモーク（ローカル CRUD · send · Chrome↔Firefox · backup）は下記「手元スモーク」で実施
 - [ ] **16.6（任意）:** bookmark picker の add / new-folder ウィザード（§7 任意の続き · `submitConstructedLine` のみ）
 - [ ] **16.7（後続・必須でない）:** 構造化 `bookmarks_list` RPC · フォルダ／日付ツリー plain print · ratatui ツリー TUI
 

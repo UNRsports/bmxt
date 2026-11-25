@@ -1,4 +1,5 @@
 mod adapter;
+mod bookmark_send_payload;
 mod bus;
 mod command_io;
 mod config;
@@ -11,6 +12,7 @@ mod mesh_plan;
 mod msgs;
 mod open_payload;
 mod paste;
+mod progress;
 #[cfg(test)]
 mod posix_io_tests;
 mod repl_log;

@@ -1267,13 +1267,17 @@
     "ja": "error: 保存する下書きがありません。先に `setting -set <key> <value>` を実行してください。",
     "en": "error: no draft to save. Run `setting -set <key> <value>` first."
   },
+  "cmd.cli.search.pickerCapped": {
+    "ja": "warn: ピッカーは先頭 {shown} 件のみ表示（取得 {total} 件）。絞り込みは `history -list <pattern> --peers` を使用",
+    "en": "warn: picker shows first {shown} of {total} hits — narrow with `history -list <pattern> --peers`"
+  },
   "cmd.cli.error.listLimited": {
-    "ja": "error: CLI の一覧 `{listId}` は tabs / setting のみ対応です",
-    "en": "error: list `{listId}` on CLI is limited to tabs / setting for now"
+    "ja": "error: CLI の一覧 `{listId}` は tabs / setting / bookmark / history のみ対応です",
+    "en": "error: list `{listId}` on CLI is limited to tabs / setting / bookmark / history for now"
   },
   "cmd.cli.error.pickerLimited": {
-    "ja": "error: CLI のピッカー `{listId}` は tabs のみ対応です",
-    "en": "error: picker `{listId}` on CLI is limited to tabs for now"
+    "ja": "error: CLI のピッカー `{listId}` は tabs / bookmark / history のみ対応です",
+    "en": "error: picker `{listId}` on CLI is limited to tabs / bookmark / history for now"
   },
   "cmd.cli.error.uiUnsupported": {
     "ja": "error: CLI 未対応の UI アクション: {kind}",

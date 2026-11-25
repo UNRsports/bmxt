@@ -20,7 +20,8 @@ import {
   buildBookmarkActionLine,
   buildBookmarkTreeViews,
   removeBookmarkRowsById,
-  type BookmarkActionId
+  type BookmarkActionId,
+  type BookmarkSendMode
 } from "./bookmark-picker-view"
 import {
   computeBookmarkSearchFilteredVisibleIndices,
@@ -44,7 +45,9 @@ export type BookmarkPickerWrapperProps = {
   onAppendLog: (lines: string[]) => void | Promise<void>
 }
 
-type MenuMode = "actions" | "sendPeers"
+type MenuMode = "actions" | "sendMode" | "sendPeers"
+
+const SEND_MODES: readonly BookmarkSendMode[] = ["open", "save", "both"]
 
 function actionLabelKey(
   action: BookmarkActionId
@@ -65,6 +68,21 @@ function actionLabelKey(
   return "bookmark.picker.action.send"
 }
 
+function sendModeLabelKey(
+  mode: BookmarkSendMode
+):
+  | "bookmark.picker.send.mode.open"
+  | "bookmark.picker.send.mode.save"
+  | "bookmark.picker.send.mode.both" {
+  if (mode === "save") {
+    return "bookmark.picker.send.mode.save"
+  }
+  if (mode === "both") {
+    return "bookmark.picker.send.mode.both"
+  }
+  return "bookmark.picker.send.mode.open"
+}
+
 export function BookmarkPickerWrapper({
   state,
   onStateChange,
@@ -79,6 +97,7 @@ export function BookmarkPickerWrapper({
   const locale = settings.locale
   const [foldRevision, setFoldRevision] = useState(0)
   const [menuMode, setMenuMode] = useState<MenuMode>("actions")
+  const [pendingSendMode, setPendingSendMode] = useState<BookmarkSendMode>("open")
   const syncStatus = useSyncExternalStore(
     subscribeSyncLinkStatus,
     getSyncLinkStatus,
@@ -191,6 +210,7 @@ export function BookmarkPickerWrapper({
 
   const onMenuClose = useCallback(() => {
     setMenuMode("actions")
+    setPendingSendMode("open")
     onStateChange((prev) => ({ ...prev, actionMenuOpen: false, actionMenuIndex: 0 }))
   }, [onStateChange])
 
@@ -249,14 +269,12 @@ export function BookmarkPickerWrapper({
     [onStateChange]
   )
 
-  const onMenuConfirm = useCallback(() => {
-    if (menuMode === "sendPeers") {
-      const peer = syncStatus.connectedPeers[state.actionMenuIndex]
-      if (peer === undefined) {
-        onMenuClose()
-        return
-      }
-      const line = buildBookmarkActionLine("send", targets, { deviceId: peer.deviceId })
+  const submitSendToPeer = useCallback(
+    (deviceId: string, mode: BookmarkSendMode) => {
+      const line = buildBookmarkActionLine("send", targets, {
+        deviceId,
+        sendMode: mode
+      })
       if (line === null) {
         void onAppendLog([tBookmark("bookmark.picker.send.invalid", locale)])
         onMenuClose()
@@ -268,7 +286,49 @@ export function BookmarkPickerWrapper({
         actionMenuIndex: 0
       }))
       setMenuMode("actions")
+      setPendingSendMode("open")
       submitConstructedLine(line)
+    },
+    [locale, onAppendLog, onMenuClose, onStateChange, submitConstructedLine, targets]
+  )
+
+  const continueSendAfterMode = useCallback(
+    (mode: BookmarkSendMode) => {
+      setPendingSendMode(mode)
+      const peers = syncStatus.connectedPeers
+      if (peers.length === 0) {
+        void onAppendLog([tBookmark("bookmark.picker.send.noPeers", locale)])
+        onMenuClose()
+        return
+      }
+      if (peers.length === 1) {
+        submitSendToPeer(peers[0]!.deviceId, mode)
+        return
+      }
+      setMenuMode("sendPeers")
+      onStateChange((prev) => ({ ...prev, actionMenuIndex: 0 }))
+    },
+    [locale, onAppendLog, onMenuClose, onStateChange, submitSendToPeer, syncStatus.connectedPeers]
+  )
+
+  const onMenuConfirm = useCallback(() => {
+    if (menuMode === "sendMode") {
+      const mode = SEND_MODES[state.actionMenuIndex]
+      if (mode === undefined) {
+        onMenuClose()
+        return
+      }
+      continueSendAfterMode(mode)
+      return
+    }
+
+    if (menuMode === "sendPeers") {
+      const peer = syncStatus.connectedPeers[state.actionMenuIndex]
+      if (peer === undefined) {
+        onMenuClose()
+        return
+      }
+      submitSendToPeer(peer.deviceId, pendingSendMode)
       return
     }
 
@@ -299,23 +359,8 @@ export function BookmarkPickerWrapper({
         onMenuClose()
         return
       }
-      if (peers.length === 1) {
-        const line = buildBookmarkActionLine("send", targets, { deviceId: peers[0]!.deviceId })
-        if (line === null) {
-          void onAppendLog([tBookmark("bookmark.picker.send.invalid", locale)])
-          onMenuClose()
-          return
-        }
-        onStateChange((prev) => ({
-          ...clearBookmarkPickerMarks(prev),
-          actionMenuOpen: false,
-          actionMenuIndex: 0
-        }))
-        setMenuMode("actions")
-        submitConstructedLine(line)
-        return
-      }
-      setMenuMode("sendPeers")
+      setPendingSendMode("open")
+      setMenuMode("sendMode")
       onStateChange((prev) => ({ ...prev, actionMenuIndex: 0 }))
       return
     }
@@ -347,13 +392,16 @@ export function BookmarkPickerWrapper({
     submitConstructedLine(line)
   }, [
     actions,
+    continueSendAfterMode,
     locale,
     menuMode,
     onAppendLog,
     onMenuClose,
     onStateChange,
+    pendingSendMode,
     state.actionMenuIndex,
     submitConstructedLine,
+    submitSendToPeer,
     syncStatus.connectedPeers,
     targets
   ])
@@ -373,6 +421,18 @@ export function BookmarkPickerWrapper({
   const menu = useMemo((): TreePickerActionMenu | null => {
     if (!state.actionMenuOpen) {
       return null
+    }
+    if (menuMode === "sendMode") {
+      return {
+        title: tBookmark("bookmark.picker.send.modeTitle", locale, { count: targets.length }),
+        hint: tBookmark("bookmark.picker.actionMenu.hint", locale),
+        targetLabels: targets.map((row) => bookmarkTargetLabel(row)),
+        items: SEND_MODES.map((mode) => ({
+          id: mode,
+          label: tBookmark(sendModeLabelKey(mode), locale)
+        })),
+        pickIndex: Math.min(state.actionMenuIndex, SEND_MODES.length - 1)
+      }
     }
     if (menuMode === "sendPeers") {
       const peers = syncStatus.connectedPeers

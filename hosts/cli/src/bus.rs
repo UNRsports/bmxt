@@ -9,7 +9,8 @@ use anyhow::{anyhow, Result};
 use base64::Engine;
 use bmxt_peer_rtc::{PeerSession, PeerSessionEvent};
 use bmxt_sync_wire::{
-    MeshPeerEntry, SyncBusCommand, SyncRemoteTabRow, SyncTabsOp, SYNC_REMOTE_QUERY_TIMEOUT_MS,
+    BookmarkImportItem, MeshPeerEntry, SyncBookmarksOp, SyncBusCommand, SyncRemoteTabRow,
+    SyncTabsOp, SYNC_REMOTE_QUERY_TIMEOUT_MS,
 };
 use rand::RngCore;
 use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
@@ -52,6 +53,48 @@ struct PendingRpc {
     tx: oneshot::Sender<SyncBusCommand>,
 }
 
+/** EN: Live search stream events for CLI progress + final aggregation. */
+enum SearchStreamEvent {
+    /** EN: A chunk arrived (hits already appended into the pending buffer). */
+    Progress {
+        seq: u32,
+        hits_so_far: usize,
+        detail: Option<String>,
+    },
+    Done {
+        ok: bool,
+        detail: Option<String>,
+        hits: Vec<bmxt_sync_wire::SyncRemoteSearchHit>,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchProgressPhase {
+    Querying,
+    Receiving,
+    Done,
+    Failed,
+}
+
+/** EN: Progress snapshot for Interactive CLI bars. */
+#[derive(Debug, Clone)]
+pub struct SearchProgress {
+    pub peer_id: String,
+    pub peer_index: usize,
+    pub peer_total: usize,
+    pub hits_so_far: usize,
+    pub chunk_seq: Option<u32>,
+    pub detail: Option<String>,
+    pub phase: SearchProgressPhase,
+}
+
+/** EN: Accumulate search_query_chunk until eof (extension bus parity). */
+struct PendingSearchRpc {
+    hits: Vec<bmxt_sync_wire::SyncRemoteSearchHit>,
+    next_seq: u32,
+    event_tx: mpsc::UnboundedSender<SearchStreamEvent>,
+}
+
 struct HubInner {
     self_id: String,
     display_name: String,
@@ -63,6 +106,7 @@ struct HubInner {
     connected: HashSet<String>,
     display_by_remote: HashMap<String, String>,
     pending_rpc: HashMap<String, PendingRpc>,
+    pending_search: HashMap<String, PendingSearchRpc>,
     /// remote → introducer (relay) device id
     relay_by_remote: HashMap<String, String>,
     offer_busy_until: HashMap<String, Instant>,
@@ -100,6 +144,7 @@ impl BusClient {
             connected: HashSet::new(),
             display_by_remote: HashMap::new(),
             pending_rpc: HashMap::new(),
+            pending_search: HashMap::new(),
             relay_by_remote: HashMap::new(),
             offer_busy_until: HashMap::new(),
             last_connected_key: String::new(),
@@ -469,67 +514,240 @@ impl BusClient {
         Ok(opened)
     }
 
+    /**
+     * EN: bookmarks_import on a specific peer (save mode of bookmark -send).
+     * JA: 指定 peer へ bookmarks_import（bookmark -send の save）。
+     */
+    pub async fn bookmarks_import_on(
+        &self,
+        from: &str,
+        remote: &str,
+        parent_id: Option<String>,
+        items: Vec<BookmarkImportItem>,
+    ) -> Result<u32> {
+        let remote = remote.trim();
+        if remote.is_empty() {
+            return Err(anyhow!("bookmarks_import: empty remote device id"));
+        }
+        let id = new_id("bmimp");
+        let resp = self
+            .request_on(
+                remote,
+                SyncBusCommand::BookmarksImport {
+                    id,
+                    from: from.to_string(),
+                    parent_id,
+                    items,
+                },
+            )
+            .await?;
+        match resp {
+            SyncBusCommand::BookmarksImportResult {
+                ok,
+                detail,
+                created,
+                ..
+            } => {
+                if !ok {
+                    return Err(anyhow!(
+                        detail.unwrap_or_else(|| "bookmarks_import failed".into())
+                    ));
+                }
+                Ok(created)
+            }
+            other => Err(anyhow!("unexpected reply: {other:?}")),
+        }
+    }
+
+    /**
+     * EN: bookmarks_ops on a specific peer (create / folder / remove / move).
+     * JA: 指定 peer へ bookmarks_ops（作成／フォルダ／削除／移動）。
+     */
+    pub async fn bookmarks_ops_on(
+        &self,
+        from: &str,
+        remote: &str,
+        op: SyncBookmarksOp,
+    ) -> Result<()> {
+        let remote = remote.trim();
+        if remote.is_empty() {
+            return Err(anyhow!("bookmarks_ops: empty remote device id"));
+        }
+        let id = new_id("bmops");
+        let resp = self
+            .request_on(
+                remote,
+                SyncBusCommand::BookmarksOps {
+                    id,
+                    from: from.to_string(),
+                    op,
+                },
+            )
+            .await?;
+        match resp {
+            SyncBusCommand::BookmarksOpsResult { ok, detail, .. } => {
+                if !ok {
+                    return Err(anyhow!(
+                        detail.unwrap_or_else(|| "bookmarks_ops failed".into())
+                    ));
+                }
+                Ok(())
+            }
+            other => Err(anyhow!("unexpected reply: {other:?}")),
+        }
+    }
+
+    /** EN: Legacy helper — prefer `bookmarks_ops_on` when the peer is known. */
+    pub async fn bookmarks_ops(&self, from: &str, op: SyncBookmarksOp) -> Result<()> {
+        let remote = self.first_remote().await?;
+        self.bookmarks_ops_on(from, &remote, op).await
+    }
+
+    #[allow(dead_code)] // EN: Convenience wrapper; call sites prefer with_progress.
     pub async fn search_query(
         &self,
         from: &str,
         dispatch_line: String,
     ) -> Result<Vec<bmxt_sync_wire::SyncRemoteSearchHit>> {
+        self.search_query_with_progress(from, dispatch_line, |_| {})
+            .await
+    }
+
+    /**
+     * EN: Peer search with optional progress callback (chunk / peer boundaries).
+     * JA: 進捗コールバック付き peer search（チャンク／ピア境界）。
+     */
+    pub async fn search_query_with_progress<F>(
+        &self,
+        from: &str,
+        dispatch_line: String,
+        mut on_progress: F,
+    ) -> Result<Vec<bmxt_sync_wire::SyncRemoteSearchHit>>
+    where
+        F: FnMut(SearchProgress),
+    {
         let remotes = self.connected_ids().await;
         if remotes.is_empty() {
             return Err(anyhow!("no connected peers"));
         }
+        // EN: Chunk streams need longer than a single RPC round-trip (parity with extension).
+        // JA: チャンクストリームは単発 RPC より長い（拡張側と揃える）。
+        const SEARCH_STREAM_TIMEOUT_MS: u64 = 90_000;
+        let peer_total = remotes.len();
         let mut all_hits = Vec::new();
-        for remote in remotes {
+        for (peer_index, remote) in remotes.into_iter().enumerate() {
+            on_progress(SearchProgress {
+                peer_id: remote.clone(),
+                peer_index,
+                peer_total,
+                hits_so_far: 0,
+                chunk_seq: None,
+                detail: None,
+                phase: SearchProgressPhase::Querying,
+            });
             let id = new_id("search");
-            let first = self
-                .request_on(
-                    &remote,
-                    SyncBusCommand::SearchQuery {
-                        id: id.clone(),
-                        from: from.to_string(),
-                        dispatch_line: dispatch_line.clone(),
+            let (event_tx, mut event_rx) = mpsc::unbounded_channel();
+            let session = {
+                let mut guard = self.inner.lock().await;
+                let session = guard
+                    .by_remote
+                    .get(&remote)
+                    .cloned()
+                    .ok_or_else(|| anyhow!("not connected to {remote}"))?;
+                guard.pending_search.insert(
+                    id.clone(),
+                    PendingSearchRpc {
+                        hits: Vec::new(),
+                        next_seq: 0,
+                        event_tx,
                     },
-                )
-                .await?;
-            match first {
-                SyncBusCommand::SearchQueryResult {
-                    ok,
-                    detail,
-                    hits,
-                    ..
-                } => {
-                    if !ok {
-                        eprintln!(
-                            "warn: search on {remote} failed: {}",
-                            detail.unwrap_or_default()
-                        );
-                        continue;
-                    }
-                    all_hits.extend(hits);
+                );
+                session
+            };
+            let cmd = SyncBusCommand::SearchQuery {
+                id: id.clone(),
+                from: from.to_string(),
+                dispatch_line: dispatch_line.clone(),
+            };
+            if let Err(err) = session.send_command(&cmd).await {
+                let mut guard = self.inner.lock().await;
+                guard.pending_search.remove(&id);
+                return Err(anyhow!(err));
+            }
+
+            let deadline = tokio::time::Instant::now()
+                + Duration::from_millis(SEARCH_STREAM_TIMEOUT_MS);
+            let (ok, detail, hits) = loop {
+                let left = deadline.saturating_duration_since(tokio::time::Instant::now());
+                if left.is_zero() {
+                    let mut guard = self.inner.lock().await;
+                    guard.pending_search.remove(&id);
+                    return Err(anyhow!("search RPC timeout waiting for {id}"));
                 }
-                SyncBusCommand::SearchQueryChunk {
-                    ok,
-                    detail,
-                    eof,
-                    hits,
-                    ..
-                } => {
-                    if !ok {
-                        eprintln!(
-                            "warn: search on {remote} failed: {}",
-                            detail.unwrap_or_default()
-                        );
-                        continue;
+                match tokio::time::timeout(left, event_rx.recv()).await {
+                    Ok(Some(SearchStreamEvent::Progress {
+                        seq,
+                        hits_so_far,
+                        detail,
+                    })) => {
+                        on_progress(SearchProgress {
+                            peer_id: remote.clone(),
+                            peer_index,
+                            peer_total,
+                            hits_so_far,
+                            chunk_seq: Some(seq),
+                            detail,
+                            phase: SearchProgressPhase::Receiving,
+                        });
                     }
-                    all_hits.extend(hits);
-                    if !eof {
-                        eprintln!("warn: search chunk stream incomplete from {remote}");
+                    Ok(Some(SearchStreamEvent::Done { ok, detail, hits })) => {
+                        break (ok, detail, hits);
+                    }
+                    Ok(None) => {
+                        let mut guard = self.inner.lock().await;
+                        guard.pending_search.remove(&id);
+                        return Err(anyhow!("search RPC canceled waiting for {id}"));
+                    }
+                    Err(_) => {
+                        let mut guard = self.inner.lock().await;
+                        guard.pending_search.remove(&id);
+                        return Err(anyhow!("search RPC timeout waiting for {id}"));
                     }
                 }
-                other => {
-                    eprintln!("warn: unexpected search reply from {remote}: {other:?}");
+            };
+
+            if !ok {
+                eprintln!(
+                    "warn: search on {remote} failed: {}",
+                    detail.clone().unwrap_or_default()
+                );
+                on_progress(SearchProgress {
+                    peer_id: remote.clone(),
+                    peer_index,
+                    peer_total,
+                    hits_so_far: 0,
+                    chunk_seq: None,
+                    detail,
+                    phase: SearchProgressPhase::Failed,
+                });
+                continue;
+            }
+            if let Some(ref d) = detail {
+                if d.contains("truncated") {
+                    eprintln!("warn: search on {remote} truncated: {d}");
                 }
             }
+            let hits_len = hits.len();
+            on_progress(SearchProgress {
+                peer_id: remote.clone(),
+                peer_index,
+                peer_total,
+                hits_so_far: hits_len,
+                chunk_seq: None,
+                detail,
+                phase: SearchProgressPhase::Done,
+            });
+            all_hits.extend(hits);
         }
         Ok(all_hits)
     }
@@ -639,6 +857,64 @@ async fn dispatch_loop(
 }
 
 async fn handle_command(inner: Arc<Mutex<HubInner>>, via_remote: &str, cmd: SyncBusCommand) {
+    // EN: search_query_result / search_query_chunk → pending_search (accumulate until eof).
+    // JA: search 結果は pending_search で eof まで蓄積する。
+    match &cmd {
+        SyncBusCommand::SearchQueryResult {
+            reply_to,
+            ok,
+            detail,
+            hits,
+            ..
+        } => {
+            let mut guard = inner.lock().await;
+            if let Some(pending) = guard.pending_search.remove(reply_to) {
+                let _ = pending.event_tx.send(SearchStreamEvent::Done {
+                    ok: *ok,
+                    detail: detail.clone(),
+                    hits: hits.clone(),
+                });
+                return;
+            }
+        }
+        SyncBusCommand::SearchQueryChunk {
+            reply_to,
+            ok,
+            detail,
+            seq,
+            eof,
+            hits,
+            ..
+        } => {
+            let mut guard = inner.lock().await;
+            if guard.pending_search.contains_key(reply_to) {
+                if let Some(pending) = guard.pending_search.get_mut(reply_to) {
+                    if *seq == pending.next_seq {
+                        pending.hits.extend(hits.iter().cloned());
+                        pending.next_seq = seq.saturating_add(1);
+                    }
+                    let hits_so_far = pending.hits.len();
+                    let _ = pending.event_tx.send(SearchStreamEvent::Progress {
+                        seq: *seq,
+                        hits_so_far,
+                        detail: detail.clone(),
+                    });
+                }
+                if *eof || !*ok {
+                    if let Some(pending) = guard.pending_search.remove(reply_to) {
+                        let _ = pending.event_tx.send(SearchStreamEvent::Done {
+                            ok: *ok,
+                            detail: detail.clone(),
+                            hits: pending.hits,
+                        });
+                    }
+                }
+                return;
+            }
+        }
+        _ => {}
+    }
+
     if let Some(reply_to) = reply_to_of(&cmd) {
         let mut guard = inner.lock().await;
         if let Some(pending) = guard.pending_rpc.remove(reply_to) {
@@ -690,6 +966,12 @@ async fn handle_command(inner: Arc<Mutex<HubInner>>, via_remote: &str, cmd: Sync
         }
         SyncBusCommand::TabsOps { id, .. } => {
             reply_fail_ops(inner, via_remote, id).await;
+        }
+        SyncBusCommand::BookmarksImport { id, .. } => {
+            reply_fail_bookmarks_import(inner, via_remote, id).await;
+        }
+        SyncBusCommand::BookmarksOps { id, .. } => {
+            reply_fail_bookmarks_ops(inner, via_remote, id).await;
         }
         SyncBusCommand::SearchQuery { id, .. } => {
             reply_fail_search(inner, via_remote, id).await;
@@ -756,6 +1038,49 @@ async fn reply_fail_ops(inner: Arc<Mutex<HubInner>>, via_remote: &str, id: Strin
     };
     let reply = SyncBusCommand::TabsOpsResult {
         id: new_id("ops-r"),
+        reply_to: id,
+        from: self_id,
+        ok: false,
+        detail: Some(CLI_NO_BROWSER.into()),
+    };
+    let _ = session.send_command(&reply).await;
+}
+
+async fn reply_fail_bookmarks_import(inner: Arc<Mutex<HubInner>>, via_remote: &str, id: String) {
+    let (self_id, session) = {
+        let guard = inner.lock().await;
+        (
+            guard.self_id.clone(),
+            guard.by_remote.get(via_remote).cloned(),
+        )
+    };
+    let Some(session) = session else {
+        return;
+    };
+    let reply = SyncBusCommand::BookmarksImportResult {
+        id: new_id("bmimp-r"),
+        reply_to: id,
+        from: self_id,
+        ok: false,
+        detail: Some(CLI_NO_BROWSER.into()),
+        created: 0,
+    };
+    let _ = session.send_command(&reply).await;
+}
+
+async fn reply_fail_bookmarks_ops(inner: Arc<Mutex<HubInner>>, via_remote: &str, id: String) {
+    let (self_id, session) = {
+        let guard = inner.lock().await;
+        (
+            guard.self_id.clone(),
+            guard.by_remote.get(via_remote).cloned(),
+        )
+    };
+    let Some(session) = session else {
+        return;
+    };
+    let reply = SyncBusCommand::BookmarksOpsResult {
+        id: new_id("bmops-r"),
         reply_to: id,
         from: self_id,
         ok: false,
@@ -1189,7 +1514,9 @@ fn reply_to_of(cmd: &SyncBusCommand) -> Option<&str> {
         | SyncBusCommand::TabsListResult { reply_to, .. }
         | SyncBusCommand::SearchQueryResult { reply_to, .. }
         | SyncBusCommand::SearchQueryChunk { reply_to, .. }
-        | SyncBusCommand::TabsOpsResult { reply_to, .. } => Some(reply_to),
+        | SyncBusCommand::TabsOpsResult { reply_to, .. }
+        | SyncBusCommand::BookmarksImportResult { reply_to, .. }
+        | SyncBusCommand::BookmarksOpsResult { reply_to, .. } => Some(reply_to),
         _ => None,
     }
 }

@@ -4,6 +4,7 @@ import type { CommandBusStabilizer } from "../stabilizers/command-bus"
 import type { CommandQueueStabilizer } from "../stabilizers/command-queue"
 import type { PeerHostStabilizer } from "../stabilizers/peer-host"
 import type {
+  SyncBookmarksOp,
   SyncBusCommand,
   SyncConnectionState,
   SyncDeviceId,
@@ -17,6 +18,7 @@ import { applyRemoteOpenTabs } from "../bus/remote-open"
 import { applyRemoteTabsList } from "../bus/apply-remote-tabs-list"
 import { applyRemoteSearchQuery } from "../bus/apply-remote-search-query"
 import { applyRemoteTabsOps } from "../bus/apply-remote-tabs-ops.ts"
+import { applyRemoteBookmarksOps } from "../bus/apply-remote-bookmarks-ops.ts"
 import { applyRemoteBookmarksImport } from "../bus/remote-bookmarks-import.ts"
 import {
   FAMILY_SIGNAL_FIRST_DEFAULT_TAB,
@@ -112,6 +114,12 @@ type PendingBookmarksImport = {
   resolve: (value: { ok: boolean; detail: string | null; created: number; rttMs: number | null }) => void
 }
 
+type PendingBookmarksOps = {
+  kind: "bookmarks_ops"
+  at: number
+  resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
+}
+
 type PendingWaiter =
   | PendingOpen
   | PendingAck
@@ -119,6 +127,7 @@ type PendingWaiter =
   | PendingSearch
   | PendingTabsOps
   | PendingBookmarksImport
+  | PendingBookmarksOps
 
 export function createWebrtcCommandBusStabilizer(
   peerHost: PeerHostStabilizer,
@@ -325,8 +334,9 @@ export function createWebrtcCommandBusStabilizer(
       })
       const device = await loadOrCreateDeviceIdentity()
       const chunks = packRemoteSearchHitsIntoChunks(result.hits)
-      // EN: Prefer chunk stream; fall back to a soft-capped single result for empty/tiny sets.
-      // JA: チャンクストリームを優先。空／極小は soft cap 済み単発結果でも可。
+      // EN: Tiny sets use one soft-capped result. Larger sets always stream chunks
+      //     (never one huge blob — that hangs CLI waiting on a single SCTP frame).
+      // JA: 極小は soft cap 単発。大きい結果は必ずチャンク分割（巨大1通は CLI が固まる）。
       if (chunks.length === 1 && chunks[0]!.hits.length <= 50) {
         const shrunk = shrinkHitsForSearchWire(chunks[0]!.hits)
         const detail =
@@ -344,15 +354,18 @@ export function createWebrtcCommandBusStabilizer(
         }
         await replyTo(command.from, reply)
       } else {
+        let sentChunks = 0
         let sendOk = true
+        const chunkTotal = chunks.length
         for (const chunk of chunks) {
+          const detailWithProgress = `${result.detail};chunk=${chunk.seq + 1}/${chunkTotal};hits=${result.hits.length}`
           const reply: SyncBusCommand = {
             type: "search_query_chunk",
             id: bytesToBase64Url(randomBytes(8)),
             replyTo: command.id,
             from: device.deviceId,
             ok: result.ok,
-            detail: result.detail,
+            detail: detailWithProgress,
             seq: chunk.seq,
             eof: chunk.eof,
             hits: chunk.hits
@@ -362,20 +375,43 @@ export function createWebrtcCommandBusStabilizer(
             sendOk = false
             break
           }
+          sentChunks += 1
         }
         if (!sendOk) {
-          const fail: SyncBusCommand = {
-            type: "search_query_chunk",
-            id: bytesToBase64Url(randomBytes(8)),
-            replyTo: command.id,
-            from: device.deviceId,
-            ok: false,
-            detail: "send_budget_exhausted",
-            seq: chunks.length,
-            eof: true,
-            hits: []
+          if (sentChunks === 0) {
+            // EN: Nothing delivered — fall back to soft-capped single result.
+            // JA: 1 通も送れなかったので soft cap 単発結果へフォールバック。
+            const shrunk = shrinkHitsForSearchWire(result.hits)
+            const detailParts = [result.detail, "truncated_send_budget"]
+            if (shrunk.detailSuffix !== null) {
+              detailParts.push(shrunk.detailSuffix)
+            }
+            const reply: SyncBusCommand = {
+              type: "search_query_result",
+              id: bytesToBase64Url(randomBytes(8)),
+              replyTo: command.id,
+              from: device.deviceId,
+              ok: result.ok,
+              detail: detailParts.filter((p) => p.length > 0).join(";"),
+              hits: shrunk.hits
+            }
+            await replyTo(command.from, reply)
+          } else {
+            // EN: Partial stream already delivered — close with truncated eof (ok stays true).
+            // JA: 一部は届いているので truncated eof で閉じる（ok は true のまま）。
+            const fail: SyncBusCommand = {
+              type: "search_query_chunk",
+              id: bytesToBase64Url(randomBytes(8)),
+              replyTo: command.id,
+              from: device.deviceId,
+              ok: true,
+              detail: `${result.detail};truncated_send_budget;chunk=${sentChunks}/${chunkTotal}`,
+              seq: sentChunks,
+              eof: true,
+              hits: []
+            }
+            await replySearchChunk(command.from, fail)
           }
-          await replySearchChunk(command.from, fail)
         }
       }
     } else if (command.type === "tabs_ops") {
@@ -480,6 +516,28 @@ export function createWebrtcCommandBusStabilizer(
           ok: command.ok,
           detail: command.detail,
           created: typeof command.created === "number" ? command.created : 0,
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
+    } else if (command.type === "bookmarks_ops") {
+      const result = await applyRemoteBookmarksOps(command.op)
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "bookmarks_ops_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "bookmarks_ops_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "bookmarks_ops") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
           rttMs: Math.max(0, Date.now() - waiter.at)
         })
       }
@@ -741,6 +799,32 @@ export function createWebrtcCommandBusStabilizer(
       }
       const result = await resultPromise
       return { ok: result.ok, detail: result.detail, created: result.created }
+    },
+
+    async bookmarksOps(remoteDeviceId, op: SyncBookmarksOp) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "bookmarks_ops",
+        id,
+        from: device.deviceId,
+        op
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "bookmarks_ops", resolve, at: Date.now() })
+        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected" }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail }
     },
 
     announceTabsChanged,

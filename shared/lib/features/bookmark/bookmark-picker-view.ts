@@ -107,11 +107,13 @@ export function bookmarkActionsForTargets(
   return actions
 }
 
+export type BookmarkSendMode = "open" | "save" | "both"
+
 /** EN: Typed command line for an action, or null when the targets cannot be encoded. */
 export function buildBookmarkActionLine(
   action: BookmarkActionId,
   targets: readonly BookmarkPickerRow[],
-  opts?: { parentId?: string; deviceId?: string }
+  opts?: { parentId?: string; deviceId?: string; sendMode?: BookmarkSendMode }
 ): string | null {
   if (action === "open") {
     const first = targets[0]
@@ -143,7 +145,8 @@ export function buildBookmarkActionLine(
       }
       urls.push(row.url)
     }
-    return buildBookmarkSendCommandLine(deviceId, urls, "open")
+    const sendMode = opts?.sendMode ?? "open"
+    return buildBookmarkSendCommandLine(deviceId, urls, sendMode)
   }
   const ids: string[] = []
   for (const row of targets) {

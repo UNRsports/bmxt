@@ -15,6 +15,22 @@
     "ja": "送信",
     "en": "Send"
   },
+  "bookmark.picker.send.mode.open": {
+    "ja": "開く（--open）",
+    "en": "Open (--open)"
+  },
+  "bookmark.picker.send.mode.save": {
+    "ja": "保存（--save）",
+    "en": "Save (--save)"
+  },
+  "bookmark.picker.send.mode.both": {
+    "ja": "開く＋保存（--both）",
+    "en": "Open and save (--both)"
+  },
+  "bookmark.picker.send.modeTitle": {
+    "ja": "送信モード（{count} 件）",
+    "en": "Send mode ({count})"
+  },
   "bookmark.picker.actionMenu.hint": {
     "ja": "↑↓ 選択 · Enter 実行 · ← / Esc 取消",
     "en": "↑↓ choose · Enter run · ← / Esc cancel"

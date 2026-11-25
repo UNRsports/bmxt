@@ -1,4 +1,5 @@
 import type {
+  SyncBookmarksOp,
   SyncBusCommand,
   SyncConnectionState,
   SyncDeviceId,
@@ -42,6 +43,10 @@ export type CommandBusStabilizer = {
     parentId: string | null,
     items: Array<{ url: string; title: string }>
   ): Promise<{ ok: boolean; detail: string | null; created: number }>
+  bookmarksOps(
+    remoteDeviceId: SyncDeviceId,
+    op: SyncBookmarksOp
+  ): Promise<{ ok: boolean; detail: string | null }>
   /**
    * EN: Broadcast tabs_changed to all connected Family peers and notify local subscribers.
    * JA: 接続中 Family ピアへ tabs_changed を广播し、ローカル購読者にも通知する。

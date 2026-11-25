@@ -24,6 +24,7 @@ import {
 import { createDefaultSyncStabilizers } from "./default-stabilizers"
 import type { SyncStabilizers } from "../stabilizers"
 import type {
+  SyncBookmarksOp,
   SyncDiscoveryRecord,
   SyncRemoteSearchHit,
   SyncRemoteTabRow,
@@ -110,6 +111,10 @@ export type SyncService = {
     parentId: string | null,
     items: Array<{ url: string; title: string }>
   ): Promise<{ ok: boolean; lines: string[]; created: number }>
+  bookmarksOps(
+    deviceId: string,
+    op: SyncBookmarksOp
+  ): Promise<{ ok: boolean; detail: string | null }>
   ping(deviceId: string): Promise<{ ok: boolean; lines: string[] }>
   /**
    * EN: Roster/discovery peers that currently have a DataChannel and answer ping.
@@ -685,6 +690,16 @@ export function createSyncService(stabilizers: SyncStabilizers = createDefaultSy
         ],
         created: result.created
       }
+    },
+
+    async bookmarksOps(deviceId: string, op: SyncBookmarksOp) {
+      await ensurePeerDocument()
+      await s.peerHost.ensureReady()
+      const state = await s.commandBus.connect(deviceId)
+      if (state !== "connected") {
+        return { ok: false, detail: `not_connected:${state}` }
+      }
+      return s.commandBus.bookmarksOps(deviceId, op)
     },
 
     async ping(deviceId: string) {

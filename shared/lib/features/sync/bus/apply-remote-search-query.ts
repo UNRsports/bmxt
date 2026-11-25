@@ -66,6 +66,16 @@ export async function applyRemoteSearchQuery(options: {
         typeof tabIdRaw === "number" && Number.isFinite(tabIdRaw) && tabIdRaw > 0
           ? tabIdRaw
           : null
+      const bookmarkIdRaw = record.fields.bookmarkId
+      const bookmarkId =
+        typeof bookmarkIdRaw === "string" && bookmarkIdRaw.trim().length > 0
+          ? bookmarkIdRaw.trim()
+          : null
+      const parentIdRaw = record.fields.parentId
+      const parentId =
+        typeof parentIdRaw === "string" && parentIdRaw.trim().length > 0
+          ? parentIdRaw.trim()
+          : null
       hits.push(
         clipRemoteSearchHitFields({
           index: hits.length + 1,
@@ -76,7 +86,9 @@ export async function applyRemoteSearchQuery(options: {
           hitCount:
             typeof record.fields.hitCount === "number" ? record.fields.hitCount : 0,
           pattern: String(record.fields.pattern ?? ""),
-          windowId
+          windowId,
+          bookmarkId,
+          parentId
         })
       )
     }

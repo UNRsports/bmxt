@@ -318,3 +318,189 @@ impl PickerEntry {
         }
     }
 }
+
+/** EN: Flat URL hit for bookmark/history CLI browse (open via open_tabs). */
+#[derive(Debug, Clone)]
+pub struct PeerUrlHit {
+    pub peer_device_id: String,
+    pub peer_display_name: String,
+    pub source: String,
+    pub title: String,
+    pub url: String,
+    pub bookmark_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UrlPickerSelection {
+    pub peer_device_id: String,
+    pub title: String,
+    pub url: String,
+}
+
+/**
+ * EN: Interactive flat URL list. Enter opens via `on_open`; Esc/q closes.
+ * JA: flat URL 一覧。Enter で `on_open`、Esc/q で閉じる。
+ */
+pub fn run_url_picker<F>(hits: Vec<PeerUrlHit>, mut on_open: F) -> Result<()>
+where
+    F: FnMut(&UrlPickerSelection) -> Result<()>,
+{
+    let entries: Vec<(String, UrlPickerSelection)> = hits
+        .into_iter()
+        .filter(|h| !h.url.trim().is_empty())
+        .map(|h| {
+            let id_part = h
+                .bookmark_id
+                .as_ref()
+                .map(|id| format!(" id={id}"))
+                .unwrap_or_default();
+            let label = format!(
+                "[{}] {} — {}{}  ({})",
+                h.source, h.title, h.url, id_part, h.peer_display_name
+            );
+            (
+                label,
+                UrlPickerSelection {
+                    peer_device_id: h.peer_device_id,
+                    title: h.title,
+                    url: h.url,
+                },
+            )
+        })
+        .collect();
+    if entries.is_empty() {
+        println!("(empty list)");
+        return Ok(());
+    }
+
+    enable_raw_mode()?;
+    stdout().execute(EnterAlternateScreen)?;
+    let result = (|| -> Result<()> {
+        let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
+        let mut state = ListState::default();
+        state.select(Some(0));
+        let mut filter = String::new();
+        let mut searching = false;
+        let mut status = t_cli("cmd.cli.picker.help", &[]);
+
+        loop {
+            let filtered: Vec<usize> = entries
+                .iter()
+                .enumerate()
+                .filter(|(_, (label, _))| {
+                    if filter.is_empty() {
+                        true
+                    } else {
+                        label.to_lowercase().contains(&filter.to_lowercase())
+                    }
+                })
+                .map(|(i, _)| i)
+                .collect();
+
+            if let Some(sel) = state.selected() {
+                if filtered.is_empty() {
+                    state.select(None);
+                } else if sel >= filtered.len() {
+                    state.select(Some(filtered.len() - 1));
+                }
+            } else if !filtered.is_empty() {
+                state.select(Some(0));
+            }
+
+            terminal.draw(|frame| {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Min(3), Constraint::Length(3)])
+                    .split(frame.area());
+                let items: Vec<ListItem> = filtered
+                    .iter()
+                    .map(|idx| ListItem::new(entries[*idx].0.as_str()))
+                    .collect();
+                let list = List::new(items)
+                    .block(
+                        Block::default()
+                            .borders(Borders::ALL)
+                            .title("BMXt URL picker"),
+                    )
+                    .highlight_symbol("▶ ");
+                frame.render_stateful_widget(list, chunks[0], &mut state);
+                let footer = if searching {
+                    format!("/{filter}_")
+                } else {
+                    status.clone()
+                };
+                frame.render_widget(
+                    Paragraph::new(footer).block(Block::default().borders(Borders::ALL)),
+                    chunks[1],
+                );
+            })?;
+
+            if !event::poll(std::time::Duration::from_millis(200))? {
+                continue;
+            }
+            let Event::Key(key) = event::read()? else {
+                continue;
+            };
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
+            if searching {
+                match key.code {
+                    KeyCode::Esc => {
+                        searching = false;
+                        filter.clear();
+                    }
+                    KeyCode::Enter => searching = false,
+                    KeyCode::Backspace => {
+                        filter.pop();
+                    }
+                    KeyCode::Char(c) => filter.push(c),
+                    _ => {}
+                }
+                continue;
+            }
+            match key.code {
+                KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+                KeyCode::Char('/') => {
+                    searching = true;
+                    filter.clear();
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    let i = state.selected().unwrap_or(0);
+                    if i + 1 < filtered.len() {
+                        state.select(Some(i + 1));
+                    }
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    let i = state.selected().unwrap_or(0);
+                    if i > 0 {
+                        state.select(Some(i - 1));
+                    }
+                }
+                KeyCode::Enter => {
+                    if let Some(fi) = state.selected() {
+                        if let Some(entry_idx) = filtered.get(fi) {
+                            let sel = &entries[*entry_idx].1;
+                            match on_open(sel) {
+                                Ok(()) => {
+                                    status = format!(
+                                        "opened {} — {} · q/Esc close",
+                                        sel.title, sel.url
+                                    );
+                                }
+                                Err(err) => {
+                                    status = format!("error: {err} · q/Esc close");
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+    })();
+
+    disable_raw_mode()?;
+    stdout().execute(LeaveAlternateScreen)?;
+    result
+}

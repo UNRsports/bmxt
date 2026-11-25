@@ -130,6 +130,39 @@ pub enum SyncBusCommand {
         #[serde(default = "default_first_tab")]
         first: String,
     },
+    #[serde(rename = "bookmarks_import")]
+    BookmarksImport {
+        id: String,
+        from: String,
+        #[serde(rename = "parentId")]
+        parent_id: Option<String>,
+        items: Vec<BookmarkImportItem>,
+    },
+    #[serde(rename = "bookmarks_import_result")]
+    BookmarksImportResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+        created: u32,
+    },
+    #[serde(rename = "bookmarks_ops")]
+    BookmarksOps {
+        id: String,
+        from: String,
+        op: SyncBookmarksOp,
+    },
+    #[serde(rename = "bookmarks_ops_result")]
+    BookmarksOpsResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+    },
     #[serde(rename = "mesh_peers")]
     MeshPeers {
         id: String,
@@ -206,6 +239,11 @@ pub struct SyncRemoteSearchHit {
     pub hit_count: i64,
     pub pattern: String,
     pub window_id: Option<i64>,
+    /** EN: Present when source is bookmark (peer remove/move). */
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bookmark_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -271,6 +309,49 @@ pub enum SyncTabsOp {
     },
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BookmarkImportItem {
+    pub url: String,
+    pub title: String,
+}
+
+/**
+ * EN: Peer-local bookmark mutations (mirrors tabs_ops for bookmarks).
+ * JA: ピア上のブックマーク操作（tabs_ops の bookmark 版）。
+ */
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SyncBookmarksOp {
+    #[serde(rename = "create")]
+    Create {
+        url: String,
+        title: String,
+        #[serde(rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "create_folder")]
+    CreateFolder {
+        title: String,
+        #[serde(rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "remove")]
+    Remove {
+        #[serde(rename = "bookmarkIds")]
+        bookmark_ids: Vec<String>,
+    },
+    #[serde(rename = "move")]
+    Move {
+        #[serde(rename = "bookmarkIds")]
+        bookmark_ids: Vec<String>,
+        #[serde(rename = "parentId")]
+        parent_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        index: Option<i64>,
+    },
+}
+
 impl SyncBusCommand {
     pub fn parse_text(text: &str) -> Result<Self, WireError> {
         if text.is_empty() || text.chars().count() > INBOUND_MESSAGE_MAX_CHARS {
@@ -308,6 +389,10 @@ impl SyncBusCommand {
             | SyncBusCommand::TabsOps { id, from, .. }
             | SyncBusCommand::TabsOpsResult { id, from, .. }
             | SyncBusCommand::TabsChanged { id, from, .. }
+            | SyncBusCommand::BookmarksImport { id, from, .. }
+            | SyncBusCommand::BookmarksImportResult { id, from, .. }
+            | SyncBusCommand::BookmarksOps { id, from, .. }
+            | SyncBusCommand::BookmarksOpsResult { id, from, .. }
             | SyncBusCommand::MeshPeers { id, from, .. }
             | SyncBusCommand::MeshSignal { id, from, .. } => {
                 if id.is_empty() || from.is_empty() {
@@ -332,6 +417,10 @@ impl SyncBusCommand {
             | SyncBusCommand::TabsOps { id, .. }
             | SyncBusCommand::TabsOpsResult { id, .. }
             | SyncBusCommand::TabsChanged { id, .. }
+            | SyncBusCommand::BookmarksImport { id, .. }
+            | SyncBusCommand::BookmarksImportResult { id, .. }
+            | SyncBusCommand::BookmarksOps { id, .. }
+            | SyncBusCommand::BookmarksOpsResult { id, .. }
             | SyncBusCommand::MeshPeers { id, .. }
             | SyncBusCommand::MeshSignal { id, .. } => id,
         }

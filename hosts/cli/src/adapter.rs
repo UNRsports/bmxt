@@ -10,19 +10,26 @@ use bmxt_core::compound::{
 use bmxt_core::ir::{DispatchBundle, HostEffect, UiAction};
 use bmxt_core::pipe_consumer::{classify_pipe_consumer, PipeConsumerClass};
 use bmxt_core::run_line;
-use bmxt_sync_wire::{SyncRemoteTabRow, SyncTabsOp};
+use bmxt_sync_wire::{
+    BookmarkImportItem, SyncBookmarksOp, SyncRemoteSearchHit, SyncRemoteTabRow, SyncTabsOp,
+};
 
 use bmxt_ui_settings::UiSettings;
 
-use crate::bus::BusClient;
+use crate::bookmark_send_payload::parse_bookmark_send_payload;
+use crate::bus::{BusClient, SearchProgress, SearchProgressPhase};
 use crate::command_io::{CommandIo, InteractionMode};
 use crate::config::CliConfig;
 use crate::connect;
 use crate::handshake;
 use crate::msgs::{expand_msgs, t_cli};
 use crate::open_payload::parse_open_payload;
+use crate::progress;
 use crate::tui;
 use crate::ui_settings_host;
+
+/** EN: Cap Interactive URL picker rows so ratatui does not freeze on huge history. */
+const MAX_URL_PICKER_ROWS: usize = 200;
 
 pub struct CliHostAdapter<'a> {
     pub cfg: &'a mut CliConfig,
@@ -179,6 +186,10 @@ impl<'a> CliHostAdapter<'a> {
                     self.err(t_cli("cmd.cli.setting.browseUnsupported", &[]));
                     return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
+                if let Some(kind) = search_list_kind_from_bundle(&producer_bundle) {
+                    let hits = self.fetch_search_hits(kind).await?;
+                    return self.run_url_picker_and_open(hits).await;
+                }
                 let (scope, device_id, show_url) =
                     tabs_list_query_from_bundle(&producer_bundle)?;
                 let rows = self
@@ -186,6 +197,80 @@ impl<'a> CliHostAdapter<'a> {
                     .await?;
                 self.run_picker_and_maybe_activate(rows, &scope, &device_id, show_url)
                     .await
+            }
+            PipeConsumerClass::BookmarkSend {
+                device_id,
+                mode,
+                parent_id,
+                group_title,
+            } => {
+                let urls = self.materialize_urls_from_bundle(&producer_bundle).await?;
+                if urls.is_empty() {
+                    self.err("error: no urls in pipe list for bookmark -send");
+                    return Ok(RunOutcome::status(EXIT_FAILURE));
+                }
+                let mut payload_parts: Vec<String> = Vec::new();
+                if let Some(pid) = parent_id {
+                    if !pid.is_empty() {
+                        payload_parts.push("--parent".into());
+                        payload_parts.push(pid);
+                    }
+                }
+                if let Some(gt) = group_title {
+                    if !gt.is_empty() {
+                        payload_parts.push("--group".into());
+                        payload_parts.push(gt);
+                    }
+                }
+                payload_parts.extend(urls);
+                self.apply_sync_bookmark_send(&device_id, &mode, &payload_parts.join(" "))
+                    .await
+            }
+            PipeConsumerClass::BookmarkRemove => {
+                let ids = self.materialize_bookmark_ids_from_bundle(&producer_bundle).await?;
+                if ids.is_empty() {
+                    self.err("error: no bookmark ids in pipe list for bookmark -remove");
+                    return Ok(RunOutcome::status(EXIT_FAILURE));
+                }
+                self.apply_bookmarks_ops(SyncBookmarksOp::Remove { bookmark_ids: ids })
+                    .await?;
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            PipeConsumerClass::BookmarkMove { parent_id, index } => {
+                let ids = self.materialize_bookmark_ids_from_bundle(&producer_bundle).await?;
+                if ids.is_empty() || parent_id.trim().is_empty() {
+                    self.err("error: bad args for pipe bookmark -move");
+                    return Ok(RunOutcome::status(EXIT_MISUSE));
+                }
+                self.apply_bookmarks_ops(SyncBookmarksOp::Move {
+                    bookmark_ids: ids,
+                    parent_id,
+                    index: index.map(i64::from),
+                })
+                .await?;
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            PipeConsumerClass::BookmarkAdd { parent_id, .. } => {
+                let urls = self.materialize_urls_from_bundle(&producer_bundle).await?;
+                if urls.is_empty() {
+                    self.err("error: no urls in pipe list for bookmark -add");
+                    return Ok(RunOutcome::status(EXIT_FAILURE));
+                }
+                for url in urls {
+                    self.apply_bookmarks_ops(SyncBookmarksOp::Create {
+                        title: url.clone(),
+                        url,
+                        parent_id: parent_id.clone(),
+                    })
+                    .await?;
+                }
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            PipeConsumerClass::HistoryDelete => {
+                self.err(
+                    "error: history delete is not supported on CLI (peer history delete is out of scope)",
+                );
+                Ok(RunOutcome::status(EXIT_MISUSE))
             }
             PipeConsumerClass::Close => {
                 let rows = self.materialize_tab_rows(&producer_bundle).await?;
@@ -322,13 +407,72 @@ impl<'a> CliHostAdapter<'a> {
                 } else {
                     peer_dispatch_line
                 };
-                let hits = self.require_client()?.search_query(&self.cfg.device_id, line).await?;
-                for hit in hits.iter().take(50) {
-                    self.out(format!("[{}] {} — {}", hit.source, hit.title, hit.url));
-                }
-                self.out(format!("({} hits)", hits.len()));
+                let show_progress = self.mode.allows_interactive_ui();
+                let hits = self
+                    .require_client()?
+                    .search_query_with_progress(&self.cfg.device_id, line, |p| {
+                        if show_progress {
+                            report_search_progress("search", &p);
+                        }
+                    })
+                    .await?;
+                self.print_search_hits(&hits);
                 Ok(())
             }
+            HostEffect::BookmarkList { .. } => {
+                let hits = self.fetch_search_hits("bookmark").await?;
+                self.print_search_hits(&hits);
+                Ok(())
+            }
+            HostEffect::BookmarkCreate {
+                url,
+                title,
+                parent_id,
+                ..
+            } => {
+                self.apply_bookmarks_ops(SyncBookmarksOp::Create {
+                    url,
+                    title,
+                    parent_id: nonempty_opt(parent_id),
+                })
+                .await
+            }
+            HostEffect::BookmarkCreateFolder { title, parent_id } => {
+                self.apply_bookmarks_ops(SyncBookmarksOp::CreateFolder {
+                    title,
+                    parent_id: nonempty_opt(parent_id),
+                })
+                .await
+            }
+            HostEffect::BookmarkRemove { ids } => {
+                let bookmark_ids = split_ids(&ids);
+                if bookmark_ids.is_empty() {
+                    return Err(anyhow!("bookmark -remove: no ids"));
+                }
+                self.apply_bookmarks_ops(SyncBookmarksOp::Remove { bookmark_ids })
+                    .await
+            }
+            HostEffect::BookmarkMove {
+                ids,
+                parent_id,
+                index,
+            } => {
+                let bookmark_ids = split_ids(&ids);
+                if bookmark_ids.is_empty() || parent_id.trim().is_empty() {
+                    return Err(anyhow!("bookmark -move: bad args"));
+                }
+                let index_val = index.trim().parse::<i64>().ok().filter(|n| *n >= 0);
+                self.apply_bookmarks_ops(SyncBookmarksOp::Move {
+                    bookmark_ids,
+                    parent_id,
+                    index: index_val,
+                })
+                .await
+            }
+            HostEffect::HistoryDeleteUrl { .. }
+            | HostEffect::HistoryDeleteRange { .. } => Err(anyhow!(
+                "history delete is not supported on CLI (peer history delete is out of scope)"
+            )),
             HostEffect::ExitPane => Ok(()),
             HostEffect::OpenWelcomePage => Err(anyhow!(
                 "welcome page is extension-only — open BMXt in the browser"
@@ -370,6 +514,11 @@ impl<'a> CliHostAdapter<'a> {
                     ));
                     return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
+                if list_id == "bookmark" || list_id == "history" {
+                    let hits = self.fetch_search_hits(&list_id).await?;
+                    self.print_search_hits(&hits);
+                    return Ok(RunOutcome::status(EXIT_SUCCESS));
+                }
                 if list_id != "tabs" {
                     self.err(t_cli(
                         "cmd.cli.error.listLimited",
@@ -398,6 +547,10 @@ impl<'a> CliHostAdapter<'a> {
                     self.err(t_cli("cmd.cli.setting.browseUnsupported", &[]));
                     return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
+                if list_id == "bookmark" || list_id == "history" {
+                    let hits = self.fetch_search_hits(&list_id).await?;
+                    return self.run_url_picker_and_open(hits).await;
+                }
                 if list_id != "tabs" {
                     self.err(t_cli(
                         "cmd.cli.error.pickerLimited",
@@ -410,6 +563,14 @@ impl<'a> CliHostAdapter<'a> {
                     .fetch_tabs_scope(&device_scope, &device_id, show)
                     .await?;
                 self.run_picker_and_maybe_activate(rows, &device_scope, &device_id, show)
+                    .await
+            }
+            UiAction::SyncBookmarkSend {
+                device_id,
+                mode,
+                payload,
+            } => {
+                self.apply_sync_bookmark_send(&device_id, &mode, &payload)
                     .await
             }
             UiAction::SettingSet { key, value } => {
@@ -576,6 +737,245 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::status(EXIT_MISUSE))
             }
         }
+    }
+
+    fn print_search_hits(&mut self, hits: &[SyncRemoteSearchHit]) {
+        for hit in hits.iter().take(50) {
+            let id_part = hit
+                .bookmark_id
+                .as_ref()
+                .map(|id| format!(" id={id}"))
+                .unwrap_or_default();
+            self.out(format!(
+                "[{}] {} — {}{}",
+                hit.source, hit.title, hit.url, id_part
+            ));
+        }
+        self.out(format!("({} hits)", hits.len()));
+    }
+
+    async fn fetch_search_hits(&self, kind: &str) -> Result<Vec<SyncRemoteSearchHit>> {
+        let dispatch = match kind {
+            "bookmark" => "search -list --bookmark",
+            "history" => "search -list --history",
+            other => {
+                return Err(anyhow!("unsupported search list kind: {other}"));
+            }
+        };
+        let show_progress = self.mode.allows_interactive_ui();
+        let label = format!("search:{kind}");
+        self.require_client()?
+            .search_query_with_progress(&self.cfg.device_id, dispatch.to_string(), |p| {
+                if !show_progress {
+                    return;
+                }
+                report_search_progress(&label, &p);
+            })
+            .await
+    }
+
+    async fn apply_bookmarks_ops(&mut self, op: SyncBookmarksOp) -> Result<()> {
+        self.require_client()?
+            .bookmarks_ops(&self.cfg.device_id, op)
+            .await?;
+        self.out("ok");
+        Ok(())
+    }
+
+    /**
+     * EN: `bookmark -send` / SyncBookmarkSend — open_tabs and/or bookmarks_import.
+     * JA: `bookmark -send` / SyncBookmarkSend。open_tabs および／または bookmarks_import。
+     */
+    async fn apply_sync_bookmark_send(
+        &mut self,
+        device_id: &str,
+        mode: &str,
+        payload: &str,
+    ) -> Result<RunOutcome> {
+        let parsed = parse_bookmark_send_payload(payload);
+        if parsed.urls.is_empty() {
+            self.err(t_cli("cmd.sync.open.noUrls", &[]));
+            return Ok(RunOutcome::status(EXIT_MISUSE));
+        }
+        let client = self.require_client()?;
+        let remote = match client.resolve_remote_id(device_id).await {
+            Ok(id) => id,
+            Err(err) => {
+                let detail = format!("{err:#}");
+                if detail.contains("ambiguous") {
+                    self.err(format!("error: {detail}"));
+                } else {
+                    self.err(t_cli("cmd.sync.open.notConnected", &[]));
+                }
+                return Ok(RunOutcome::status(EXIT_FAILURE));
+            }
+        };
+        let should_open = mode == "open" || mode == "both";
+        let should_save = mode == "save" || mode == "both";
+        if !should_open && !should_save {
+            self.err(t_cli(
+                "cmd.cli.error.uiUnsupported",
+                &[("kind", "sync_bookmark_send")],
+            ));
+            return Ok(RunOutcome::status(EXIT_MISUSE));
+        }
+        let mut ok = true;
+        if should_open {
+            let url_count = parsed.urls.len();
+            match client
+                .open_tabs_on(
+                    &self.cfg.device_id,
+                    &remote,
+                    parsed.urls.clone(),
+                    parsed.group_title.clone(),
+                    None,
+                )
+                .await
+            {
+                Ok((opened, detail)) => {
+                    let detail_text = detail.unwrap_or_default();
+                    self.out(t_cli(
+                        "cmd.sync.open.done",
+                        &[(
+                            "detail",
+                            &format!(
+                                "ok=true;peer={remote};requested={url_count};opened={};detail={detail_text}",
+                                opened.len()
+                            ),
+                        )],
+                    ));
+                }
+                Err(err) => {
+                    ok = false;
+                    self.err(format!("error: open failed: {err:#}"));
+                }
+            }
+        }
+        if should_save {
+            let items: Vec<BookmarkImportItem> = parsed
+                .urls
+                .iter()
+                .map(|url| BookmarkImportItem {
+                    url: url.clone(),
+                    title: url.clone(),
+                })
+                .collect();
+            match client
+                .bookmarks_import_on(
+                    &self.cfg.device_id,
+                    &remote,
+                    parsed.parent_id.clone(),
+                    items,
+                )
+                .await
+            {
+                Ok(created) => {
+                    self.out(format!(
+                        "bookmarks_import: ok=true;peer={remote};created={created}"
+                    ));
+                }
+                Err(err) => {
+                    ok = false;
+                    self.err(format!("error: bookmarks_import failed: {err:#}"));
+                }
+            }
+        }
+        Ok(RunOutcome::status(if ok {
+            EXIT_SUCCESS
+        } else {
+            EXIT_FAILURE
+        }))
+    }
+
+    async fn run_url_picker_and_open(
+        &mut self,
+        hits: Vec<SyncRemoteSearchHit>,
+    ) -> Result<RunOutcome> {
+        let client = self.require_client()?.clone();
+        let self_device_id = self.cfg.device_id.clone();
+        let peers = client.list_connected().await;
+        let peer_name = |id: &str| -> String {
+            peers
+                .iter()
+                .find(|(pid, _)| pid == id)
+                .map(|(_, name)| name.clone())
+                .unwrap_or_else(|| id.to_string())
+        };
+        // EN: search_query fans out; attribute hits to first connected peer for open routing.
+        // JA: search_query は fan-out。open 経路のため先頭接続 peer に帰属させる。
+        let default_peer = peers
+            .first()
+            .map(|(id, _)| id.clone())
+            .ok_or_else(|| anyhow!("no connected peers"))?;
+        let total = hits.len();
+        let capped: Vec<SyncRemoteSearchHit> = hits.into_iter().take(MAX_URL_PICKER_ROWS).collect();
+        if total > capped.len() {
+            self.err(t_cli(
+                "cmd.cli.search.pickerCapped",
+                &[
+                    ("shown", &capped.len().to_string()),
+                    ("total", &total.to_string()),
+                ],
+            ));
+        }
+        let rows: Vec<tui::PeerUrlHit> = capped
+            .into_iter()
+            .map(|hit| tui::PeerUrlHit {
+                peer_device_id: default_peer.clone(),
+                peer_display_name: peer_name(&default_peer),
+                source: hit.source,
+                title: hit.title,
+                url: hit.url,
+                bookmark_id: hit.bookmark_id,
+            })
+            .collect();
+        tokio::task::block_in_place(|| {
+            let handle = tokio::runtime::Handle::current();
+            tui::run_url_picker(rows, |sel| {
+                handle.block_on(async {
+                    client
+                        .open_tabs_on(
+                            &self_device_id,
+                            &sel.peer_device_id,
+                            vec![sel.url.clone()],
+                            None,
+                            None,
+                        )
+                        .await
+                        .map(|_| ())
+                })
+            })
+        })?;
+        Ok(RunOutcome::status(EXIT_SUCCESS))
+    }
+
+    async fn materialize_urls_from_bundle(
+        &self,
+        bundle: &DispatchBundle,
+    ) -> Result<Vec<String>> {
+        if let Some(kind) = search_list_kind_from_bundle(bundle) {
+            let hits = self.fetch_search_hits(kind).await?;
+            return Ok(hits
+                .into_iter()
+                .map(|h| h.url)
+                .filter(|u| !u.trim().is_empty())
+                .collect());
+        }
+        let rows = self.materialize_tab_rows(bundle).await?;
+        Ok(urls_from_rows(&rows))
+    }
+
+    async fn materialize_bookmark_ids_from_bundle(
+        &self,
+        bundle: &DispatchBundle,
+    ) -> Result<Vec<String>> {
+        let kind = search_list_kind_from_bundle(bundle).unwrap_or("bookmark");
+        let hits = self.fetch_search_hits(kind).await?;
+        Ok(hits
+            .into_iter()
+            .filter_map(|h| h.bookmark_id)
+            .filter(|id| !id.trim().is_empty())
+            .collect())
     }
 
     /**
@@ -769,6 +1169,127 @@ impl<'a> CliHostAdapter<'a> {
  * EN: Extract tabs list query (scope / device / showUrl) from a producer DispatchBundle.
  * JA: producer の DispatchBundle から tabs 一覧クエリ（scope / device / showUrl）を取り出す。
  */
+fn report_search_progress(label: &str, p: &SearchProgress) {
+    let peer_label = if p.peer_total <= 1 {
+        p.peer_id.clone()
+    } else {
+        format!("{} ({}/{})", p.peer_id, p.peer_index + 1, p.peer_total)
+    };
+    match p.phase {
+        SearchProgressPhase::Querying => {
+            progress::report(
+                label,
+                None,
+                &format!("peer={peer_label} querying…"),
+            );
+        }
+        SearchProgressPhase::Receiving => {
+            let fraction = parse_chunk_fraction(p.detail.as_deref());
+            let chunk = p
+                .chunk_seq
+                .map(|s| format!("chunk={}", s + 1))
+                .unwrap_or_else(|| "chunk=?".into());
+            progress::report(
+                label,
+                fraction,
+                &format!("peer={peer_label} {chunk} hits={}", p.hits_so_far),
+            );
+        }
+        SearchProgressPhase::Done => {
+            progress::done(
+                label,
+                &format!("peer={peer_label} hits={}", p.hits_so_far),
+            );
+        }
+        SearchProgressPhase::Failed => {
+            progress::report(
+                label,
+                Some(0.0),
+                &format!(
+                    "peer={peer_label} failed: {}",
+                    p.detail.clone().unwrap_or_default()
+                ),
+            );
+        }
+    }
+}
+
+/** EN: Parse `chunk=3/10` from wire detail into 0..=1. */
+fn parse_chunk_fraction(detail: Option<&str>) -> Option<f64> {
+    let detail = detail?;
+    for part in detail.split(';') {
+        let part = part.trim();
+        let Some(rest) = part.strip_prefix("chunk=") else {
+            continue;
+        };
+        let mut it = rest.split('/');
+        let cur: f64 = it.next()?.parse().ok()?;
+        let total: f64 = it.next()?.parse().ok()?;
+        if total > 0.0 {
+            return Some((cur / total).clamp(0.0, 1.0));
+        }
+    }
+    None
+}
+
+fn search_list_kind_from_bundle(bundle: &DispatchBundle) -> Option<&'static str> {
+    match bundle {
+        DispatchBundle::Ui {
+            action:
+                UiAction::OpenPlainList { list_id, .. } | UiAction::OpenPicker { list_id, .. },
+            ..
+        } if list_id == "bookmark" => Some("bookmark"),
+        DispatchBundle::Ui {
+            action:
+                UiAction::OpenPlainList { list_id, .. } | UiAction::OpenPicker { list_id, .. },
+            ..
+        } if list_id == "history" => Some("history"),
+        DispatchBundle::Effects { effects, .. } => {
+            for effect in effects {
+                if let HostEffect::SearchList {
+                    dispatch_line,
+                    peer_dispatch_line,
+                    ..
+                } = effect
+                {
+                    let line = if peer_dispatch_line.is_empty() {
+                        dispatch_line.as_str()
+                    } else {
+                        peer_dispatch_line.as_str()
+                    };
+                    if line.contains("--bookmark") {
+                        return Some("bookmark");
+                    }
+                    if line.contains("--history") {
+                        return Some("history");
+                    }
+                }
+                if let HostEffect::BookmarkList { .. } = effect {
+                    return Some("bookmark");
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+fn split_ids(raw: &str) -> Vec<String> {
+    raw.split_whitespace()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
+}
+
+fn nonempty_opt(raw: String) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
 fn tabs_list_query_from_bundle(bundle: &DispatchBundle) -> Result<(String, String, bool)> {
     match bundle {
         DispatchBundle::Ui {
@@ -1001,6 +1522,7 @@ fn effect_kind(effect: &HostEffect) -> &'static str {
         HostEffect::BookmarkRemove { .. } => "bookmark_remove",
         HostEffect::HistoryDeleteRange { .. } => "history_delete_range",
         HostEffect::HistoryDeleteUrl { .. } => "history_delete_url",
+        _ => "other_host_effect",
     }
 }
 
@@ -1050,5 +1572,6 @@ fn ui_kind(action: &UiAction) -> &'static str {
         UiAction::HistoryBackup => "history_backup",
         UiAction::HistoryRestore { .. } => "history_restore",
         UiAction::SyncBookmarkSend { .. } => "sync_bookmark_send",
+        _ => "other_ui_action",
     }
 }

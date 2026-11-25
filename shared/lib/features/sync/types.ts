@@ -170,6 +170,9 @@ export type SyncRemoteSearchHit = {
   hitCount: number
   pattern: string
   windowId: number | null
+  /** EN: Present when source is bookmark (peer remove/move). */
+  bookmarkId?: string | null
+  parentId?: string | null
 }
 
 /** EN: Why a Family tabs_changed signal was emitted (refresh hint only). */
@@ -328,6 +331,24 @@ export type SyncBusCommand =
       created: number
     }
   | {
+      /**
+       * EN: Peer-local bookmark mutations (create / folder / remove / move).
+       * JA: ピア上のブックマーク操作（作成／フォルダ／削除／移動）。
+       */
+      type: "bookmarks_ops"
+      id: string
+      from: SyncDeviceId
+      op: SyncBookmarksOp
+    }
+  | {
+      type: "bookmarks_ops_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+    }
+  | {
       /** EN: Announce other live DataChannel peers so the receiver can mesh. */
       type: "mesh_peers"
       id: string
@@ -352,6 +373,30 @@ export type SyncBusCommand =
       sessionId: string
       sdp: string
       ice: string[]
+    }
+
+/** EN: Peer-local bookmark mutations requested over the command bus. */
+export type SyncBookmarksOp =
+  | {
+      kind: "create"
+      url: string
+      title: string
+      parentId: string | null
+    }
+  | {
+      kind: "create_folder"
+      title: string
+      parentId: string | null
+    }
+  | {
+      kind: "remove"
+      bookmarkIds: string[]
+    }
+  | {
+      kind: "move"
+      bookmarkIds: string[]
+      parentId: string
+      index: number | null
     }
 
 /** EN: Peer-local tab mutations requested over the command bus. */
