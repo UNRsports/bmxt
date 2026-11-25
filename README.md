@@ -447,14 +447,14 @@ Dedicated first command for bookmark **CRUD**, Family send, and local ZIP backup
 | Form | Effect |
 |------|--------|
 | `bookmark -list [--folder <id>] [--device <id>\|--peers]` | Local folder tree via `open_plain_list` (`bookmark.folder` / `bookmark.item`). `| browse` → tree picker (open / remove / move / send). Peers → `search_list --bookmark`. |
-| `bookmark -add <url> [--title …] [--parent <id>]` | HostEffect `bookmark_create` |
-| `bookmark -folder <title> [--parent <id>]` | HostEffect `bookmark_create_folder` |
-| `bookmark -remove <id…>` / `… \| bookmark -remove` | HostEffect `bookmark_remove` (pipe needs `bookmarkId` on `bookmark` / `bookmark.folder` rows) |
-| `bookmark -move <id…> --parent <id> [--index n]` / pipe | HostEffect `bookmark_move` |
-| `bookmark -send <deviceId> [--open\|--save\|--both] …` / pipe | UiAction `sync_bookmark_send`. **`--open`** → peer `open_tabs` (default). **`--save`** → peer `bookmarks_import`. **`--both`** runs both (reports each side). |
-| `bookmark -backup` / `bookmark -restore` | UiAction ZIP under `bmxt-browser-backup/` (`manifest.json` + `bookmarks.json`). Restore recreates via `bookmarks.create`. |
+| `bookmark -add <url> [--title …] [--parent <id>]` | HostEffect `bookmark_create` (on a connected peer from CLI → **`bookmarks_ops`**) |
+| `bookmark -folder <title> [--parent <id>]` | HostEffect `bookmark_create_folder` (CLI → **`bookmarks_ops`**) |
+| `bookmark -remove <id…>` / `… \| bookmark -remove` | HostEffect `bookmark_remove` (pipe needs `bookmarkId` on `bookmark` / `bookmark.folder` rows; CLI → **`bookmarks_ops`**) |
+| `bookmark -move <id…> --parent <id> [--index n]` / pipe | HostEffect `bookmark_move` (CLI → **`bookmarks_ops`**) |
+| `bookmark -send <deviceId> [--open\|--save\|--both] …` / pipe | UiAction `sync_bookmark_send`. **`--open`** → peer `open_tabs` (default). **`--save`** → peer `bookmarks_import`. **`--both`** runs both (reports each side). Picker send mode picks the same flags, then a peer. |
+| `bookmark -backup` / `bookmark -restore` | UiAction ZIP under `bmxt-browser-backup/` (`manifest.json` + `bookmarks.json`). Restore recreates via `bookmarks.create`. Extension-only (not on CLI). |
 
-`tab -send` remains **URL open only**. Use **`bookmark -send`** when the peer should also store bookmarks.
+`tab -send` remains **URL open only**. Use **`bookmark -send`** when the peer should also store bookmarks. Tree-picker keys and close: **[Picker UI — Tree pickers](#picker-ui)**.
 
 <a id="history-command"></a>
 
@@ -465,12 +465,12 @@ Dedicated first command for history **list**, **delete**, and ZIP backup. Cross-
 | Form | Effect |
 |------|--------|
 | `history -list [<pattern>] [--device <id>\|--peers]` | Local date tree via `open_plain_list` (month → day → visit). `| browse` → tree picker (open / delete / delete-range). Peers → `search_list --history`. |
-| `history -delete <url…>` / `… \| history -delete` | HostEffect `history_delete_url` |
-| `history -delete-range --from <iso\|ms> --to <iso\|ms>` | HostEffect `history_delete_range` |
-| `history -backup` | UiAction ZIP (`manifest.json` + `history.json`) |
-| `history -restore [--as-bookmarks]` | UiAction file picker. **Cannot rewrite** the browser history DB (`chrome.history` has no insert API). Default loads/export-shaped restore; **`--as-bookmarks`** creates bookmarks instead. |
+| `history -delete <url…>` / `… \| history -delete` | HostEffect `history_delete_url` (local extension only) |
+| `history -delete-range --from <iso\|ms> --to <iso\|ms>` | HostEffect `history_delete_range` (local extension only) |
+| `history -backup` | UiAction ZIP (`manifest.json` + `history.json`). Extension-only. |
+| `history -restore [--as-bookmarks]` | UiAction file picker. **Cannot rewrite** the browser history DB (`chrome.history` has no insert API). Default loads/export-shaped restore; **`--as-bookmarks`** creates bookmarks instead. Extension-only. |
 
-Peer-side history **delete** is out of scope.
+Peer-side history **delete** is out of scope (CLI returns misuse / unsupported). Tree-picker keys and close: **[Picker UI — Tree pickers](#picker-ui)**.
 
 <a id="snapshot"></a>
 
@@ -663,7 +663,7 @@ UI locale and **terminal + picker appearance** are edited in a dedicated **setti
 - Each validated apply (picker choice, Enter on edit, image import/clear, reset, zip import, storage-reload) writes **`bmxt_ui_settings_v1`** and, in external mode, the **settings bundle**, then updates the live UI.
 - Inline color/font typing buffers in **`editDraft`** until Enter validates; partial hex is preview-only and is not written on every keystroke.
 - The **Preview** panel shows the current (committed) appearance, plus in-progress edit preview while typing.
-- **`prompt-fire: on`** paints typing/delete FX across the BMXt window canvas (not only the prompt caret).
+- **`prompt-fire: on`** paints typing/delete FX across the BMXt window canvas (not only the prompt caret). On **Firefox / Gecko**, when a prompt **candidate menu** is open, painting switches to a caret-local **menu-lite** path (`shared/lib/features/prompt-effects/`) so the menu stays responsive; Chromium keeps full quality with the menu open.
 
 **Storage (internal vs external)**
 
@@ -705,7 +705,7 @@ When changing UI settings shape or on-disk format in a release:
 | **language** | `--japanese` / `--english` (UI display language) |
 | **edit-picker** | **`on`** — show extra rows to customize picker columns separately; **`off`** — picker columns follow global appearance |
 | **ime-candidate-help** | **`on`** (default, **since 0.8.7**) — show command usage help beside IME candidate tokens; **`off`** — token column only |
-| **prompt-fire** | **`off`** (default) — no typing/delete FX; **`on`** — fire wrap while typing, glitter shatter when deleting |
+| **prompt-fire** | **`off`** (default) — no typing/delete FX; **`on`** — fire wrap while typing, glitter shatter when deleting (Firefox: **menu-lite** while the candidate menu is open) |
 | **search-legend** | **`text`** (default) — scope brackets as text only (`[history]`); **`emoji`** — emoji only (`[⏱️]`); **`text_emoji`** — both (`[⏱️ history]`). Icons: history ⏱️, bookmark 🔖, page 📄, snapshot 📷️. Applies to search picker and `search -list` plain labels |
 | **host-ui** | **`auto`** (default) — install/runtime detect (**Android → mobile**, else desktop); **`desktop`** / **`mobile`** — force layout. **mobile** (since **0.8.2**): soft key bar; prompt candidate menus support tap-to-select and outside-tap dismiss. **desktop**: keyboard-centric candidate close (**Esc** / **↑** at top), matching **0.8.0** |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | Global appearance (terminal **and** picker when `edit-picker` is **off**) |
@@ -782,7 +782,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **6c** | Same PC (protocol can extend later) | **Copy-paste / file handshake** (`bmxt-rtc1.`) + **WebRTC DataChannel** (host ICE only); sleep → in-memory queue only |
 | **§11 (CLI localhost listener)** | Same PC · CLI running | **Localhost HTTP listener** `http://127.0.0.1:17653/` (loopback only, Family-authenticated hello + offer/answer). Extension auto-retries when the BMXt prompt opens. Clipboard / file stay full fallbacks. |
 
-**Current capability after connect:** `sync -ping` on the peer; cross-browser **`tab -list` / `search -list`** (and **`bookmark -list` / `history -list`** via the same search scopes) with `--device <id>` / `--peers` (DataChannel RPC); send URLs with `tab -send` / `tab -list | tab -send <deviceId>` (group titles preserved) and optional **`--close`**; send bookmarks with **`bookmark -send <deviceId> [--open|--save|--both]`** (open tabs and/or **`bookmarks_import`** on the peer); tab picker **`:move`** to a **remote window/tab/group row** copies to that peer (default; **`move --close`** for copy-then-close); **`tab -list --peers | browse`** can also **move / close / Enter-activate / reload** remote rows over **`tabs_ops`** within the same peer (group create / new-window on remote rows are still local-only). While a DataChannel is up, a vim-like status strip under the prompt lists connected peer display names; during final ICE/tunnel bring-up both sides show **Connecting...** and lock command input. **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
+**Current capability after connect:** `sync -ping` on the peer; cross-browser **`tab -list` / `search -list`** (and **`bookmark -list` / `history -list`** via the same search scopes) with `--device <id>` / `--peers` (DataChannel RPC); send URLs with `tab -send` / `tab -list | tab -send <deviceId>` (group titles preserved) and optional **`--close`**; send bookmarks with **`bookmark -send <deviceId> [--open|--save|--both]`** (open tabs and/or **`bookmarks_import`** on the peer); peer bookmark mutate via **`bookmarks_ops`** (create / create_folder / remove / move — extension + CLI); tab picker **`:move`** to a **remote window/tab/group row** copies to that peer (default; **`move --close`** for copy-then-close); **`tab -list --peers | browse`** can also **move / close / Enter-activate / reload** remote rows over **`tabs_ops`** within the same peer (group create / new-window on remote rows are still local-only). The **Terminal CLI peer** can list from one browser and open/send to another with **independent source / destination** picks (see **[Terminal CLI peer](#terminal-cli-peer)**). While a DataChannel is up, a vim-like status strip under the prompt lists connected peer display names; during final ICE/tunnel bring-up both sides show **Connecting...** and lock command input. **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
 
 **Family list refresh (`tabs_changed`):** After a successful Family tab mutation (`open_tabs` / `tabs_ops`, and local `--close` when used), BMXt broadcasts a lightweight **`tabs_changed`** signal to **all currently connected** Family peers (including notifying the sender). The payload carries **`first`** — a **first-command selection code** (today always **`tab`**; missing `first` from an older peer is treated as **`tab`**). A peer refreshes an open picker only when that code matches (tab picker reacts to **`first: "tab"`** only). Disconnected peers are not notified; they re-pull on the next `--peers` / `--device` list.
 
@@ -790,7 +790,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **UX:** First Family join: **`sync -setup`** (or `-pair`). Handshake UI is a dedicated **wizard** under **`shared/lib/features/sync/wizard/`** (not a long terminal dump): **COPY** puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard; the peer pastes the code body in the wizard paste field. When the handshake completes, the wizard closes automatically. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same wizard flow, **or** reopen the BMXt prompt while the CLI localhost listener is up for Family-authenticated auto-reconnect. The setting picker sync panel only shows a setup guide and display-name edit.
 
-**Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`, **`sync_bookmark_send`**) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`tabs_ops`** / **`tabs_changed`** (`first` + `reason`).
+**Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`, **`sync_bookmark_send`**) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`bookmarks_ops`** / **`tabs_ops`** / **`tabs_changed`** (`first` + `reason`).
 
 **Peer host** is the **BMXt prompt window** (`bmxt.html`) only — no offscreen document and no dedicated peer tab. The DataChannel lasts while that window stays open (and until an explicit re-handshake replaces the session). ICE uses **host candidates only** (no public STUN/TURN on the local path).
 
@@ -800,7 +800,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 ### Terminal CLI peer (`hosts/cli`)
 
-**Status (todo §10–§15):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP. Shares the **BMXt POSIX Profile** I/O contract with the extension (todo §13); oneshot **`bmxt exec`** (todo §14); Profile gates when adding commands (todo §15).
+**Status (todo §10–§16):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP. Shares the **BMXt POSIX Profile** I/O contract with the extension (todo §13); oneshot **`bmxt exec`** (todo §14); Profile gates when adding commands (todo §15); bookmark / history / cross-browser send parity (todo §16).
 
 | Topic | Current behavior |
 |-------|------------------|
@@ -813,8 +813,11 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). |
 | **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; OSC-8 `file://` when supported. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
 | **UI settings / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json` (export v2 layout). Locale: committed → env → `en`. REPL: `setting -list` / `-set` (immediate save); `-save` / `-cancel` close aliases (todo §12). `| browse` for settings is CLI-only unsupported. |
-| **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `sync -ping <deviceId>`, URL open on a peer. |
+| **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `bookmark -list --device <id>`, `history -list --device \| browse`, `tab -send <deviceId> …`, `bookmark -send <deviceId> --open\|--save\|--both …`, `sync -ping <deviceId>`. |
 | **Line editor / Tab** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. After a list producer `-list`, Tab offers **`\| browse`** (and other pipe consumers). After a typed **`\|`**, Tab completes bare consumer names (`browse`, `close`, …). |
+| **No local browser inventory** | CLI has no Chrome/Firefox APIs. Bare `bookmark -list` / `history -list` **fan out** to connected peers via **`search_query`** (flat hits). `bookmark -add` / `-folder` / `-remove` / `-move` go through peer **`bookmarks_ops`**. `history -delete*` is **unsupported** on CLI (peer history delete is out of scope). Backup/restore stay extension-only. |
+| **Source peer (`--device`)** | **`--device <id>`** lists that peer only (oneshot stdout). Bare **`--device`** (no id) is a valid plan: plain run → exit **2**; Interactive **`… --device \| browse`** → numbered connected-peer pick (auto-select when only one peer), then the existing URL/tab picker. Same for **`tab`** / **`bookmark`** / **`history`** / **`search -list`**. |
+| **Destination peer (open / send)** | Flat URL browse (`bookmark` / `history` / peer `search`): **Space** marks URLs → **Enter** → destination-peer list → **Tab** marks one or more peers → **Enter** opens on all marked (or the highlighted peer if none marked). **Source and destination are independent** (list from browser A, open/send to browser B). Typed CUI still uses **`tab -send <deviceId>`** / **`bookmark -send <deviceId> [--open\|--save\|--both]`** (and pipes). CLI **`--close`** is skipped (no local tabs). |
 | **Tab picker** | `tab -list --peers \| browse` opens a ratatui picker. **Enter** activates on the owning peer (ids are per-browser); picker **stays open** until **q** / **Esc**. Open picker **follows Family `tabs_changed`** (same `first: "tab"` rule as the extension) and re-fetches the list while preserving selection when possible. |
 | **Mesh** | First peer via localhost listener or manual connection setup; additional Family peers join over in-band mesh (CLI acts as introducer; tab ops are not hub-relayed). |
 | **Build** | `cargo build -p bmxt-cli` → `target/debug/bmxt` (release: `cargo build --release -p bmxt-cli`). |
@@ -845,7 +848,10 @@ Model: **one resident process + many oneshot clients** — same idea as **`docke
 # Quote the grammar line so the shell does not treat `|` as a pipe.
 ./path/to/bmxt exec -- 'sync -status'
 ./path/to/bmxt exec -- 'tab -list --peers'
+./path/to/bmxt exec -- 'bookmark -list --device <id>'
+./path/to/bmxt exec -- 'history -list --device <id>'
 ./path/to/bmxt exec -- 'tab -send <deviceId> https://example.com --group MyGroup'
+./path/to/bmxt exec -- 'bookmark -send <deviceId> --save https://example.com'
 ./path/to/bmxt exec -- 'help'
 echo $?   # Profile exit: 0 success · 1 failure · 2 misuse · 127 unknown
 ```
@@ -867,7 +873,7 @@ echo $?   # Profile exit: 0 success · 1 failure · 2 misuse · 127 unknown
 
 **Tool-definition hint for agents (copy-paste):** “Resident `bmxt` is already listening on 127.0.0.1:17653. For each browser/Family action, run exactly one shell command of the form `./path/to/bmxt exec -- '<grammar line>'` via your normal shell tool. This is the BMXt oneshot client (HTTP POST), **not** the shell builtin `exec`, and it does **not** attach to the resident process stdin. Never start `bmxt` or `bmxt repl`. Never use bare `exec`.”
 
-**Out of scope for this host:** `nav` / `dom` page overlays, settings picker browse / FSA, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI, true incremental chunk delivery over exec IPC. Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§15.
+**Out of scope for this host:** `nav` / `dom` page overlays, settings picker browse / FSA, peer history delete, CLI `bookmark|history -backup/-restore`, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI, true incremental chunk delivery over exec IPC, folder/date tree TUI on CLI (flat `search_query` only until todo §16.7). Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§16.
 
 <a id="bmxt-cli-releases"></a>
 
@@ -965,9 +971,9 @@ Manual re-run: Actions → **Release BMXtCLI** → **Run workflow** (same tag / 
 
 When a list picker is opened from the prompt, **`lib/features/bmxt-window/bmxt-shell.tsx`** lays out the focused session leaf as a horizontal strip:
 
-**Terminal (log + prompt)** | **tabs** (if open) | **search** (if open) | **dom** (if open) | **setting** (if open)
+**Terminal (log + prompt)** | **tabs** (if open) | **search** (if open) | **dom** (if open) | **setting** (if open) | **bookmark** (if open) | **history** (if open)
 
-Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tab` / `search` / `dom` / `setting` slots). While the BMXt window is open, **open columns, `paneFocus`, tab-picker highlight/marks, and tree fold state** live in **UI memory** (not the Service Worker). Closing and reopening the BMXt window starts fresh (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**). **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → search → dom → setting).
+Several picker columns may be open at once in the same pane. Session state is **`sessionPickers`** per leaf (`tabs` / `search` / `dom` / `setting` / **`bookmark`** / **`history`** slots). While the BMXt window is open, **open columns, `paneFocus`, tab-picker highlight/marks, and tree fold state** live in **UI memory** (not the Service Worker). Closing and reopening the BMXt window starts fresh (see **[BMXt process lifecycle](#bmxt-process-lifecycle)**). **`SessionPickerColumns`** in **`lib/features/side-picker/wrappers/session-picker-columns.tsx`** renders open columns (`PICKER_SLOT_ORDER`: tabs → search → dom → setting → **bookmark** → **history**).
 
 **Four layers (side picker)**
 
@@ -975,12 +981,12 @@ Several picker columns may be open at once in the same pane. Session state is **
 |-------|------|------------|
 | ① Parent terminal | Log, prompt, picker launch/close | `lib/features/bmxt-window/bmxt-shell.tsx`, `bmxt-terminal.tsx` |
 | ② Panel host | Column chrome, blue focus border, click-to-activate | `lib/features/side-picker/panel/picker-panel-host.tsx` |
-| ③ Command wrapper | Slot entry + keyboard wiring | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx`, `setting-picker-wrapper.tsx` |
-| ④ Command body | Flat lines vs hierarchical tab rows vs dom prompt vs settings | `PlainTextPickerBody` (search/dom lines), `TabsUrlListPicker` + `TabPickerRowList` (tabs), `dom/dom-prompt-render.tsx`, `setting-picker-body.tsx` |
+| ③ Command wrapper | Slot entry + keyboard wiring | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx`, `setting-picker-wrapper.tsx`, **`bookmark-picker-wrapper.tsx`**, **`history-picker-wrapper.tsx`** |
+| ④ Command body | Flat lines vs hierarchical rows vs settings | `PlainTextPickerBody` (search/dom lines), `TabsUrlListPicker` + `TabPickerRowList` (tabs), **`TreePickerBody`** (bookmark / history trees), `dom/dom-prompt-render.tsx`, `setting-picker-body.tsx` |
 
-**Shared keyboard:** **`usePlainPickerKeyboard`** in `lib/features/side-picker/hooks/` drives `/`, `:`, `n`/`N`, **`Esc` → prompt**, vertical navigation, and **Ctrl+←/→** pane-strip navigation via the interaction kernel (`lib/features/side-picker/interaction/picker-*.ts`). **search** and **dom** line columns use it directly; **tabs** adds **`useTabPickerPlainExtensions`** (`lib/features/tabs/use-tab-picker-plain-extensions.ts`) for bulk/edit, `#` / `Tab`, Shift range, and layered **`Esc`**.
+**Shared keyboard:** **`usePlainPickerKeyboard`** in `lib/features/side-picker/hooks/` drives `/`, `:`, `n`/`N`, **`Esc` → prompt**, vertical navigation, and **Ctrl+←/→** pane-strip navigation via the interaction kernel (`lib/features/side-picker/interaction/picker-*.ts`). **search** and **dom** line columns use it directly; **tabs** adds **`useTabPickerPlainExtensions`** (`lib/features/tabs/use-tab-picker-plain-extensions.ts`) for bulk/edit, `#` / `Tab`, Shift range, and layered **`Esc`**. **bookmark** / **history** use **`useTreePickerKeyboard`** (`lib/features/side-picker/tree/`) — fold with **←/→**, **Space** mark, **Enter** / **→** action menu, shared `/` / `n` / `N` / `:nohlsearch`.
 
-**Shared list chrome:** **`PickerListShell`** (`chrome/picker-list-shell.tsx`) — headline, invisible IME `textarea`, list slot, search/command footers. **tabs** render through **`TabsUrlListPicker`** on this shell. **search** / **dom** line lists still use **`PlainTextPickerBody`** (same CSS classes, optional virtualization; may move to `PickerListShell` later).
+**Shared list chrome:** **`PickerListShell`** (`chrome/picker-list-shell.tsx`) — headline, invisible IME `textarea`, list slot, search/command footers. **tabs** render through **`TabsUrlListPicker`** on this shell. **bookmark** / **history** render through **`TreePickerBody`** on the same shell (folder or month→day→visit trees). **search** / **dom** line lists still use **`PlainTextPickerBody`** (same CSS classes, optional virtualization; may move to `PickerListShell` later).
 
 **`PickerEntry` (search)**
 
@@ -988,7 +994,7 @@ Search hits are normalized to **`PickerEntry`** (`url`, `source`, display line) 
 
 **Focus and blue border**
 
-- **`paneFocus`** selects the active column: `terminal` → `tab` → `search` → `dom` → `setting` (skipping columns that are not open).
+- **`paneFocus`** selects the active column: `terminal` → `tab` → `search` → `dom` → `setting` → **`bookmark`** → **`history`** (skipping columns that are not open).
 - The active column gets a **blue outline** (`.bmxt-split-pane--focused`).
 - When a column **newly opens** or receives focus from the **detail bar**, keyboard focus and the outline move to that column; the focused picker column **animates to the left** of other open columns (`usePickerColumnFlip`).
 - **Ctrl+Left / Ctrl+Right** walk the strip inside the active session. With **two or more** terminal sessions, **Ctrl+← / Ctrl+→** also cycles the active session (see **[`session`](#session)**).
@@ -996,7 +1002,7 @@ Search hits are normalized to **`PickerEntry`** (`url`, `source`, display line) 
 
 **Detail bars (mode status strips under the prompt)**
 
-While a picker is open (or nav / translate assist is active), a **detail bar** appears under the prompt for that mode (`tab`, `search`, `dom`, `setting`, `nav`, `translate`). Common keys when the **terminal** column is focused:
+While a picker is open (or nav / translate assist is active), a **detail bar** appears under the prompt for that mode (`tab`, `search`, `dom`, `setting`, **`bookmark`**, **`history`**, `nav`, `translate`). Common keys when the **terminal** column is focused:
 
 | Key | Effect |
 |-----|--------|
@@ -1006,7 +1012,7 @@ While a picker is open (or nav / translate assist is active), a **detail bar** a
 | **`Alt`** (tab / search / dom detail bar) | Toggle **`--auto` / `--manual`** page-active (persisted) |
 | **`Alt`** (nav detail bar) | Toggle nav overlay **ON** / **OFF** |
 | **`→`** (from a detail bar) | Enter the matching picker column (column moves left with animation) |
-| **`Ctrl+C`** (from a detail bar) | Close the matching browse column (**tab** / **search** / **dom** / **setting**), or **disarm nav** when the **nav** detail bar is selected |
+| **`Ctrl+C`** (from a detail bar) | Close the matching browse column (**tab** / **search** / **dom** / **setting** / **bookmark** / **history**), or **disarm nav** when the **nav** detail bar is selected |
 
 While the nav overlay is **ON**, focus **stays on the nav detail bar** (typing mode is the temporary exception). Each bar shows mode-specific hints. **`useDetailBarKeyboard`** in **`lib/features/bmxt-window/use-detail-bar-keyboard.ts`** wires these keys.
 
@@ -1022,6 +1028,7 @@ While the nav overlay is **ON**, focus **stays on the nav detail bar** (typing m
 | `search -exit -list` | Search list picker |
 | `dom -exit -list` | DOM list picker (including the permission confirmation panel) |
 | `setting -exit -list` | Settings picker |
+| **detail bar `Ctrl+C`** | Also closes **bookmark** / **history** columns (no dedicated `*-exit -list` yet) |
 
 Service Worker **`run`** for `*-exit -list` prints usage hints only; the window UI performs the actual close.
 
@@ -1037,9 +1044,25 @@ Service Worker **`run`** for `*-exit -list` prints usage hints only; the window 
 | `dom -list … | browse` only + **Enter** | Shows `--normal` / `--with` / `--html` / `--react` option menu when mode/flavor unset |
 | `dom -list … [--normal|--with] [--html|--react] … | browse` + **Enter** | Fetches DOM output, opens the dom column |
 | `setting -list | browse` + **Enter** | Opens the settings picker column (see **[`setting`](#setting)**) |
+| `bookmark -list … \| browse` + **Enter** | Opens the **bookmark** tree picker (folder tree; actions → typed CUI lines) |
+| `history -list … \| browse` + **Enter** | Opens the **history** tree picker (month → day → visit; actions → typed CUI lines) |
 | `translate -on` + **Enter** | Enables translation assist (prompt stays focused) |
 
-**Plain `-list` (terminal log, no column)** — default for **`tab -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`** (plain; use **`<list> | browse`** for the column). Output uses schema **`bmxt-list/1`**; see **[`-list` output registry](#list-commands-registry)**.
+**Plain `-list` (terminal log, no column)** — default for **`tab -list`**, **`dom -list`**, **`search -list`**, **`session -list`**, **`setting -list`**, **`bookmark -list`**, **`history -list`** (plain; use **`<list> | browse`** for the column). Output uses schema **`bmxt-list/1`**; see **[`-list` output registry](#list-commands-registry)**.
+
+**Tree pickers (`bookmark -list | browse` / `history -list | browse`)**
+
+Shared chrome: **`lib/features/side-picker/tree/`** (`TreePickerBody`, `useTreePickerKeyboard`, fold/search helpers). Actions always go through **`submitConstructedLine`** (same typed grammar as the prompt — no direct `chrome.bookmarks` / `chrome.history` calls from the picker).
+
+| Key / gesture | bookmark | history |
+|---------------|----------|---------|
+| **↑ / ↓** | Move highlight | Same |
+| **← / →** | Collapse / expand folder | Collapse / expand month or day |
+| **Space** | Mark leaves or folders (not mixed) | Mark visits, days, or months (not mixed) |
+| **Enter** / **→** (on row) | Action menu: open / remove / move / **send** (`--open` / `--save` / `--both` + peer pick) | Action menu: open / delete / delete-range |
+| **/** · **n** / **N** · **`:nohlsearch`** | Shared filter / next match | Same |
+| **Esc** | Return to prompt (column stays open) | Same |
+| Close column | Detail bar **`Ctrl+C`** | Same |
 
 **Settings picker column (`setting -list | browse`)**
 
@@ -1616,12 +1639,15 @@ Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smok
 - `entrypoints/bmxt/main.tsx` — Extension page entry (thin wrapper around `BmxtTerminal`)
 - `bmxt-ui.css` — Window styles at repo root (imported from `entrypoints/bmxt/main.tsx`)
 - `lib/features/bmxt-window/` — Main BMXt window UI (`bmxt-terminal.tsx`, session log/history hooks, etc.)
-- `lib/features/side-picker/` — Shared side-column picker UI (panels, keyboard kernel, wrappers)
+- `lib/features/side-picker/` — Shared side-column picker UI (panels, keyboard kernel, wrappers, **`tree/`** for bookmark/history)
+- `lib/features/bookmark/` — Bookmark list / tree picker / send (`bookmark-picker-wrapper.tsx`, fold state, `submitConstructedLine` actions)
+- `lib/features/history/` — History list / tree picker (`history-picker-wrapper.tsx`, month→day→visit fold)
 - `lib/features/release-notes/release-notes.json` — In-app upgrade banner text (keys must match `package.json` `version`)
 - `lib/features/welcome/` — Welcome tab URL builder and update hook (opens hosted **`docs/welcome.html`**; content lives under **`docs/`** only)
 - `lib/features/support/` — In-window support links (official site / NotebookLM manual; friendly labels; open in a normal browser tab)
 - `lib/features/extension-storage/` — Storage keys and caps (used by Service Worker and UI)
 - `lib/features/tabs/` — Tab picker (`tabs-picker-wrapper.tsx`, `tabs-url-list-picker.tsx`, `use-tab-picker-controller.ts`, `picker-rows.ts`, keyboard extensions, etc.)
+- `lib/features/prompt-effects/` — Optional typing FX (`prompt-fire`); Firefox **menu-lite** when the candidate menu is open
 - `crates/bmxt-core/` — Rust command core (`src/cmd/*.rs`, compound/pipe, tabs_picker); WASM exports
 - `lib/features/bmxt-core/` — TS host: `wasm-host.ts`, `dispatch.ts` (WASM call + msgs expand), registry metadata, tabs-picker wrappers
 - `lib/features/dispatch/` — Generated Effect/UiAction types + hand-written **`handlers/effects/`**
@@ -1629,6 +1655,7 @@ Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smok
 - `lib/features/builtin-commands/` — Generated Tab / IME helpers (`completion-fallback.ts`, `command-subcommands.gen.ts`); Enter continuation SoT is Rust `promptPrefix`
 - `lib/features/page-dom/` — DOM injection helpers (`dom -list`)
 - `lib/features/search/` — Search mode (`search -list`), cross-scope **`--all`**, in-memory metadata cache for **`--history`** / **`--bookmark`** (`search-cache-store`; rows carry `bookmarkId` / visit metadata)
+- `lib/features/sync/bus/apply-remote-bookmarks-ops.ts` — Peer **`bookmarks_ops`** handler
 - `lib/features/backup/` — Browser bookmark/history ZIP backup & restore (`bmxt-browser-backup/`)
 - `lib/features/snapshot/` — Markdown snapshots (`snapshot -save`), vault/bundled storage, **`search -list --snapshot`**
 - `lib/features/bmxt-rule/` — **bmxtRule** stream (`bmxt-rule/1`, validate, serialize, adapters)
@@ -1759,7 +1786,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 3. ~~Add history and bookmark operations~~ — **done** (`bookmark` / `history` commands, Family `--open|--save|--both`, ZIP backup; see **[`bookmark`](#bookmark-command)** · **[`history`](#history-command)** · todo §9)
 4. Improve multi-terminal behavior
 5. Support pure command-line operation and additional automation flows
-6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer + localhost auto-connect + **`bmxt exec`** oneshot + Profile I/O gates (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10–§15); polish packaging / same-PC smoke
+6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer + localhost auto-connect + **`bmxt exec`** oneshot + Profile I/O gates + bookmark/history / cross-browser send (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10–§16); polish packaging / same-PC smoke
 
 ---
 
@@ -2335,7 +2362,7 @@ UI 表示言語と **ターミナル＋ピッカー列の外観**は、専用の
 - 検証済み適用（ピッカー選択、編集 Enter、画像取込／削除、reset、zip import、storage-reload）のたびに **`bmxt_ui_settings_v1`**（外部モード時は設定バンドルも）へ書き込み、ライブ UI を更新する。
 - 色／フォントのインライン入力は **`editDraft`** にバッファし、Enter で検証してから保存。途中の hex はプレビューのみで、キー入力ごとに書かない。
 - 下部 **Preview** は現在の（committed）外観と、編集中のプレビューを表示。
-- **`prompt-fire: on`** の打鍵／削除エフェクトは BMXt ウィンドウ全体のキャンバスに描画する（プロンプトキャレット付近のみではない）。
+- **`prompt-fire: on`** の打鍵／削除エフェクトは BMXt ウィンドウ全体のキャンバスに描画する（プロンプトキャレット付近のみではない）。**Firefox / Gecko** では、プロンプトの **候補メニュー** が開いているときキャレット近傍の **menu-lite** 経路（`shared/lib/features/prompt-effects/`）に切り替わり、メニューの応答性を保つ。Chromium はメニュー開でもフル品質のまま。
 
 **保存先（拡張機能内／外部）**
 
@@ -2377,7 +2404,7 @@ bmxt-ui-settings/          ← 選んだ親フォルダの下（既に settings.
 | **language** | `--japanese` / `--english`（UI 表示言語） |
 | **edit-picker** | **`on`** — ピッカー列専用の行を追加；**`off`** — ピッカー列は全体外観に従う |
 | **ime-candidate-help** | **`on`**（既定、**0.8.7 以降**）— 候補メニュー右にコマンド説明（usage）を表示；**`off`** — トークン列のみ |
-| **prompt-fire** | **`off`**（既定）— 入力／削除エフェクトなし；**`on`** — 入力は炎、削除はキラキラ砕け散り |
+| **prompt-fire** | **`off`**（既定）— 入力／削除エフェクトなし；**`on`** — 入力は炎、削除はキラキラ砕け散り（Firefox: 候補メニュー開中は **menu-lite**） |
 | **search-legend** | **`text`**（既定）— スコープ凡例をテキストのみ（`[history]`）；**`emoji`** — 絵文字のみ（`[⏱️]`）；**`text_emoji`** — 併用（`[⏱️ history]`）。アイコン: 履歴 ⏱️、ブックマーク 🔖、ページ 📄、スナップショット 📷️。検索ピッカーおよび `search -list` プレーン出力に適用 |
 | **host-ui** | **`auto`**（既定）— インストール／実行時判定（**Android → mobile**、それ以外は desktop）；**`desktop`** / **`mobile`** — 強制切替。**mobile**（**0.8.2** 以降）: 補助キーバー、プロンプト候補のタップ確定／外タップで閉じる。**desktop**: **0.8.0** 相当のキーボード中心（**Esc** / 先頭で **↑**） |
 | **fg**, **bg-color**, **size**, **font**, **bg-image** | 全体外観（`edit-picker` **off** 時はターミナル＋ピッカー共通） |
@@ -2454,7 +2481,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 | **6c** | 同一 PC（プロトコルは後から拡張可） | **コピペ／ファイル握手**（`bmxt-rtc1.`）+ **WebRTC DataChannel**（host ICE のみ）。休眠時はメモリキューのみ |
 | **§11（CLI localhost 待ち受け）** | 同一 PC · CLI 起動時 | **localhost HTTP 待ち受け** `http://127.0.0.1:17653/`（loopback のみ・Family 認証付き hello + offer/answer）。BMXt プロンプト起動で拡張が自動リトライ。コピペ／ファイルはフォールバックとして存続 |
 
-**接続後の現状:** ピアへの `sync -ping`。横断 **`tab -list` / `search -list`**（および同じ search スコープ経由の **`bookmark -list` / `history -list`**）を `--device` / `--peers` で。URL 送信は **`tab -send`** / `tab -list | tab -send <deviceId>`（`--close` 可）。ブックマーク送信は **`bookmark -send <deviceId> [--open|--save|--both]`**（タブ open および／またはピア側 **`bookmarks_import`**）。tab picker の **`:move`** で **リモート窓／タブ／グループ行** を宛先にするとコピー送信（**`move --close`** で移動相当）。同一ピア内のリモート行操作は **`tabs_ops`**（リモートのグループ作成／新窓は未対応）。DataChannel 接続中はプロンプト下に接続ピア名の vim 風ステータス行を常時表示。最終の ICE／トンネル開通中は双方が **接続中...** を出しコマンド入力をロックする。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
+**接続後の現状:** ピアへの `sync -ping`。横断 **`tab -list` / `search -list`**（および同じ search スコープ経由の **`bookmark -list` / `history -list`**）を `--device` / `--peers` で。URL 送信は **`tab -send`** / `tab -list | tab -send <deviceId>`（`--close` 可）。ブックマーク送信は **`bookmark -send <deviceId> [--open|--save|--both]`**（タブ open および／またはピア側 **`bookmarks_import`**）。ピア側ブックマーク変更は **`bookmarks_ops`**（create / create_folder / remove / move — 拡張 + CLI）。tab picker の **`:move`** で **リモート窓／タブ／グループ行** を宛先にするとコピー送信（**`move --close`** で移動相当）。同一ピア内のリモート行操作は **`tabs_ops`**（リモートのグループ作成／新窓は未対応）。**端末 CLI peer** は取得元／送信先ブラウザを独立して選べる（**[端末 CLI peer](#terminal-cli-peer-ja)**）。DataChannel 接続中はプロンプト下に接続ピア名の vim 風ステータス行を常時表示。最終の ICE／トンネル開通中は双方が **接続中...** を出しコマンド入力をロックする。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
 
 **Family 一覧追従（`tabs_changed`）:** Family 経由のタブ変更（`open_tabs` / `tabs_ops`、および `--close` によるローカル閉じ）が成功すると、**いま接続中の全 Family ピア**へ軽量シグナル **`tabs_changed`** を广播する（送信元自身の購読者にも通知）。ペイロードの **`first`** は **第一コマンド選別符号**（現状は常に **`tab`**。旧ピアが欠落させたら **`tab`** 扱い）。受信側は符号が一致する開中 picker だけを再取得する（tab picker は **`first: "tab"`** のみ反応）。未接続ピアには届かない（次の `--peers` / `--device` 一覧で再取得）。
 
@@ -2462,7 +2489,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。握手 UI は **`shared/lib/features/sync/wizard/`** の専用ウィザード（長いログダンプは本線にしない）。**COPY** で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ。相手はウィザードの貼付欄へコード本体を入れる。握手完了でウィザードは自動で閉じる。切断後は両側 **`sync -connect <peerDeviceId>`** のウィザード往復、**または** CLI localhost 待ち受け起動中に BMXt プロンプトを開き直して Family 認証付き自動再接続。setting picker の sync は案内と表示名編集のみ。
 
-**配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`、**`sync_bookmark_send`**）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`tabs_ops`** / **`tabs_changed`**（`first` + `reason`）など。
+**配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`、**`sync_bookmark_send`**）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`bookmarks_ops`** / **`tabs_ops`** / **`tabs_changed`**（`first` + `reason`）など。
 
 **peer 宿主**は **BMXt プロンプト窓**（`bmxt.html`）のみ（offscreen / 専用 peer タブなし）。DataChannel はその窓が開いている間（および明示的再握手で差し替えるまで）維持する。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
 
@@ -2472,7 +2499,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 ### 端末 CLI peer（`hosts/cli`）
 
-**現状（todo §10–§15）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。拡張と同一の **BMXt POSIX Profile** I/O（todo §13）· **`bmxt exec`** ワンショット（todo §14）· 追加時ゲート（todo §15）。
+**現状（todo §10–§16）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。拡張と同一の **BMXt POSIX Profile** I/O（todo §13）· **`bmxt exec`** ワンショット（todo §14）· 追加時ゲート（todo §15）· bookmark / history / ブラウザ間送信パリティ（todo §16）。
 
 | 項目 | 現状 |
 |------|------|
@@ -2485,8 +2512,11 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 | **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。 |
 | **握手ファイル** | `~/.config/bmxt/` の offer/answer JSON。OSC-8 `file://` 対応時あり。`@path.json` 推奨。 |
 | **UI 設定 / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`（export v2 同形）。locale: committed → env → `en`。REPL: `setting -list` / `-set`（即保存）；`-save` / `-cancel` は閉じる互換エイリアス（todo §12）。設定の `| browse` は CLI 非対応。 |
-| **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `sync -ping`。 |
+| **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `bookmark -list --device <id>` · `history -list --device \| browse` · `tab -send <deviceId> …` · `bookmark -send <deviceId> --open\|--save\|--both …` · `sync -ping`。 |
 | **行編集 / Tab** | rustyline · 灰色ヒント · Tab / Enter。list プロデューサーの `-list` 後は **`\| browse`** 等を候補化。既に **`\|`** を打った右辺では `browse` / `close` など consumer 名を補完。 |
+| **ローカル在庫なし** | CLI に Chrome/Firefox API は無い。裸の `bookmark -list` / `history -list` は接続 peer へ **`search_query`** で fan-out（flat）。`bookmark -add` / `-folder` / `-remove` / `-move` は peer **`bookmarks_ops`**。`history -delete*` は CLI **非対応**（ピア履歴削除は対象外）。backup/restore は拡張のみ。 |
+| **取得元ピア（`--device`）** | **`--device <id>`** はその1台のみ一覧（ワンショット stdout）。ID なしの裸 **`--device`** はプランとして有効: 単独実行 → exit **2**；Interactive の **`… --device \| browse`** → 接続 peer を番号選択（1台なら自動）→ 既存の URL/タブ picker。**`tab`** / **`bookmark`** / **`history`** / **`search -list`** で同じ。 |
+| **送信先ピア（open / send）** | flat URL browse（`bookmark` / `history` / peer `search`）: **Space** で URL マーク → **Enter** → 送信先ピア一覧 → **Tab** で1台以上マーク → **Enter** で開く（未マーク時はハイライト peer）。**取得元と送信先は独立**（ブラウザ A から一覧し B へ開く／送る）。typed CUI は従来どおり **`tab -send <deviceId>`** / **`bookmark -send <deviceId> [--open\|--save\|--both]`**（パイプ可）。CLI の **`--close`** はローカルタブがないため無視。 |
 | **タブ picker** | `tab -list --peers \| browse` で ratatui picker。**Enter** で所有 peer へ activate（tab id はブラウザごと）。**q** / **Esc** まで開いたまま。開中は Family **`tabs_changed`**（拡張と同じ `first: "tab"`）で一覧を再取得し、可能なら選択位置を維持。 |
 | **メッシュ** | 最初の peer は待ち受けまたは手動握手。以降は in-band メッシュ（CLI は紹介役。タブ操作のハブ中継はしない）。 |
 | **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`。 |
@@ -2517,7 +2547,10 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 # 文法行は必ず引用符で囲む（シェルが `|` をパイプと解釈しないように）。
 ./path/to/bmxt exec -- 'sync -status'
 ./path/to/bmxt exec -- 'tab -list --peers'
+./path/to/bmxt exec -- 'bookmark -list --device <id>'
+./path/to/bmxt exec -- 'history -list --device <id>'
 ./path/to/bmxt exec -- 'tab -send <deviceId> https://example.com --group MyGroup'
+./path/to/bmxt exec -- 'bookmark -send <deviceId> --save https://example.com'
 ./path/to/bmxt exec -- 'help'
 echo $?   # Profile exit: 0 成功 · 1 失敗 · 2 misuse · 127 不明コマンド
 ```
@@ -2539,7 +2572,7 @@ echo $?   # Profile exit: 0 成功 · 1 失敗 · 2 misuse · 127 不明コマ�
 
 **エージェント向けツール定義のヒント（コピー用）:** 「常駐 `bmxt` は 127.0.0.1:17653 で待ち受け済み。ブラウザ／Family 操作のたびに、通常のシェルツールで `./path/to/bmxt exec -- '<文法行>'` をちょうど1回実行せよ。これは BMXt ワンショットクライアント（HTTP POST）であり、**シェル組み込みの `exec` ではない**。常駐プロセスの stdin にアタッチする必要もない。`bmxt` / `bmxt repl` は起動するな。裸の `exec` は使うな。」
 
-**この host の対象外:** `nav` / `dom` のページオーバーレイ、設定ピッカー browse / FSA、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI、exec IPC の真のインクリメンタル配信。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§15。
+**この host の対象外:** `nav` / `dom` のページオーバーレイ、設定ピッカー browse / FSA、ピア履歴削除、CLI の `bookmark|history -backup/-restore`、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI、exec IPC の真のインクリメンタル配信、CLI 上のフォルダ／日付ツリー TUI（flat `search_query` のみ · todo §16.7 まで）。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§16。
 
 <a id="bmxt-cli-releases-ja"></a>
 
@@ -2637,9 +2670,9 @@ git push origin cli-v0.1.0
 
 プロンプトからリストピッカーを開いたとき、**`lib/features/bmxt-window/bmxt-shell.tsx`** はフォーカス中のセッションリーフを次の横並びにします。
 
-**ターミナル（ログ＋プロンプト）** | **tabs**（表示時） | **search**（表示時） | **dom**（表示時） | **setting**（表示時）
+**ターミナル（ログ＋プロンプト）** | **tabs**（表示時） | **search**（表示時） | **dom**（表示時） | **setting**（表示時） | **bookmark**（表示時） | **history**（表示時）
 
-同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tab` / `search` / `dom` / `setting` スロット）。BMXt **ウィンドウが開いている間**、**開いている列・`paneFocus`・タブピッカーのハイライト／マーク・ツリー開閉**は **UI メモリ**に保持（Service Worker ではない）。ウィンドウを閉じて開き直すと新規状態（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。列の描画は **`SessionPickerColumns`**（**`PICKER_SLOT_ORDER`**: tabs → search → dom → setting）。
+同一ペイン内で複数のピッカー列を同時に開けます。セッション状態はリーフごとの **`sessionPickers`**（`tabs` / `search` / `dom` / `setting` / **`bookmark`** / **`history`** スロット）。BMXt **ウィンドウが開いている間**、**開いている列・`paneFocus`・タブピッカーのハイライト／マーク・ツリー開閉**は **UI メモリ**に保持（Service Worker ではない）。ウィンドウを閉じて開き直すと新規状態（**[BMXt プロセスのライフサイクル](#bmxt-process-lifecycle-ja)**）。列の描画は **`SessionPickerColumns`**（**`PICKER_SLOT_ORDER`**: tabs → search → dom → setting → **bookmark** → **history**）。
 
 **4 層（サイドピッカー）**
 
@@ -2647,12 +2680,12 @@ git push origin cli-v0.1.0
 |----|------|----------|
 | ① 親ターミナル | ログ・プロンプト・ピッカー起動／閉じる | `lib/features/bmxt-window/bmxt-shell.tsx`, `bmxt-terminal.tsx` |
 | ② パネルホスト | 列クロム・青枠・クリックでアクティブ化 | `lib/features/side-picker/panel/picker-panel-host.tsx` |
-| ③ コマンドラッパ | スロット入口・keyboard 配線 | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx`, `setting-picker-wrapper.tsx` |
-| ④ コマンド本体 | フラット行 / 階層タブ行 / dom 確認 / 設定 | `PlainTextPickerBody`（search/dom 行）, `TabsUrlListPicker` + `TabPickerRowList`（tabs）, `dom/dom-prompt-render.tsx`, `setting-picker-body.tsx` |
+| ③ コマンドラッパ | スロット入口・keyboard 配線 | `url-list-picker-wrapper.tsx`, `dom-picker-wrapper.tsx`, `tabs-picker-wrapper.tsx`, `setting-picker-wrapper.tsx`, **`bookmark-picker-wrapper.tsx`**, **`history-picker-wrapper.tsx`** |
+| ④ コマンド本体 | フラット行 / 階層行 / 設定 | `PlainTextPickerBody`（search/dom 行）, `TabsUrlListPicker` + `TabPickerRowList`（tabs）, **`TreePickerBody`**（bookmark / history）, `dom/dom-prompt-render.tsx`, `setting-picker-body.tsx` |
 
-**共有 keyboard:** **`usePlainPickerKeyboard`**（`lib/features/side-picker/hooks/`）が `/`, `:`, `n`/`N`, **`Esc` → プロンプト**, 縦移動, **Ctrl+←/→** 列ストリップを interaction kernel 経由で処理。**search** / **dom** 行一覧はそのまま利用。**tabs** は **`useTabPickerPlainExtensions`**（`lib/features/tabs/use-tab-picker-plain-extensions.ts`）で bulk/edit・`#` / `Tab`・Shift 範囲・段階 **`Esc`** を追加。
+**共有 keyboard:** **`usePlainPickerKeyboard`**（`lib/features/side-picker/hooks/`）が `/`, `:`, `n`/`N`, **`Esc` → プロンプト**, 縦移動, **Ctrl+←/→** 列ストリップを interaction kernel 経由で処理。**search** / **dom** 行一覧はそのまま利用。**tabs** は **`useTabPickerPlainExtensions`**（`lib/features/tabs/use-tab-picker-plain-extensions.ts`）で bulk/edit・`#` / `Tab`・Shift 範囲・段階 **`Esc`** を追加。**bookmark** / **history** は **`useTreePickerKeyboard`**（`lib/features/side-picker/tree/`）— **←/→** 折りたたみ、**Space** マーク、**Enter** / **→** 操作メニュー、共有の `/` / `n` / `N` / `:nohlsearch`。
 
-**共有リスト chrome:** **`PickerListShell`**（`chrome/picker-list-shell.tsx`）— headline・不可視 IME・リストスロット・検索/コマンドフッタ。**tabs** は **`TabsUrlListPicker`** 経由。**search** / **dom** 行一覧は現状 **`PlainTextPickerBody`**（同一 CSS・仮想スクロールあり。将来 `PickerListShell` に寄せ可能）。
+**共有リスト chrome:** **`PickerListShell`**（`chrome/picker-list-shell.tsx`）— headline・不可視 IME・リストスロット・検索/コマンドフッタ。**tabs** は **`TabsUrlListPicker`** 経由。**bookmark** / **history** は同一シェル上の **`TreePickerBody`**（フォルダまたは月→日→訪問ツリー）。**search** / **dom** 行一覧は現状 **`PlainTextPickerBody`**（同一 CSS・仮想スクロールあり。将来 `PickerListShell` に寄せ可能）。
 
 **`PickerEntry`（search）**
 
@@ -2660,7 +2693,7 @@ search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示�
 
 **フォーカスと青枠**
 
-- **`paneFocus`** がキー入力を受け取る列を表します: `terminal` → `tab` → `search` → `dom` → `setting`（未表示の列は飛ばす）。
+- **`paneFocus`** がキー入力を受け取る列を表します: `terminal` → `tab` → `search` → `dom` → `setting` → **`bookmark`** → **`history`**（未表示の列は飛ばす）。
 - フォーカス中の列に **青い枠**（`.bmxt-split-pane--focused`）が付きます。
 - 列が **新しく開いた** とき、または **詳細バー** からフォーカスが移ったとき、キーボードフォーカスと青枠がその列へ移ります。フォーカスされたピッカー列は他列より **左へアニメーション** します（`usePickerColumnFlip`）。
 - **Ctrl+← / Ctrl+→** でアクティブセッション内の列を移動します。**2 つ以上**のターミナルセッションがあるときは **Ctrl+← / Ctrl+→** でアクティブセッションも循環します（**[`session`](#session-ja)** 参照）。
@@ -2668,7 +2701,7 @@ search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示�
 
 **詳細バー（プロンプト下のモードステータス列）**
 
-ピッカーが開いている間（または nav / 翻訳アシストが有効な間）、各モード用の **詳細バー**（`tab` / `search` / `dom` / `setting` / `nav` / `translate`）がプロンプト下に表示されます。**ターミナル**列フォーカス時の共通キー:
+ピッカーが開いている間（または nav / 翻訳アシストが有効な間）、各モード用の **詳細バー**（`tab` / `search` / `dom` / `setting` / **`bookmark`** / **`history`** / `nav` / `translate`）がプロンプト下に表示されます。**ターミナル**列フォーカス時の共通キー:
 
 | キー | 動作 |
 |------|------|
@@ -2678,7 +2711,7 @@ search のヒットは描画前に **`PickerEntry`**（`url`, `source`, 表示�
 | **`Alt`**（tab / search / dom 詳細バー） | **`--auto` / `--manual`** page-active を切替（保存される） |
 | **`Alt`**（nav 詳細バー） | nav オーバーレイ **ON** / **OFF** |
 | **`→`**（詳細バーから） | 対応するピッカー列へ入る（列は左へアニメーション） |
-| **`Ctrl+C`**（詳細バーから） | 対応する browse 列を閉じる（**tab** / **search** / **dom** / **setting**）。**nav** 詳細バー選択時は **nav を disarm** |
+| **`Ctrl+C`**（詳細バーから） | 対応する browse 列を閉じる（**tab** / **search** / **dom** / **setting** / **bookmark** / **history**）。**nav** 詳細バー選択時は **nav を disarm** |
 
 nav オーバーレイ **ON** 中はフォーカスを **nav 詳細バーに固定**（typing モードのみ一時例外）。各バーにはモード別ヒントが出ます。配線は **`lib/features/bmxt-window/use-detail-bar-keyboard.ts`** の **`useDetailBarKeyboard`**。
 
@@ -2694,6 +2727,7 @@ nav オーバーレイ **ON** 中はフォーカスを **nav 詳細バーに固�
 | `search -exit -list` | search リストピッカー |
 | `dom -exit -list` | DOM リストピッカー（権限確認パネル含む） |
 | `setting -exit -list` | 設定ピッカー |
+| **詳細バー `Ctrl+C`** | **bookmark** / **history** 列も閉じる（専用 `*-exit -list` は未実装） |
 
 Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで、実際の閉じる処理はウィンドウ UI が行います。
 
@@ -2708,9 +2742,25 @@ Service Worker の **`run`** は `*-exit -list` で案内行を返すだけで�
 | `dom -list … | browse` のみ + **Enter** | mode／flavor 未確定時は `--normal` / `--with` / `--html` / `--react` のオプションメニュー |
 | `dom -list … [--normal|--with] [--html|--react] … | browse` + **Enter** | DOM 取得後、dom 列を開く |
 | `setting -list | browse` + **Enter** | 設定ピッカー列を開く（**[`setting`](#setting-ja)** 参照） |
+| `bookmark -list … \| browse` + **Enter** | **bookmark** ツリーピッカー（フォルダツリー。操作は typed CUI 行） |
+| `history -list … \| browse` + **Enter** | **history** ツリーピッカー（月→日→訪問。操作は typed CUI 行） |
 | `translate -on` + **Enter** | 翻訳アシストを有効化（プロンプトにフォーカス維持） |
 
-**プレーン `-list`（ターミナルログ・列なし）** — **`tab -list`** / **`dom -list`** / **`search -list`** / **`session -list`** / **`setting -list`** が既定。対話列は **`<list> | browse`**。出力スキーマは **`bmxt-list/1`**（**[`-list` 出力レジストリ](#list-commands-registry-ja)** 参照）。
+**プレーン `-list`（ターミナルログ・列なし）** — **`tab -list`** / **`dom -list`** / **`search -list`** / **`session -list`** / **`setting -list`** / **`bookmark -list`** / **`history -list`** が既定。対話列は **`<list> | browse`**。出力スキーマは **`bmxt-list/1`**（**[`-list` 出力レジストリ](#list-commands-registry-ja)** 参照）。
+
+**ツリーピッカー（`bookmark -list | browse` / `history -list | browse`）**
+
+共有 chrome: **`lib/features/side-picker/tree/`**（`TreePickerBody` · `useTreePickerKeyboard` · fold/search）。操作は必ず **`submitConstructedLine`**（プロンプトと同じ文法行。ピッカーから `chrome.bookmarks` / `chrome.history` を直接呼ばない）。
+
+| キー / 操作 | bookmark | history |
+|-------------|----------|---------|
+| **↑ / ↓** | ハイライト移動 | 同左 |
+| **← / →** | フォルダの折りたたみ／展開 | 月・日の折りたたみ／展開 |
+| **Space** | 葉またはフォルダをマーク（混在不可） | 訪問・日・月をマーク（混在不可） |
+| **Enter** / **→**（行上） | 操作メニュー: open / remove / move / **send**（`--open` / `--save` / `--both` + ピア選択） | 操作メニュー: open / delete / delete-range |
+| **/** · **n** / **N** · **`:nohlsearch`** | 共有の絞り込み／次マッチ | 同左 |
+| **Esc** | プロンプトへ（列は開いたまま） | 同左 |
+| 列を閉じる | 詳細バー **`Ctrl+C`** | 同左 |
 
 **設定ピッカー列（`setting -list | browse`）**
 
@@ -2799,14 +2849,14 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 | 形式 | 効果 |
 |------|------|
 | `bookmark -list [--folder <id>] [--device <id>\|--peers]` | ローカルは `open_plain_list` のフォルダツリー（`bookmark.folder` / `bookmark.item`）。`| browse` → ツリー picker（open / remove / move / send）。ピアは `search_list --bookmark`。 |
-| `bookmark -add <url> [--title …] [--parent <id>]` | HostEffect `bookmark_create` |
-| `bookmark -folder <title> [--parent <id>]` | HostEffect `bookmark_create_folder` |
-| `bookmark -remove <id…>` / `… \| bookmark -remove` | HostEffect `bookmark_remove`（パイプは `bookmark` / `bookmark.folder` 行の `bookmarkId` が必要） |
-| `bookmark -move <id…> --parent <id> [--index n]` / パイプ | HostEffect `bookmark_move` |
-| `bookmark -send <deviceId> [--open\|--save\|--both] …` / パイプ | UiAction `sync_bookmark_send`。**`--open`** → ピア `open_tabs`（既定）。**`--save`** → ピア `bookmarks_import`。**`--both`** は両方（各側を報告）。 |
-| `bookmark -backup` / `bookmark -restore` | UiAction ZIP（`bmxt-browser-backup/` 配下、`manifest.json` + `bookmarks.json`）。復元は `bookmarks.create` で再作成。 |
+| `bookmark -add <url> [--title …] [--parent <id>]` | HostEffect `bookmark_create`（CLI から接続ピアへは **`bookmarks_ops`**） |
+| `bookmark -folder <title> [--parent <id>]` | HostEffect `bookmark_create_folder`（CLI → **`bookmarks_ops`**） |
+| `bookmark -remove <id…>` / `… \| bookmark -remove` | HostEffect `bookmark_remove`（パイプは `bookmark` / `bookmark.folder` 行の `bookmarkId` が必要。CLI → **`bookmarks_ops`**） |
+| `bookmark -move <id…> --parent <id> [--index n]` / パイプ | HostEffect `bookmark_move`（CLI → **`bookmarks_ops`**） |
+| `bookmark -send <deviceId> [--open\|--save\|--both] …` / パイプ | UiAction `sync_bookmark_send`。**`--open`** → ピア `open_tabs`（既定）。**`--save`** → ピア `bookmarks_import`。**`--both`** は両方（各側を報告）。ピッカーの send モードも同じフラグ → ピア選択。 |
+| `bookmark -backup` / `bookmark -restore` | UiAction ZIP（`bmxt-browser-backup/` 配下、`manifest.json` + `bookmarks.json`）。復元は `bookmarks.create` で再作成。拡張のみ（CLI 非対応）。 |
 
-`tab -send` は **URL を開くだけ**。ピア側にもブックマークを残すときは **`bookmark -send`** を使う。
+`tab -send` は **URL を開くだけ**。ピア側にもブックマークを残すときは **`bookmark -send`** を使う。ツリーピッカーのキーと閉じ方: **[ピッカー UI — ツリーピッカー](#picker-ui-ja)**。
 
 <a id="history-command-ja"></a>
 
@@ -2817,12 +2867,12 @@ UI の一行ヒントは **`lib/features/side-picker/interaction/picker-headline
 | 形式 | 効果 |
 |------|------|
 | `history -list [<pattern>] [--device <id>\|--peers]` | ローカルは `open_plain_list` の日付ツリー（月→日→訪問）。`| browse` → ツリー picker（open / delete / delete-range）。ピアは `search_list --history`。 |
-| `history -delete <url…>` / `… \| history -delete` | HostEffect `history_delete_url` |
-| `history -delete-range --from <iso\|ms> --to <iso\|ms>` | HostEffect `history_delete_range` |
-| `history -backup` | UiAction ZIP（`manifest.json` + `history.json`） |
-| `history -restore [--as-bookmarks]` | UiAction ファイル選択。ブラウザ履歴 DB は **書き換え不可**（`chrome.history` に insert API なし）。既定は export 形の読込；**`--as-bookmarks`** はブックマーク作成。 |
+| `history -delete <url…>` / `… \| history -delete` | HostEffect `history_delete_url`（拡張ローカルのみ） |
+| `history -delete-range --from <iso\|ms> --to <iso\|ms>` | HostEffect `history_delete_range`（拡張ローカルのみ） |
+| `history -backup` | UiAction ZIP（`manifest.json` + `history.json`）。拡張のみ。 |
+| `history -restore [--as-bookmarks]` | UiAction ファイル選択。ブラウザ履歴 DB は **書き換え不可**（`chrome.history` に insert API なし）。既定は export 形の読込；**`--as-bookmarks`** はブックマーク作成。拡張のみ。 |
 
-ピア側の履歴 **削除** は対象外。
+ピア側の履歴 **削除** は対象外（CLI は misuse / unsupported）。ツリーピッカーのキーと閉じ方: **[ピッカー UI — ツリーピッカー](#picker-ui-ja)**。
 
 <a id="snapshot-ja"></a>
 
@@ -3339,17 +3389,21 @@ pnpm run dev
 - `bmxt-ui.css` — ウィンドウ用スタイル
 - `wxt.config.ts` — manifest オーバーライド
 - `lib/features/bmxt-window/` — BMXt ウィンドウのメイン UI（`bmxt-terminal.tsx`、セッションログ／履歴フックなど）
-- `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ）
+- `lib/features/side-picker/` — 横並びピッカー列の共有 UI（パネルホスト・`PickerListShell`・`usePlainPickerKeyboard`・interaction kernel・ラッパ・**`tree/`**）
+- `lib/features/bookmark/` — ブックマーク一覧／ツリーピッカー／送信（`bookmark-picker-wrapper.tsx`、fold、`submitConstructedLine`）
+- `lib/features/history/` — 履歴一覧／ツリーピッカー（`history-picker-wrapper.tsx`、月→日→訪問 fold）
 - `lib/features/release-notes/release-notes.json` — アプリ内バージョンアップ通知の変更内容（キーは `package.json` の `version` と一致させてメンテ）
 - `lib/features/welcome/` — ウェルカムタブ URL 組み立てと更新フック（ホストされた **`docs/welcome.html`** を開く；コンテンツは **`docs/`** のみ）
 - `lib/features/support/` — ウィンドウ内サポートリンク（公式サイト / NotebookLM マニュアル；表示名のみ；通常ブラウザタブで開く）
 - `lib/features/extension-storage/` — ストレージキーと上限（Service Worker と UI の両方から参照）
 - `lib/features/tabs/` — タブピッカー（`tabs-picker-wrapper.tsx`、`tabs-url-list-picker.tsx`、`use-tab-picker-controller.ts`、`picker-rows.ts`、keyboard 拡張など）
+- `lib/features/prompt-effects/` — 任意の打鍵 FX（`prompt-fire`）；Firefox は候補メニュー開中 **menu-lite**
 - `crates/bmxt-core/` — Rust/WASM コマンドコア；`lib/features/bmxt-core/` — TS ホスト（`wasm-host` / `dispatch` / tabs-picker ラッパ）
 - `lib/features/dispatch/` — **`effect-types.ts`** / 生成ディスパッチ・**`handlers/effects/`** で Chrome 実行
 - `lib/features/builtin-commands/` — Tab / IME 用生成物（`completion-fallback.ts`・`command-subcommands.gen.ts`）。Enter continuation の正本は Rust `promptPrefix`
 - `lib/features/page-dom/` — DOM 注入ヘルパー（`dom -list`）
 - `lib/features/search/` — search モード（`search -list`）、横断 **`--all`**、**`--history`** / **`--bookmark`** 用のメモリ内メタデータキャッシュ（`search-cache-store`；行に `bookmarkId`／訪問メタデータを保持）
+- `lib/features/sync/bus/apply-remote-bookmarks-ops.ts` — ピア **`bookmarks_ops`** ハンドラ
 - `lib/features/backup/` — ブラウザのブックマーク／履歴 ZIP バックアップ＆復元（`bmxt-browser-backup/`）
 - `lib/features/snapshot/` — Markdown snapshot（`snapshot -save`）、Vault／bundled 保存、**`search -list --snapshot`**
 - `lib/features/bmxt-rule/` — **bmxtRule** 規格（`bmxt-rule/1`）と adapter
@@ -3455,4 +3509,4 @@ pnpm run package:chrome   # .output/bmxt-<version>-chrome.zip を出力
 3. ~~履歴、ブックマーク操作~~ — **完了**（`bookmark` / `history` コマンド、Family `--open|--save|--both`、ZIP バックアップ。**[`bookmark`](#bookmark-command-ja)** · **[`history`](#history-command-ja)** · todo §9）
 4. 複数ターミナルでの動作
 5. 純粋なコマンドラインでの動作や各種自動処理系への対応など
-6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer + localhost 自動接続 + **`bmxt exec`** ワンショット + Profile I/O ゲート（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10–§15）。配布／同一 PC スモークの磨き込み
+6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer + localhost 自動接続 + **`bmxt exec`** ワンショット + Profile I/O ゲート + bookmark/history／ブラウザ間送信（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10–§16）。配布／同一 PC スモークの磨き込み
