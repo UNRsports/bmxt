@@ -10,14 +10,12 @@ use bmxt_core::compound::{
 use bmxt_core::ir::{DispatchBundle, HostEffect, UiAction};
 use bmxt_core::pipe_consumer::{classify_pipe_consumer, PipeConsumerClass};
 use bmxt_core::run_line;
-use bmxt_sync_wire::{
-    BookmarkImportItem, SyncBookmarksOp, SyncRemoteSearchHit, SyncRemoteTabRow, SyncTabsOp,
-};
+use bmxt_sync_wire::{BookmarkImportItem, SyncBookmarksOp, SyncRemoteTabRow, SyncTabsOp};
 
 use bmxt_ui_settings::UiSettings;
 
 use crate::bookmark_send_payload::parse_bookmark_send_payload;
-use crate::bus::{BusClient, SearchProgress, SearchProgressPhase};
+use crate::bus::{BusClient, PeerTaggedSearchHit, SearchProgress, SearchProgressPhase};
 use crate::command_io::{CommandIo, InteractionMode};
 use crate::config::CliConfig;
 use crate::connect;
@@ -186,8 +184,10 @@ impl<'a> CliHostAdapter<'a> {
                     self.err(t_cli("cmd.cli.setting.browseUnsupported", &[]));
                     return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
-                if let Some(kind) = search_list_kind_from_bundle(&producer_bundle) {
-                    let hits = self.fetch_search_hits(kind).await?;
+                if let Some((kind, scope, device_id)) =
+                    search_list_query_from_bundle(&producer_bundle)
+                {
+                    let hits = self.fetch_search_hits(kind, &scope, &device_id).await?;
                     return self.run_url_picker_and_open(hits).await;
                 }
                 let (scope, device_id, show_url) =
@@ -398,19 +398,20 @@ impl<'a> CliHostAdapter<'a> {
                 dispatch_line,
                 peer_dispatch_line,
                 device_scope,
-                ..
+                device_id,
             } => {
                 let line = if peer_dispatch_line.is_empty() {
                     dispatch_line
-                } else if device_scope == "local" || device_scope.is_empty() {
-                    peer_dispatch_line
                 } else {
                     peer_dispatch_line
                 };
                 let show_progress = self.mode.allows_interactive_ui();
+                let filter = self
+                    .resolve_search_remote_filter(&device_scope, &device_id)
+                    .await?;
                 let hits = self
                     .require_client()?
-                    .search_query_with_progress(&self.cfg.device_id, line, |p| {
+                    .search_query_with_progress(&self.cfg.device_id, line, filter, |p| {
                         if show_progress {
                             report_search_progress("search", &p);
                         }
@@ -420,7 +421,7 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(())
             }
             HostEffect::BookmarkList { .. } => {
-                let hits = self.fetch_search_hits("bookmark").await?;
+                let hits = self.fetch_search_hits("bookmark", "peers", "").await?;
                 self.print_search_hits(&hits);
                 Ok(())
             }
@@ -515,7 +516,9 @@ impl<'a> CliHostAdapter<'a> {
                     return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
                 if list_id == "bookmark" || list_id == "history" {
-                    let hits = self.fetch_search_hits(&list_id).await?;
+                    let hits = self
+                        .fetch_search_hits(&list_id, &device_scope, &device_id)
+                        .await?;
                     self.print_search_hits(&hits);
                     return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
@@ -548,7 +551,9 @@ impl<'a> CliHostAdapter<'a> {
                     return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
                 if list_id == "bookmark" || list_id == "history" {
-                    let hits = self.fetch_search_hits(&list_id).await?;
+                    let hits = self
+                        .fetch_search_hits(&list_id, &device_scope, &device_id)
+                        .await?;
                     return self.run_url_picker_and_open(hits).await;
                 }
                 if list_id != "tabs" {
@@ -739,22 +744,56 @@ impl<'a> CliHostAdapter<'a> {
         }
     }
 
-    fn print_search_hits(&mut self, hits: &[SyncRemoteSearchHit]) {
-        for hit in hits.iter().take(50) {
+    fn print_search_hits(&mut self, hits: &[PeerTaggedSearchHit]) {
+        for tagged in hits.iter().take(50) {
+            let hit = &tagged.hit;
             let id_part = hit
                 .bookmark_id
                 .as_ref()
                 .map(|id| format!(" id={id}"))
                 .unwrap_or_default();
+            let peer = if tagged.peer_display_name.is_empty() {
+                tagged.peer_device_id.as_str()
+            } else {
+                tagged.peer_display_name.as_str()
+            };
             self.out(format!(
-                "[{}] {} — {}{}",
-                hit.source, hit.title, hit.url, id_part
+                "[{}@{}] {} — {}{}",
+                hit.source, peer, hit.title, hit.url, id_part
             ));
         }
         self.out(format!("({} hits)", hits.len()));
     }
 
-    async fn fetch_search_hits(&self, kind: &str) -> Result<Vec<SyncRemoteSearchHit>> {
+    /**
+     * EN: Resolve which connected peers to query (source inventory).
+     *     `--device` → that peer only; `--peers` / local / empty → all.
+     * JA: 取得元 peer を解決。`--device` はその1台、`--peers`/local/空は全接続。
+     */
+    async fn resolve_search_remote_filter(
+        &self,
+        device_scope: &str,
+        device_id: &str,
+    ) -> Result<Option<Vec<String>>> {
+        match device_scope {
+            "device" if !device_id.trim().is_empty() => {
+                let remote = self
+                    .require_client()?
+                    .resolve_remote_id(device_id.trim())
+                    .await?;
+                Ok(Some(vec![remote]))
+            }
+            "peers" | "local" | "" => Ok(None),
+            other => Err(anyhow!("unknown device_scope for search: {other}")),
+        }
+    }
+
+    async fn fetch_search_hits(
+        &self,
+        kind: &str,
+        device_scope: &str,
+        device_id: &str,
+    ) -> Result<Vec<PeerTaggedSearchHit>> {
         let dispatch = match kind {
             "bookmark" => "search -list --bookmark",
             "history" => "search -list --history",
@@ -764,8 +803,11 @@ impl<'a> CliHostAdapter<'a> {
         };
         let show_progress = self.mode.allows_interactive_ui();
         let label = format!("search:{kind}");
+        let filter = self
+            .resolve_search_remote_filter(device_scope, device_id)
+            .await?;
         self.require_client()?
-            .search_query_with_progress(&self.cfg.device_id, dispatch.to_string(), |p| {
+            .search_query_with_progress(&self.cfg.device_id, dispatch.to_string(), filter, |p| {
                 if !show_progress {
                     return;
                 }
@@ -889,7 +931,7 @@ impl<'a> CliHostAdapter<'a> {
 
     async fn run_url_picker_and_open(
         &mut self,
-        hits: Vec<SyncRemoteSearchHit>,
+        hits: Vec<PeerTaggedSearchHit>,
     ) -> Result<RunOutcome> {
         let client = self.require_client()?.clone();
         let self_device_id = self.cfg.device_id.clone();
@@ -905,7 +947,7 @@ impl<'a> CliHostAdapter<'a> {
             })
             .collect();
         let total = hits.len();
-        let capped: Vec<SyncRemoteSearchHit> = hits.into_iter().take(MAX_URL_PICKER_ROWS).collect();
+        let capped: Vec<PeerTaggedSearchHit> = hits.into_iter().take(MAX_URL_PICKER_ROWS).collect();
         if total > capped.len() {
             self.err(t_cli(
                 "cmd.cli.search.pickerCapped",
@@ -917,31 +959,40 @@ impl<'a> CliHostAdapter<'a> {
         }
         let rows: Vec<tui::PeerUrlHit> = capped
             .into_iter()
-            .map(|hit| tui::PeerUrlHit {
-                source: hit.source,
-                title: hit.title,
-                url: hit.url,
-                bookmark_id: hit.bookmark_id,
+            .map(|tagged| {
+                let peer = if tagged.peer_display_name.is_empty() {
+                    tagged.peer_device_id.as_str()
+                } else {
+                    tagged.peer_display_name.as_str()
+                };
+                tui::PeerUrlHit {
+                    source: format!("{}@{}", tagged.hit.source, peer),
+                    title: tagged.hit.title,
+                    url: tagged.hit.url,
+                    bookmark_id: tagged.hit.bookmark_id,
+                }
             })
             .collect();
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            tui::run_url_picker(rows, open_peers, |dest_peer_id, sels| {
+            tui::run_url_picker(rows, open_peers, |dest_peer_ids, sels| {
                 let urls: Vec<String> = sels.iter().map(|s| s.url.clone()).collect();
-                if urls.is_empty() {
+                if urls.is_empty() || dest_peer_ids.is_empty() {
                     return Ok(());
                 }
                 handle.block_on(async {
-                    client
-                        .open_tabs_on(
-                            &self_device_id,
-                            dest_peer_id,
-                            urls,
-                            None,
-                            None,
-                        )
-                        .await
-                        .map(|_| ())
+                    for dest in dest_peer_ids {
+                        client
+                            .open_tabs_on(
+                                &self_device_id,
+                                dest,
+                                urls.clone(),
+                                None,
+                                None,
+                            )
+                            .await?;
+                    }
+                    Ok(())
                 })
             })
         })?;
@@ -952,11 +1003,11 @@ impl<'a> CliHostAdapter<'a> {
         &self,
         bundle: &DispatchBundle,
     ) -> Result<Vec<String>> {
-        if let Some(kind) = search_list_kind_from_bundle(bundle) {
-            let hits = self.fetch_search_hits(kind).await?;
+        if let Some((kind, scope, device_id)) = search_list_query_from_bundle(bundle) {
+            let hits = self.fetch_search_hits(kind, &scope, &device_id).await?;
             return Ok(hits
                 .into_iter()
-                .map(|h| h.url)
+                .map(|t| t.hit.url)
                 .filter(|u| !u.trim().is_empty())
                 .collect());
         }
@@ -968,11 +1019,12 @@ impl<'a> CliHostAdapter<'a> {
         &self,
         bundle: &DispatchBundle,
     ) -> Result<Vec<String>> {
-        let kind = search_list_kind_from_bundle(bundle).unwrap_or("bookmark");
-        let hits = self.fetch_search_hits(kind).await?;
+        let (kind, scope, device_id) =
+            search_list_query_from_bundle(bundle).unwrap_or(("bookmark", "peers".into(), String::new()));
+        let hits = self.fetch_search_hits(kind, &scope, &device_id).await?;
         Ok(hits
             .into_iter()
-            .filter_map(|h| h.bookmark_id)
+            .filter_map(|t| t.hit.bookmark_id)
             .filter(|id| !id.trim().is_empty())
             .collect())
     }
@@ -1231,24 +1283,50 @@ fn parse_chunk_fraction(detail: Option<&str>) -> Option<f64> {
     None
 }
 
-fn search_list_kind_from_bundle(bundle: &DispatchBundle) -> Option<&'static str> {
+/**
+ * EN: Extract bookmark/history list kind + source device scope from a producer bundle.
+ * JA: producer bundle から bookmark/history の種類と取得元 device scope を取り出す。
+ */
+fn search_list_query_from_bundle(
+    bundle: &DispatchBundle,
+) -> Option<(&'static str, String, String)> {
     match bundle {
         DispatchBundle::Ui {
             action:
-                UiAction::OpenPlainList { list_id, .. } | UiAction::OpenPicker { list_id, .. },
+                UiAction::OpenPlainList {
+                    list_id,
+                    device_scope,
+                    device_id,
+                    ..
+                }
+                | UiAction::OpenPicker {
+                    list_id,
+                    device_scope,
+                    device_id,
+                    ..
+                },
             ..
-        } if list_id == "bookmark" => Some("bookmark"),
-        DispatchBundle::Ui {
-            action:
-                UiAction::OpenPlainList { list_id, .. } | UiAction::OpenPicker { list_id, .. },
-            ..
-        } if list_id == "history" => Some("history"),
+        } if list_id == "bookmark" || list_id == "history" => {
+            let kind: &'static str = if list_id == "bookmark" {
+                "bookmark"
+            } else {
+                "history"
+            };
+            // EN: CLI has no local inventory — bare/local → peers fan-out.
+            let scope = if device_scope.is_empty() || device_scope == "local" {
+                "peers".to_string()
+            } else {
+                device_scope.clone()
+            };
+            Some((kind, scope, device_id.clone()))
+        }
         DispatchBundle::Effects { effects, .. } => {
             for effect in effects {
                 if let HostEffect::SearchList {
                     dispatch_line,
                     peer_dispatch_line,
-                    ..
+                    device_scope,
+                    device_id,
                 } = effect
                 {
                     let line = if peer_dispatch_line.is_empty() {
@@ -1256,15 +1334,34 @@ fn search_list_kind_from_bundle(bundle: &DispatchBundle) -> Option<&'static str>
                     } else {
                         peer_dispatch_line.as_str()
                     };
-                    if line.contains("--bookmark") {
-                        return Some("bookmark");
-                    }
-                    if line.contains("--history") {
-                        return Some("history");
+                    let kind = if line.contains("--bookmark") {
+                        Some("bookmark")
+                    } else if line.contains("--history") {
+                        Some("history")
+                    } else {
+                        None
+                    };
+                    if let Some(kind) = kind {
+                        let scope = if device_scope.is_empty() || device_scope == "local" {
+                            "peers".to_string()
+                        } else {
+                            device_scope.clone()
+                        };
+                        return Some((kind, scope, device_id.clone()));
                     }
                 }
-                if let HostEffect::BookmarkList { .. } = effect {
-                    return Some("bookmark");
+                if let HostEffect::BookmarkList {
+                    device_scope,
+                    device_id,
+                    ..
+                } = effect
+                {
+                    let scope = if device_scope.is_empty() || device_scope == "local" {
+                        "peers".to_string()
+                    } else {
+                        device_scope.clone()
+                    };
+                    return Some(("bookmark", scope, device_id.clone()));
                 }
             }
             None

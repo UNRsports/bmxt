@@ -88,6 +88,14 @@ pub struct SearchProgress {
     pub phase: SearchProgressPhase,
 }
 
+/** EN: Search hit tagged with the inventory peer that produced it. */
+#[derive(Debug, Clone)]
+pub struct PeerTaggedSearchHit {
+    pub peer_device_id: String,
+    pub peer_display_name: String,
+    pub hit: bmxt_sync_wire::SyncRemoteSearchHit,
+}
+
 /** EN: Accumulate search_query_chunk until eof (extension bus parity). */
 struct PendingSearchRpc {
     hits: Vec<bmxt_sync_wire::SyncRemoteSearchHit>,
@@ -603,33 +611,34 @@ impl BusClient {
         self.bookmarks_ops_on(from, &remote, op).await
     }
 
-    #[allow(dead_code)] // EN: Convenience wrapper; call sites prefer with_progress.
-    pub async fn search_query(
-        &self,
-        from: &str,
-        dispatch_line: String,
-    ) -> Result<Vec<bmxt_sync_wire::SyncRemoteSearchHit>> {
-        self.search_query_with_progress(from, dispatch_line, |_| {})
-            .await
-    }
-
     /**
      * EN: Peer search with optional progress callback (chunk / peer boundaries).
-     * JA: 進捗コールバック付き peer search（チャンク／ピア境界）。
+     *     `remote_filter`: `None` = all connected; `Some(ids)` = those remotes only.
+     * JA: 進捗コールバック付き peer search。`remote_filter` が `None` なら全接続、
+     *     `Some(ids)` なら指定 peer のみ（取得元の選択）。
      */
     pub async fn search_query_with_progress<F>(
         &self,
         from: &str,
         dispatch_line: String,
+        remote_filter: Option<Vec<String>>,
         mut on_progress: F,
-    ) -> Result<Vec<bmxt_sync_wire::SyncRemoteSearchHit>>
+    ) -> Result<Vec<PeerTaggedSearchHit>>
     where
         F: FnMut(SearchProgress),
     {
-        let remotes = self.connected_ids().await;
-        if remotes.is_empty() {
-            return Err(anyhow!("no connected peers"));
-        }
+        let remotes = if let Some(filter) = remote_filter {
+            if filter.is_empty() {
+                return Err(anyhow!("no search target peers"));
+            }
+            filter
+        } else {
+            let all = self.connected_ids().await;
+            if all.is_empty() {
+                return Err(anyhow!("no connected peers"));
+            }
+            all
+        };
         // EN: Chunk streams need longer than a single RPC round-trip (parity with extension).
         // JA: チャンクストリームは単発 RPC より長い（拡張側と揃える）。
         const SEARCH_STREAM_TIMEOUT_MS: u64 = 90_000;
@@ -747,7 +756,21 @@ impl BusClient {
                 detail,
                 phase: SearchProgressPhase::Done,
             });
-            all_hits.extend(hits);
+            let peer_display_name = {
+                let guard = self.inner.lock().await;
+                guard
+                    .display_by_remote
+                    .get(&remote)
+                    .cloned()
+                    .unwrap_or_else(|| remote.clone())
+            };
+            for hit in hits {
+                all_hits.push(PeerTaggedSearchHit {
+                    peer_device_id: remote.clone(),
+                    peer_display_name: peer_display_name.clone(),
+                    hit,
+                });
+            }
         }
         Ok(all_hits)
     }

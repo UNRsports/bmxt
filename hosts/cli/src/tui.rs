@@ -348,9 +348,12 @@ enum UrlPickerMode {
 }
 
 /**
- * EN: Interactive flat URL list with Space multi-mark and destination-peer pick.
- *     Enter opens marked rows (or the highlighted row when none marked).
- * JA: flat URL 一覧。Space で複数マーク、Enter で開く先ピアを選ぶ。
+ * EN: Interactive flat URL list.
+ *     Browse: Space marks URLs; Enter opens (then destination peer list).
+ *     Dest peers: Tab marks peers; Enter opens on all marked (or highlight if none).
+ * JA: flat URL 一覧。
+ *     一覧: Space で URL マーク → Enter で送信先ピア一覧へ。
+ *     送信先: Tab でピア複数選択 → Enter で開く。
  */
 pub fn run_url_picker<F>(
     hits: Vec<PeerUrlHit>,
@@ -358,7 +361,7 @@ pub fn run_url_picker<F>(
     mut on_open: F,
 ) -> Result<()>
 where
-    F: FnMut(&str, &[UrlPickerSelection]) -> Result<()>,
+    F: FnMut(&[String], &[UrlPickerSelection]) -> Result<()>,
 {
     let entries: Vec<(String, UrlPickerSelection)> = hits
         .into_iter()
@@ -400,6 +403,8 @@ where
         let mut pending_open: Vec<UrlPickerSelection> = Vec::new();
         let mut peer_state = ListState::default();
         peer_state.select(Some(0));
+        let mut peer_marked: std::collections::HashSet<usize> =
+            std::collections::HashSet::new();
         let mut status = t_cli("cmd.cli.urlPicker.help", &[]);
 
         loop {
@@ -536,32 +541,17 @@ where
                                 status = t_cli("cmd.cli.urlPicker.noneSelected", &[]);
                                 continue;
                             }
+                            pending_open = targets;
+                            peer_marked.clear();
                             if open_peers.len() == 1 {
-                                let peer = &open_peers[0];
-                                match on_open(&peer.device_id, &targets) {
-                                    Ok(()) => {
-                                        status = t_cli(
-                                            "cmd.cli.urlPicker.opened",
-                                            &[
-                                                ("count", &targets.len().to_string()),
-                                                ("peer", &peer.display_name),
-                                            ],
-                                        );
-                                        marked.clear();
-                                    }
-                                    Err(err) => {
-                                        status = format!("error: {err} · q/Esc close");
-                                    }
-                                }
-                            } else {
-                                pending_open = targets;
-                                mode = UrlPickerMode::PickPeer;
-                                peer_state.select(Some(0));
-                                status = t_cli(
-                                    "cmd.cli.urlPicker.pickPeer",
-                                    &[("count", &pending_open.len().to_string())],
-                                );
+                                peer_marked.insert(0);
                             }
+                            mode = UrlPickerMode::PickPeer;
+                            peer_state.select(Some(0));
+                            status = t_cli(
+                                "cmd.cli.urlPicker.pickPeer",
+                                &[("count", &pending_open.len().to_string())],
+                            );
                         }
                         _ => {}
                     }
@@ -574,21 +564,27 @@ where
                             .split(frame.area());
                         let items: Vec<ListItem> = open_peers
                             .iter()
-                            .map(|p| {
+                            .enumerate()
+                            .map(|(i, p)| {
                                 let name = if p.display_name.is_empty() {
                                     p.device_id.as_str()
                                 } else {
                                     p.display_name.as_str()
                                 };
-                                ListItem::new(format!("{name}  ({})", p.device_id))
+                                let mark = if peer_marked.contains(&i) {
+                                    "[x] "
+                                } else {
+                                    "[ ] "
+                                };
+                                ListItem::new(format!("{mark}{name}  ({})", p.device_id))
                             })
                             .collect();
+                        let title = format!(
+                            "Open on peer · selected {}",
+                            peer_marked.len()
+                        );
                         let list = List::new(items)
-                            .block(
-                                Block::default()
-                                    .borders(Borders::ALL)
-                                    .title("Open on peer"),
-                            )
+                            .block(Block::default().borders(Borders::ALL).title(title))
                             .highlight_symbol("▶ ");
                         frame.render_stateful_widget(list, chunks[0], &mut peer_state);
                         frame.render_widget(
@@ -611,6 +607,7 @@ where
                         KeyCode::Char('q') => return Ok(()),
                         KeyCode::Esc => {
                             pending_open.clear();
+                            peer_marked.clear();
                             mode = UrlPickerMode::Browse;
                             status = t_cli("cmd.cli.urlPicker.help", &[]);
                         }
@@ -626,27 +623,64 @@ where
                                 peer_state.select(Some(i - 1));
                             }
                         }
-                        KeyCode::Enter => {
+                        KeyCode::Tab => {
                             if let Some(i) = peer_state.selected() {
-                                if let Some(peer) = open_peers.get(i) {
-                                    let targets = pending_open.clone();
-                                    match on_open(&peer.device_id, &targets) {
-                                        Ok(()) => {
-                                            status = t_cli(
-                                                "cmd.cli.urlPicker.opened",
-                                                &[
-                                                    ("count", &targets.len().to_string()),
-                                                    ("peer", &peer.display_name),
-                                                ],
-                                            );
-                                            marked.clear();
-                                            pending_open.clear();
-                                            mode = UrlPickerMode::Browse;
-                                        }
-                                        Err(err) => {
-                                            status = format!("error: {err} · Esc back");
-                                        }
+                                if i < open_peers.len() {
+                                    if !peer_marked.remove(&i) {
+                                        peer_marked.insert(i);
                                     }
+                                    status = t_cli(
+                                        "cmd.cli.urlPicker.peersMarked",
+                                        &[("count", &peer_marked.len().to_string())],
+                                    );
+                                }
+                            }
+                        }
+                        KeyCode::Enter => {
+                            let dest_idxs: Vec<usize> = if peer_marked.is_empty() {
+                                peer_state.selected().into_iter().collect()
+                            } else {
+                                let mut idxs: Vec<usize> = peer_marked.iter().copied().collect();
+                                idxs.sort_unstable();
+                                idxs
+                            };
+                            let dest_ids: Vec<String> = dest_idxs
+                                .iter()
+                                .filter_map(|i| open_peers.get(*i).map(|p| p.device_id.clone()))
+                                .collect();
+                            let dest_names: Vec<String> = dest_idxs
+                                .iter()
+                                .filter_map(|i| {
+                                    open_peers.get(*i).map(|p| {
+                                        if p.display_name.is_empty() {
+                                            p.device_id.clone()
+                                        } else {
+                                            p.display_name.clone()
+                                        }
+                                    })
+                                })
+                                .collect();
+                            if dest_ids.is_empty() {
+                                status = t_cli("cmd.cli.urlPicker.noPeerSelected", &[]);
+                                continue;
+                            }
+                            let targets = pending_open.clone();
+                            match on_open(&dest_ids, &targets) {
+                                Ok(()) => {
+                                    status = t_cli(
+                                        "cmd.cli.urlPicker.opened",
+                                        &[
+                                            ("count", &targets.len().to_string()),
+                                            ("peer", &dest_names.join(", ")),
+                                        ],
+                                    );
+                                    marked.clear();
+                                    peer_marked.clear();
+                                    pending_open.clear();
+                                    mode = UrlPickerMode::Browse;
+                                }
+                                Err(err) => {
+                                    status = format!("error: {err} · Esc back");
                                 }
                             }
                         }

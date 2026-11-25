@@ -1296,20 +1296,28 @@
     "en": "list refreshed · ↑↓ move · / filter · Enter · q/Esc"
   },
   "cmd.cli.urlPicker.help": {
-    "ja": "↑↓ 移動 · Space マーク · Enter で開く（先に送信先ピア） · / 絞り込み · q/Esc 閉じる",
-    "en": "↑↓ move · Space mark · Enter open (then pick peer) · / filter · q/Esc close"
+    "ja": "↑↓ 移動 · Space URLマーク · Enter で送信先へ · / 絞り込み · q/Esc 閉じる",
+    "en": "↑↓ move · Space mark URLs · Enter → destinations · / filter · q/Esc close"
   },
   "cmd.cli.urlPicker.marked": {
-    "ja": "マーク {count} 件 · Enter で開く · Space で解除",
-    "en": "marked {count} · Enter open · Space unmark"
+    "ja": "URL マーク {count} 件 · Enter で送信先へ · Space で解除",
+    "en": "URL marked {count} · Enter → destinations · Space unmark"
   },
   "cmd.cli.urlPicker.noneSelected": {
     "ja": "行を選ぶか Space でマークしてください",
     "en": "highlight a row or Space-mark items first"
   },
   "cmd.cli.urlPicker.pickPeer": {
-    "ja": "{count} 件を開く送信先ピアを選択 · Enter 確定 · Esc 戻る",
-    "en": "pick destination peer for {count} URL(s) · Enter confirm · Esc back"
+    "ja": "{count} URL の送信先 · Tab でピア選択 · Enter で開く · Esc 戻る",
+    "en": "{count} URL(s) · Tab mark peers · Enter open · Esc back"
+  },
+  "cmd.cli.urlPicker.peersMarked": {
+    "ja": "送信先ピア {count} 台 · Tab で追加/解除 · Enter で開く",
+    "en": "{count} destination peer(s) · Tab toggle · Enter open"
+  },
+  "cmd.cli.urlPicker.noPeerSelected": {
+    "ja": "送信先ピアを Tab で選ぶか、ハイライトして Enter",
+    "en": "Tab-mark destination peers, or Enter on the highlighted peer"
   },
   "cmd.cli.urlPicker.opened": {
     "ja": "{count} 件を {peer} で開きました · 続けて操作可 · q/Esc 閉じる",
