@@ -8,6 +8,7 @@ import {
   markLaunchPhase,
   resetLaunchPerf
 } from "../../lib/features/launch/launch-perf"
+import { ensureFirefoxHttpsHostGrant } from "../../lib/features/extension-permissions/ensure-firefox-https-host-grant"
 import { broadcastSessionClearToUi } from "../../lib/features/bmxt-window/terminal-sessions/session-runtime-notify"
 import { loadBackgroundServicesAsync } from "./load-background-services"
 import { flushPersistBmxtWindowBounds } from "./window-bounds"
@@ -54,6 +55,9 @@ function enqueueBmxtWindowLaunch(task: () => Promise<void>): void {
 /** EN: Shortcut — focus existing window or create immediately (no tabs.query before create). */
 async function launchBmxtFromShortcutAsync(): Promise<void> {
   void loadBackgroundServicesAsync()
+  // EN: User-gesture path — restore Firefox https host grant after temporary Reload.
+  // JA: ユーザー操作経路。一時アドオン Reload 後の Firefox https host を戻す。
+  await ensureFirefoxHttpsHostGrant()
   markLaunchPhase("resolve-window-start")
   const existingId = await resolveBmxtWindowIdFastAsync()
   markLaunchPhase("resolve-window-done")
@@ -71,13 +75,17 @@ async function launchBmxtFromShortcutAsync(): Promise<void> {
 }
 
 async function resetBmxtFromShortcutAsync(): Promise<void> {
+  await ensureFirefoxHttpsHostGrant()
   const services = await loadBackgroundServicesAsync()
   await services.resetBmxtFromShortcutAsync(openOrFocusBmxtWindowAsync)
 }
 
 function openOrFocusBmxtWindow(): void {
   void loadBackgroundServicesAsync()
-  enqueueBmxtWindowLaunch(() => openOrFocusBmxtWindowAsync())
+  enqueueBmxtWindowLaunch(async () => {
+    await ensureFirefoxHttpsHostGrant()
+    await openOrFocusBmxtWindowAsync()
+  })
 }
 
 export function setupWindowLaunch(): void {

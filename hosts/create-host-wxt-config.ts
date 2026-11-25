@@ -12,6 +12,8 @@ import {
   FIREFOX_ANDROID_STRICT_MIN_VERSION,
   FIREFOX_GECKO_ID,
   FIREFOX_STRICT_MIN_VERSION,
+  firefoxHostPermissionManifestExtras,
+  HOST_ORIGIN_PERMISSIONS,
   hostCommands,
   hostContentSecurityPolicy,
   hostIcons,
@@ -54,7 +56,8 @@ export function createHostWxtConfig(browser: HostBrowser) {
             gecko_android: {
               strict_min_version: FIREFOX_ANDROID_STRICT_MIN_VERSION
             }
-          }
+          },
+          ...firefoxHostPermissionManifestExtras()
         }
       : {}
 
@@ -145,11 +148,7 @@ export function createHostWxtConfig(browser: HostBrowser) {
       default_locale: "en",
       permissions: hostPermissionsList(browser),
       // EN: https for in-page scripting; loopback door port for CLI sealed handshake only (todo §11).
-      host_permissions: [
-        "https://*/*",
-        "http://127.0.0.1:17653/*",
-        "http://localhost:17653/*"
-      ],
+      host_permissions: [...HOST_ORIGIN_PERMISSIONS],
       content_security_policy: hostContentSecurityPolicy(browser),
       commands: hostCommands(browser),
       action: {
