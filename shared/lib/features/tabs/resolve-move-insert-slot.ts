@@ -166,3 +166,55 @@ export function moveInsertMarkerAt(
   }
   return slot.marker.rowIndex === rowIndex && slot.marker.place === place
 }
+
+/**
+ * EN: When `--before-tab` points at a tab that is itself being moved, the effect drops
+ *     that id from movers and the insert index collapses. Walk forward in picker order
+ *     within the same window to the next non-moving tab; if none, append (`null`).
+ * JA: 移動対象自身が `--before-tab` だと effect 側で除外され挿入が崩れる。
+ *     同一ウィンドウで picker 順の次の非移動タブへずらす。無ければ末尾（`null`）。
+ */
+export function resolveBeforeTabIdOutsideMovers(
+  rows: readonly TabPickerRow[],
+  beforeTabId: number | null,
+  movingTabIds: readonly number[]
+): number | null {
+  if (beforeTabId === null) {
+    return null
+  }
+  const moving = new Set(
+    movingTabIds.filter((id) => Number.isFinite(id) && id >= 0)
+  )
+  if (!moving.has(beforeTabId)) {
+    return beforeTabId
+  }
+  let start = -1
+  let windowId = -1
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i]
+    if (row?.kind === "tab" && row.tabId === beforeTabId) {
+      start = i
+      windowId = row.windowId
+      break
+    }
+  }
+  if (start < 0 || windowId < 0) {
+    return null
+  }
+  for (let i = start + 1; i < rows.length; i++) {
+    const row = rows[i]
+    if (row === undefined) {
+      continue
+    }
+    if (row.kind === "window") {
+      break
+    }
+    if (row.kind !== "tab" || row.windowId !== windowId) {
+      continue
+    }
+    if (!moving.has(row.tabId)) {
+      return row.tabId
+    }
+  }
+  return null
+}

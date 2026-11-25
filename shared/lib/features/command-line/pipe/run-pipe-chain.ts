@@ -158,9 +158,11 @@ export async function runPipeChain(
     }
 
     // EN: Synthetic producer — `#t:<id>…` chips (optional trailing `tab:`) → page.open stream.
+    //     requireUrl:false so move/close/reload keep every chip (send still filters empty URLs).
+    // JA: requireUrl:false — move/close/reload が全チップを保持（send は空 URL を消費側で除外）。
     const chipIds = parseTabChipProducerSegment(stage)
     if (chipIds !== null) {
-      bmxtRuleStream = await bmxtRuleStreamFromTabIds(chipIds)
+      bmxtRuleStream = await bmxtRuleStreamFromTabIds(chipIds, { requireUrl: false })
       listResult = undefined
       showUrl = false
       if (stages.length === 1) {

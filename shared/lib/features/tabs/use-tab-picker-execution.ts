@@ -27,7 +27,10 @@ import {
   buildRemoteMoveOpFromSlot,
   classifyPickerSelection
 } from "./remote-picker-ops.ts"
-import { resolveMoveInsertSlot } from "./resolve-move-insert-slot.ts"
+import {
+  resolveBeforeTabIdOutsideMovers,
+  resolveMoveInsertSlot
+} from "./resolve-move-insert-slot.ts"
 import { runRemoteTabsOp } from "./run-remote-tabs-op.ts"
 import { resolveFamilySendDestination } from "./resolve-family-send-dest.ts"
 import {
@@ -285,9 +288,19 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       return
     }
     const classified = classifyPickerSelection(rows, toMove)
+    const movingPickerIds =
+      classified.kind === "local" || classified.kind === "remote"
+        ? classified.tabIds
+        : toMove
+    const beforeTabId = resolveBeforeTabIdOutsideMovers(
+      rows,
+      slot.beforeTabId,
+      movingPickerIds
+    )
+    const slotForMove = { ...slot, beforeTabId }
     try {
       if (classified.kind === "remote") {
-        const op = buildRemoteMoveOpFromSlot(rows, classified.peerTabIds, slot)
+        const op = buildRemoteMoveOpFromSlot(rows, classified.peerTabIds, slotForMove)
         if (op === null) {
           await onAppendLog?.([tTabs("tabs.picker.remote.moveTargetMismatch", locale)])
         } else {
@@ -305,10 +318,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
         } else {
           const line = buildTabMoveCommandLine(classified.tabIds, {
-            windowId: slot.windowId,
-            groupId: slot.groupId !== null ? slot.groupId : undefined,
-            ungroup: slot.ungroup,
-            beforeTabId: slot.beforeTabId !== null ? slot.beforeTabId : undefined
+            windowId: slotForMove.windowId,
+            groupId: slotForMove.groupId !== null ? slotForMove.groupId : undefined,
+            ungroup: slotForMove.ungroup,
+            beforeTabId: slotForMove.beforeTabId !== null ? slotForMove.beforeTabId : undefined
           })
           if (line !== null) {
             clearMarkedViaReducer()
@@ -634,7 +647,15 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         }
         if (classified.kind === "remote") {
           if (intent === "executeMove" && moveSlot !== null) {
-            const op = buildRemoteMoveOpFromSlot(rows, classified.peerTabIds, moveSlot)
+            const remoteBefore = resolveBeforeTabIdOutsideMovers(
+              rows,
+              moveSlot.beforeTabId,
+              classified.tabIds
+            )
+            const op = buildRemoteMoveOpFromSlot(rows, classified.peerTabIds, {
+              ...moveSlot,
+              beforeTabId: remoteBefore
+            })
             if (op === null) {
               await onAppendLog?.([tTabs("tabs.picker.remote.moveTargetMismatch", locale)])
               setBulkSubMode(null)
@@ -705,11 +726,16 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
             }
           }
           if (intent === "executeMove" && moveSlot !== null) {
+            const beforeTabId = resolveBeforeTabIdOutsideMovers(
+              rows,
+              moveSlot.beforeTabId,
+              classified.tabIds
+            )
             const line = buildTabMoveCommandLine(classified.tabIds, {
               windowId: moveSlot.windowId,
               groupId: moveSlot.groupId !== null ? moveSlot.groupId : undefined,
               ungroup: moveSlot.ungroup,
-              beforeTabId: moveSlot.beforeTabId !== null ? moveSlot.beforeTabId : undefined
+              beforeTabId: beforeTabId !== null ? beforeTabId : undefined
             })
             if (line !== null) {
               clearMarkedViaReducer()

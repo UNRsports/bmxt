@@ -1,7 +1,10 @@
 import { describe, it } from "node:test"
 import assert from "node:assert/strict"
 import type { TabPickerRow } from "../../../../shared/lib/features/tabs/picker-rows.ts"
-import { resolveMoveInsertSlot } from "../../../../shared/lib/features/tabs/resolve-move-insert-slot.ts"
+import {
+  resolveBeforeTabIdOutsideMovers,
+  resolveMoveInsertSlot
+} from "../../../../shared/lib/features/tabs/resolve-move-insert-slot.ts"
 
 function windowRow(windowId: number): Extract<TabPickerRow, { kind: "window" }> {
   return {
@@ -103,5 +106,31 @@ describe("resolveMoveInsertSlot", () => {
     assert.equal(slot!.beforeTabId, 30)
     assert.equal(slot!.groupId, 7)
     assert.equal(slot!.ungroup, false)
+  })
+})
+
+describe("resolveBeforeTabIdOutsideMovers", () => {
+  const rows: TabPickerRow[] = [
+    windowRow(1),
+    tabRow(10, 1, null),
+    tabRow(20, 1, null),
+    tabRow(30, 1, null),
+    tabRow(40, 1, null)
+  ]
+
+  it("keeps beforeTabId when it is not among movers", () => {
+    assert.equal(resolveBeforeTabIdOutsideMovers(rows, 30, [10, 20]), 30)
+  })
+
+  it("advances to the next non-moving tab in the same window", () => {
+    assert.equal(resolveBeforeTabIdOutsideMovers(rows, 20, [10, 20]), 30)
+  })
+
+  it("returns null (end of window) when every following tab is also moving", () => {
+    assert.equal(resolveBeforeTabIdOutsideMovers(rows, 20, [10, 20, 30, 40]), null)
+  })
+
+  it("returns null when beforeTabId is already null", () => {
+    assert.equal(resolveBeforeTabIdOutsideMovers(rows, null, [10, 20]), null)
   })
 })

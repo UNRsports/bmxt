@@ -22,6 +22,17 @@ export type ResolvedChipTab = {
   groupColor: string | null
 }
 
+export type BmxtRuleStreamFromTabsOptions = {
+  /**
+   * EN: When true (default), drop empty-URL tabs — required for `tab -send`.
+   *     When false, keep tabId-only `page.open` rows so move/close/reload/new-window
+   *     still see every chip (chrome:// / pending-less tabs).
+   * JA: true（既定）は空 URL を落とす（tab -send 用）。false は tabId のみの
+   *     page.open を残し、move/close/reload/new-window が全チップを見られるようにする。
+   */
+  requireUrl?: boolean
+}
+
 function pushUngroupedMarker(records: BmxtRuleRecord[]): void {
   records.push(
     bmxtRuleRecord("page.group", {
@@ -34,10 +45,6 @@ function pushUngroupedMarker(records: BmxtRuleRecord[]): void {
   )
 }
 
-/**
- * EN: Pure builder used by tests and by the tabs-API resolver.
- * JA: テストと tabs API 解決の両方から使う純粋ビルダ。
- */
 /**
  * EN: Drop unresolved / empty-URL chip tabs before building the stream.
  *     Producers must never emit `page.open` with an empty url for tab-send.
@@ -60,10 +67,16 @@ export function filterResolvedChipTabsWithUrl(
   return out
 }
 
+/**
+ * EN: Pure builder used by tests and by the tabs-API resolver.
+ * JA: テストと tabs API 解決の両方から使う純粋ビルダ。
+ */
 export function bmxtRuleStreamFromResolvedTabs(
-  tabs: readonly ResolvedChipTab[]
+  tabs: readonly ResolvedChipTab[],
+  options?: BmxtRuleStreamFromTabsOptions
 ): BmxtRuleStream {
-  const usable = filterResolvedChipTabsWithUrl(tabs)
+  const requireUrl = options?.requireUrl !== false
+  const usable = requireUrl ? filterResolvedChipTabsWithUrl(tabs) : [...tabs]
   const records: BmxtRuleRecord[] = []
   let i = 0
   let previousWasGrouped = false
@@ -93,7 +106,7 @@ export function bmxtRuleStreamFromResolvedTabs(
         records.push(
           bmxtRuleRecord("page.open", {
             tabId: tab.tabId,
-            url: tab.url,
+            url: typeof tab.url === "string" ? tab.url : "",
             pageTitle: tab.pageTitle
           })
         )
@@ -114,7 +127,7 @@ export function bmxtRuleStreamFromResolvedTabs(
       records.push(
         bmxtRuleRecord("page.open", {
           tabId: tab.tabId,
-          url: tab.url,
+          url: typeof tab.url === "string" ? tab.url : "",
           pageTitle: tab.pageTitle
         })
       )
@@ -132,7 +145,10 @@ export function bmxtRuleStreamFromResolvedTabs(
   }
 }
 
-async function resolveChipTab(tabId: number): Promise<ResolvedChipTab | null> {
+async function resolveChipTab(
+  tabId: number,
+  allowEmptyUrl: boolean
+): Promise<ResolvedChipTab | null> {
   let tab: chrome.tabs.Tab
   try {
     tab = await chrome.tabs.get(tabId)
@@ -145,7 +161,7 @@ async function resolveChipTab(tabId: number): Promise<ResolvedChipTab | null> {
       : typeof tab.pendingUrl === "string"
         ? tab.pendingUrl.trim()
         : ""
-  if (rawUrl.length === 0) {
+  if (rawUrl.length === 0 && !allowEmptyUrl) {
     return null
   }
   const groupId = typeof tab.groupId === "number" ? tab.groupId : -1
@@ -172,14 +188,17 @@ async function resolveChipTab(tabId: number): Promise<ResolvedChipTab | null> {
 }
 
 export async function bmxtRuleStreamFromTabIds(
-  tabIds: readonly number[]
+  tabIds: readonly number[],
+  options?: BmxtRuleStreamFromTabsOptions
 ): Promise<BmxtRuleStream> {
+  const requireUrl = options?.requireUrl !== false
+  const allowEmptyUrl = !requireUrl
   const resolved: ResolvedChipTab[] = []
   for (const tabId of tabIds) {
-    const tab = await resolveChipTab(tabId)
+    const tab = await resolveChipTab(tabId, allowEmptyUrl)
     if (tab !== null) {
       resolved.push(tab)
     }
   }
-  return bmxtRuleStreamFromResolvedTabs(resolved)
+  return bmxtRuleStreamFromResolvedTabs(resolved, options)
 }
