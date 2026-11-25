@@ -695,3 +695,57 @@ where
     stdout().execute(LeaveAlternateScreen)?;
     result
 }
+
+/**
+ * EN: Interactive source-peer pick by number (bare `--device | browse`).
+ *     One peer → auto-select. Otherwise print numbered list and read stdin.
+ * JA: 取得元ピアを番号で選ぶ（`--device | browse`）。1台なら自動確定。
+ */
+pub fn pick_peer_by_number(peers: &[(String, String)]) -> Result<String> {
+    use std::io::{self, Write};
+
+    if peers.is_empty() {
+        return Err(anyhow::anyhow!(t_cli("cmd.cli.device.noPeers", &[])));
+    }
+    if peers.len() == 1 {
+        let (id, name) = &peers[0];
+        let label = if name.is_empty() {
+            id.as_str()
+        } else {
+            name.as_str()
+        };
+        eprintln!(
+            "{}",
+            t_cli("cmd.cli.device.autoSelected", &[("peer", label)])
+        );
+        return Ok(id.clone());
+    }
+
+    eprintln!("{}", t_cli("cmd.cli.device.pickPrompt", &[]));
+    for (i, (id, name)) in peers.iter().enumerate() {
+        let label = if name.is_empty() {
+            id.as_str()
+        } else {
+            name.as_str()
+        };
+        eprintln!("  {}. {}  ({})", i + 1, label, id);
+    }
+    eprint!(
+        "{}",
+        t_cli(
+            "cmd.cli.device.pickNumber",
+            &[("max", &peers.len().to_string())]
+        )
+    );
+    let _ = io::stderr().flush();
+    let mut line = String::new();
+    io::stdin().read_line(&mut line)?;
+    let trimmed = line.trim();
+    let Ok(n) = trimmed.parse::<usize>() else {
+        return Err(anyhow::anyhow!(t_cli("cmd.cli.device.invalidNumber", &[])));
+    };
+    if n == 0 || n > peers.len() {
+        return Err(anyhow::anyhow!(t_cli("cmd.cli.device.invalidNumber", &[])));
+    }
+    Ok(peers[n - 1].0.clone())
+}

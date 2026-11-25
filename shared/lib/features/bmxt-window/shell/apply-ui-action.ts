@@ -6,7 +6,10 @@ import {
   type ListCommandFetchContext,
   type ListCommandId
 } from "../../command-line/list-commands"
-import { listPlanFromOpenPlainList } from "../../command-line/list-commands/list-plan-from-ir"
+import {
+  isBareDeviceScope,
+  listPlanFromOpenPlainList
+} from "../../command-line/list-commands/list-plan-from-ir"
 import { segmentFailure, segmentSuccess } from "../../command-line/compound/classify-outcome"
 import type { SegmentOutcome } from "../../command-line/compound/types"
 import {
@@ -1509,6 +1512,12 @@ function applyOpenPlainList(
   ctx: CommandDispatchContext,
   action: Extract<UiActionIR, { kind: "open_plain_list" }>
 ): boolean {
+  if (isBareDeviceScope(action.device_scope, action.device_id)) {
+    finishCommand(ctx)
+    void ctx.deps.appendLogLines([tCmd("cmd.cli.device.needIdOrBrowse", ctx.locale)])
+    ctx.deps.focusPrompt()
+    return true
+  }
   const resolved = resolveOpenPlainListPlan(action)
   if (resolved === null) {
     return false
@@ -1546,6 +1555,9 @@ async function applyOpenPlainListSegment(
   ctx: CommandDispatchContext,
   action: Extract<UiActionIR, { kind: "open_plain_list" }>
 ): Promise<SegmentOutcome> {
+  if (isBareDeviceScope(action.device_scope, action.device_id)) {
+    return segmentFailure("usage", [tCmd("cmd.cli.device.needIdOrBrowse", ctx.locale)])
+  }
   const resolved = resolveOpenPlainListPlan(action)
   if (resolved === null) {
     return segmentFailure("unknown", [`error: unknown list: ${action.list_id}`])
@@ -1599,6 +1611,12 @@ function applyOpenPicker(
   ctx: CommandDispatchContext,
   action: Extract<UiActionIR, { kind: "open_picker" }>
 ): boolean {
+  if (isBareDeviceScope(action.device_scope, action.device_id)) {
+    finishCommand(ctx)
+    void ctx.deps.appendLogLines([tCmd("cmd.cli.device.needIdOrBrowse", ctx.locale)])
+    ctx.deps.focusPrompt()
+    return true
+  }
   const resolved = resolveOpenPickerPlan(action)
   if (resolved === null) {
     return false
@@ -1654,6 +1672,9 @@ async function applyOpenPickerSegment(
   ctx: CommandDispatchContext,
   action: Extract<UiActionIR, { kind: "open_picker" }>
 ): Promise<SegmentOutcome> {
+  if (isBareDeviceScope(action.device_scope, action.device_id)) {
+    return segmentFailure("usage", [tCmd("cmd.cli.device.needIdOrBrowse", ctx.locale)])
+  }
   const resolved = resolveOpenPickerPlan(action)
   if (resolved === null) {
     return segmentFailure("unknown", [`error: unknown list: ${action.list_id}`])

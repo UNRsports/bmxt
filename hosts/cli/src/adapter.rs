@@ -103,6 +103,31 @@ impl<'a> CliHostAdapter<'a> {
         RunOutcome::status(EXIT_MISUSE)
     }
 
+    fn refuse_bare_device(&mut self) -> RunOutcome {
+        self.err(t_cli("cmd.cli.device.needIdOrBrowse", &[]));
+        RunOutcome::status(EXIT_MISUSE)
+    }
+
+    fn is_bare_device(device_scope: &str, device_id: &str) -> bool {
+        device_scope == "device" && device_id.trim().is_empty()
+    }
+
+    /**
+     * EN: For bare `--device` in Interactive browse, pick one connected peer by number.
+     * JA: Interactive の `| browse` で ID なし `--device` なら番号で1台選ぶ。
+     */
+    async fn resolve_source_device_id(
+        &mut self,
+        device_scope: &str,
+        device_id: &str,
+    ) -> Result<String> {
+        if !Self::is_bare_device(device_scope, device_id) {
+            return Ok(device_id.to_string());
+        }
+        let peers = self.require_client()?.list_connected().await;
+        tokio::task::block_in_place(|| tui::pick_peer_by_number(&peers))
+    }
+
     fn require_client(&self) -> Result<&'a BusClient> {
         self.client.ok_or_else(|| {
             anyhow!(
@@ -187,11 +212,13 @@ impl<'a> CliHostAdapter<'a> {
                 if let Some((kind, scope, device_id)) =
                     search_list_query_from_bundle(&producer_bundle)
                 {
+                    let device_id = self.resolve_source_device_id(&scope, &device_id).await?;
                     let hits = self.fetch_search_hits(kind, &scope, &device_id).await?;
                     return self.run_url_picker_and_open(hits).await;
                 }
                 let (scope, device_id, show_url) =
                     tabs_list_query_from_bundle(&producer_bundle)?;
+                let device_id = self.resolve_source_device_id(&scope, &device_id).await?;
                 let rows = self
                     .fetch_tabs_scope(&scope, &device_id, show_url)
                     .await?;
@@ -329,6 +356,11 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::with_prefix(exit_status, prompt_prefix))
             }
             DispatchBundle::Effects { effects, .. } => {
+                for effect in &effects {
+                    if effect_is_bare_device(effect) {
+                        return Ok(self.refuse_bare_device());
+                    }
+                }
                 for effect in effects {
                     self.apply_effect(effect).await?;
                 }
@@ -515,6 +547,9 @@ impl<'a> CliHostAdapter<'a> {
                     ));
                     return Ok(RunOutcome::status(EXIT_SUCCESS));
                 }
+                if Self::is_bare_device(&device_scope, &device_id) {
+                    return Ok(self.refuse_bare_device());
+                }
                 if list_id == "bookmark" || list_id == "history" {
                     let hits = self
                         .fetch_search_hits(&list_id, &device_scope, &device_id)
@@ -550,6 +585,9 @@ impl<'a> CliHostAdapter<'a> {
                     self.err(t_cli("cmd.cli.setting.browseUnsupported", &[]));
                     return Ok(RunOutcome::status(EXIT_MISUSE));
                 }
+                let device_id = self
+                    .resolve_source_device_id(&device_scope, &device_id)
+                    .await?;
                 if list_id == "bookmark" || list_id == "history" {
                     let hits = self
                         .fetch_search_hits(&list_id, &device_scope, &device_id)
@@ -783,6 +821,7 @@ impl<'a> CliHostAdapter<'a> {
                     .await?;
                 Ok(Some(vec![remote]))
             }
+            "device" => Err(anyhow!(t_cli("cmd.cli.device.needIdOrBrowse", &[]))),
             "peers" | "local" | "" => Ok(None),
             other => Err(anyhow!("unknown device_scope for search: {other}")),
         }
@@ -1004,12 +1043,20 @@ impl<'a> CliHostAdapter<'a> {
         bundle: &DispatchBundle,
     ) -> Result<Vec<String>> {
         if let Some((kind, scope, device_id)) = search_list_query_from_bundle(bundle) {
+            if Self::is_bare_device(&scope, &device_id) {
+                return Err(anyhow!(t_cli("cmd.cli.device.needIdOrBrowse", &[])));
+            }
             let hits = self.fetch_search_hits(kind, &scope, &device_id).await?;
             return Ok(hits
                 .into_iter()
                 .map(|t| t.hit.url)
                 .filter(|u| !u.trim().is_empty())
                 .collect());
+        }
+        if let Ok((scope, device_id, _)) = tabs_list_query_from_bundle(bundle) {
+            if Self::is_bare_device(&scope, &device_id) {
+                return Err(anyhow!(t_cli("cmd.cli.device.needIdOrBrowse", &[])));
+            }
         }
         let rows = self.materialize_tab_rows(bundle).await?;
         Ok(urls_from_rows(&rows))
@@ -1021,6 +1068,9 @@ impl<'a> CliHostAdapter<'a> {
     ) -> Result<Vec<String>> {
         let (kind, scope, device_id) =
             search_list_query_from_bundle(bundle).unwrap_or(("bookmark", "peers".into(), String::new()));
+        if Self::is_bare_device(&scope, &device_id) {
+            return Err(anyhow!(t_cli("cmd.cli.device.needIdOrBrowse", &[])));
+        }
         let hits = self.fetch_search_hits(kind, &scope, &device_id).await?;
         Ok(hits
             .into_iter()
@@ -1631,6 +1681,27 @@ fn is_setting_list_bundle(bundle: &DispatchBundle) -> bool {
             ..
         } if list_id == "setting"
     )
+}
+
+fn effect_is_bare_device(effect: &HostEffect) -> bool {
+    match effect {
+        HostEffect::SearchList {
+            device_scope,
+            device_id,
+            ..
+        }
+        | HostEffect::TabsList {
+            device_scope,
+            device_id,
+            ..
+        }
+        | HostEffect::BookmarkList {
+            device_scope,
+            device_id,
+            ..
+        } => device_scope == "device" && device_id.trim().is_empty(),
+        _ => false,
+    }
 }
 
 fn ui_kind(action: &UiAction) -> &'static str {

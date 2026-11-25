@@ -55,6 +55,7 @@ Same grammar as the extension (`bmxt-core`):
    - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`) · **Tab** applies · **Enter** runs
    - Tab after `-list` offers `| browse`…; after a typed `|`, Tab completes `browse` / `close` / …
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates on the owning peer, stays open until q/Esc; **live refresh** on Family `tabs_changed`)
+   - `history -list --device <id>` (oneshot list) · `history -list --device | browse` (number-pick source peer, then URL picker; same for `bookmark` / `tab` / `search -list`)
    - **`quit` / `exit`** ends the `bmxt` process (peer drop while the REPL stays up only prints a “listener keeps running” notice)
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - First peer: `sync -offer` / `sync -accept` (or `bmxt sync-connect`); extra peers join via mesh
@@ -164,6 +165,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
    - **↑↓** 履歴 · **灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）· **Tab** で適用 · **Enter** で実行
    - `-list` 後の Tab で `| browse` 等、既に `|` を打った右辺では `browse` / `close` 等を補完
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で所有 peer へ activate、q/Esc まで開いたまま。Family `tabs_changed` で**ライブ更新**）
+   - `history -list --device <id>`（ワンショット一覧）· `history -list --device | browse`（番号で取得元ピア選択→URL picker。`bookmark` / `tab` / `search -list` も同様）
    - **`quit` / `exit`** で `bmxt` プロセス終了（REPL 継続中のピア切断時のみ「待ち受け継続」案内）
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - 最初の peer: `sync -offer` / `sync -accept`（または `bmxt sync-connect`）。追加 peer はメッシュ

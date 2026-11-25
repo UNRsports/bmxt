@@ -1399,6 +1399,30 @@
     "ja": "非対話 exec では握手・配送の対話（ask / zenity）は禁止です。事前に `setting` / REPL で済ませてください。",
     "en": "Interactive handshake / delivery (ask / zenity) is forbidden in non-interactive exec. Configure via `setting` / REPL first."
   },
+  "cmd.cli.device.needIdOrBrowse": {
+    "ja": "`--device` には <id> が必要です。ワンショットは `--device <id>`、対話選択は `--device | browse` を使ってください。",
+    "en": "`--device` needs an <id>. For oneshot use `--device <id>`; for interactive pick use `--device | browse`."
+  },
+  "cmd.cli.device.noPeers": {
+    "ja": "接続中のピアがありません。先にブラウザを Family 接続してください。",
+    "en": "No connected peers. Connect a browser to the Family first."
+  },
+  "cmd.cli.device.autoSelected": {
+    "ja": "取得元ピア: {peer}（1台のため自動選択）",
+    "en": "Source peer: {peer} (auto-selected; only one connected)"
+  },
+  "cmd.cli.device.pickPrompt": {
+    "ja": "取得元ピアを番号で選んでください:",
+    "en": "Pick source peer by number:"
+  },
+  "cmd.cli.device.pickNumber": {
+    "ja": "番号 [1-{max}]: ",
+    "en": "Number [1-{max}]: "
+  },
+  "cmd.cli.device.invalidNumber": {
+    "ja": "無効な番号です。一覧の番号を入力してください。",
+    "en": "Invalid number. Enter a number from the list."
+  },
   "cmd.sync.open.notConnected": {
     "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",
     "en": "Peer not connected. Establish a DataChannel with sync -connect <deviceId> (or -offer / -answer / -accept) first."

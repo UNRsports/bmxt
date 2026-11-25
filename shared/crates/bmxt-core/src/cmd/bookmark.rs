@@ -81,12 +81,16 @@ fn parse_device_scope(args: &[String], start: usize) -> Option<(String, String, 
             if device_scope != "local" {
                 return None;
             }
-            let Some(id) = args.get(i + 1).and_then(|s| sanitize_id(s)) else {
-                return None;
-            };
+            // EN: Bare `--device` (no id) is a valid plan; host picks via `| browse` or misuse on plain.
+            // JA: ID なし `--device` は合法 plan。plain はホストが misuse、`| browse` で番号選択。
             device_scope = "device".to_string();
-            device_id = id;
-            i += 2;
+            if let Some(id) = args.get(i + 1).and_then(|s| sanitize_id(s)) {
+                device_id = id;
+                i += 2;
+            } else {
+                device_id = String::new();
+                i += 1;
+            }
             continue;
         }
         rest.push(args[i].clone());
@@ -127,7 +131,9 @@ fn run_list(args: &[String]) -> DispatchBundle {
             dispatch_parts.push("--peers".to_string());
         } else {
             dispatch_parts.push("--device".to_string());
-            dispatch_parts.push(device_id.clone());
+            if !device_id.is_empty() {
+                dispatch_parts.push(device_id.clone());
+            }
         }
         return effects(vec![HostEffect::SearchList {
             dispatch_line: dispatch_parts.join(" "),
@@ -469,6 +475,27 @@ mod tests {
                 HostEffect::SearchList {
                     peer_dispatch_line, ..
                 } => assert!(peer_dispatch_line.contains("--bookmark")),
+                other => panic!("unexpected: {other:?}"),
+            },
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_bare_device_emits_search_list_with_empty_id() {
+        let bundle = run(&["bookmark".into(), "-list".into(), "--device".into()]);
+        match bundle {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
+                HostEffect::SearchList {
+                    dispatch_line,
+                    device_scope,
+                    device_id,
+                    ..
+                } => {
+                    assert_eq!(device_scope, "device");
+                    assert!(device_id.is_empty());
+                    assert!(dispatch_line.ends_with("--device"));
+                }
                 other => panic!("unexpected: {other:?}"),
             },
             other => panic!("unexpected: {other:?}"),

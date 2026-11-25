@@ -79,16 +79,17 @@ fn parse_tabs_list_args(args: &[String]) -> Result<TabsListPlan, ()> {
             if device_scope != "local" {
                 return Err(());
             }
-            let Some(id) = args.get(i + 1) else {
-                return Err(());
-            };
-            let trimmed = id.trim();
-            if trimmed.is_empty() || trimmed.starts_with('-') {
-                return Err(());
-            }
+            // EN: Bare `--device` (no id) is a valid plan; host picks via `| browse` or misuse on plain.
+            // JA: ID なし `--device` は合法 plan。plain はホストが misuse、`| browse` で番号選択。
             device_scope = "device".to_string();
-            device_id = trimmed.to_string();
-            i += 2;
+            let next = args.get(i + 1).map(|s| s.trim()).unwrap_or("");
+            if !next.is_empty() && !next.starts_with('-') {
+                device_id = next.to_string();
+                i += 2;
+            } else {
+                device_id = String::new();
+                i += 1;
+            }
             continue;
         }
         return Err(());
@@ -300,12 +301,26 @@ mod tests {
     }
 
     #[test]
-    fn list_rejects_incomplete_device_and_conflicts() {
-        assert!(is_usage_msgs(&run(&[
-            "tab".into(),
-            "-list".into(),
-            "--device".into()
-        ])));
+    fn list_bare_device_emits_open_plain_list_with_empty_id() {
+        match run(&["tab".into(), "-list".into(), "--device".into()]) {
+            DispatchBundle::Ui {
+                action:
+                    UiAction::OpenPlainList {
+                        device_scope,
+                        device_id,
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(device_scope, "device");
+                assert!(device_id.is_empty());
+            }
+            other => panic!("expected OpenPlainList, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_rejects_device_peer_conflicts() {
         assert!(is_usage_msgs(&run(&[
             "tab".into(),
             "-list".into(),

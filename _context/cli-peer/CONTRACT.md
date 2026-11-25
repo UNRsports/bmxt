@@ -30,6 +30,7 @@ SoT for the terminal BMXt peer. Initial version does **not** break wire fields.
 - Soft size / timeouts: align with `remote-query-limits` / search wire soft cap.
 - Inbound max (extension): 200_000 UTF-16 code units per DataChannel text message.
 - Bookmark / history (todo **§16**): CLI has no local browser inventory. Bare `bookmark -list` / `history -list` fan out via existing **`search_query`** (flat). `bookmark -send --open|--save|--both` uses **`open_tabs`** / **`bookmarks_import`**. Peer BM mutate uses **`bookmarks_ops`** (create / create_folder / remove / move). Peer history delete is **out of scope**. Folder/date tree TUI and dedicated `bookmarks_list` RPC are **§16.7** (later).
+- **`--device` source pick:** `--device <id>` oneshot lists that peer. Bare `--device` (no id) is a valid plan; plain run → exit **2**; Interactive `| browse` → numbered connected-peer pick, then the existing URL/tab picker. Same for `tab` / `bookmark` / `history` / `search -list`.
 - **Search wire:** Hits larger than a tiny set are always sent as ordered **`search_query_chunk`** frames (≈40 KiB target, peer cap 400). Soft-capped single `search_query_result` only for ≤50 hits. CLI accumulates until `eof` and shows Interactive ASCII progress (`chunk=i/n`). URL picker caps at 200 rows.
 
 ## CLI device

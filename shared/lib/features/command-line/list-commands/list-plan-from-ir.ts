@@ -14,12 +14,22 @@ export type ListPlan = {
   showUrl: boolean
 }
 
+/** EN: Bare `--device` (no id) — host must refuse or Interactive-pick; never treat as local. */
+export function isBareDeviceScope(deviceScope: string, deviceId: string): boolean {
+  return deviceScope === "device" && deviceId.trim().length === 0
+}
+
 function scopeFromIr(deviceScope: string, deviceId: string): DeviceListScope {
   if (deviceScope === "peers") {
     return { kind: "peers" }
   }
-  if (deviceScope === "device" && deviceId.trim().length > 0) {
-    return { kind: "device", deviceId: deviceId.trim() }
+  if (deviceScope === "device") {
+    const id = deviceId.trim()
+    if (id.length > 0) {
+      return { kind: "device", deviceId: id }
+    }
+    // EN: Placeholder; callers must refuse via `isBareDeviceScope` before fetch.
+    return { kind: "device", deviceId: "" }
   }
   return { kind: "local" }
 }
