@@ -2146,12 +2146,34 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   font-style: italic;
 }
 
-.bmxt-tab-picker-row--move-dest {
-  box-shadow: inset 0 0 0 1px #a371f7;
+/* EN: MOVE cursor on a row (subtle); actual insert point is `.bmxt-tab-picker-insert-slot`. */
+.bmxt-tab-picker-row--move-cursor {
+  outline: 1px dashed rgba(163, 113, 247, 0.55);
+  outline-offset: -1px;
 }
 
-.bmxt-tab-picker-row--marked.bmxt-tab-picker-row--move-dest {
-  box-shadow: inset 0 0 0 1px #a371f7, inset 3px 0 0 #3fb950;
+.bmxt-tab-picker-row-block {
+  display: block;
+}
+
+.bmxt-tab-picker-insert-slot {
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bmxt-tab-picker-insert-slot::before {
+  content: "";
+  display: block;
+  height: 2px;
+  margin: -1px 4px 0;
+  border-radius: 1px;
+  background: #a371f7;
+  box-shadow: 0 0 0 1px rgba(163, 113, 247, 0.35);
 }
 
 /* find/dom plain picker: one row per line (fixed height for virtual window) */

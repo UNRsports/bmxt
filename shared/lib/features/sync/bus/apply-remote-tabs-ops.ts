@@ -1,4 +1,5 @@
 import type { SyncTabsOp } from "../types.ts"
+import { moveTabsContiguous } from "../../tabs/controller/move-tabs-contiguous.ts"
 
 const MAX_IDS = 200
 
@@ -28,6 +29,7 @@ export async function applyRemoteTabsOps(op: SyncTabsOp): Promise<{ ok: boolean;
         return { ok: false, detail: "bad_move_args" }
       }
       let index = Number.isInteger(op.index) ? op.index : -1
+      let destWindowId = op.windowId
       if (
         op.beforeTabId !== null &&
         Number.isInteger(op.beforeTabId) &&
@@ -39,20 +41,20 @@ export async function applyRemoteTabsOps(op: SyncTabsOp): Promise<{ ok: boolean;
             index = dest.index
           }
           if (typeof dest.windowId === "number") {
-            await chrome.tabs.move(tabIds, { windowId: dest.windowId, index })
-          } else {
-            await chrome.tabs.move(tabIds, { windowId: op.windowId, index })
+            destWindowId = dest.windowId
           }
         } catch {
-          await chrome.tabs.move(tabIds, { windowId: op.windowId, index: -1 })
+          index = -1
         }
-      } else {
-        await chrome.tabs.move(tabIds, { windowId: op.windowId, index })
+      }
+      const moved = await moveTabsContiguous(tabIds, destWindowId, index)
+      if (moved.length === 0) {
+        return { ok: false, detail: "no_tabs_moved" }
       }
       if (op.groupAfter && op.groupId !== null && Number.isInteger(op.groupId) && op.groupId >= 0) {
-        await chrome.tabs.group({ groupId: op.groupId, tabIds })
+        await chrome.tabs.group({ groupId: op.groupId, tabIds: moved })
       } else if (op.ungroup) {
-        await chrome.tabs.ungroup(tabIds)
+        await chrome.tabs.ungroup(moved)
       }
       return { ok: true, detail: null }
     }

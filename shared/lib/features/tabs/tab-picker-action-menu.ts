@@ -3,6 +3,7 @@ import { actionMenuItemsForKind, NEW_GROUP_COLORS } from "./tab-picker-overlay-c
 import type { NewGroupPaletteColor } from "./tab-picker-overlay-constants"
 import type { ActionMenuPanel, ActionMenuTabTarget, SelectKind } from "./tab-picker-overlay-types"
 import type { TabPickerRow } from "./picker-rows"
+import { computeSelectedTabIdsFromMarks } from "./picker-selected-tab-ids.ts"
 
 function tabTargetById(rows: TabPickerRow[], tabId: number): ActionMenuTabTarget {
   for (const row of rows) {
@@ -30,68 +31,21 @@ export function actionMenuTargetDividerColor(
   return NEW_GROUP_COLORS[index % NEW_GROUP_COLORS.length]
 }
 
-function tabIdsForMarked(
-  rows: TabPickerRow[],
-  markedKind: SelectKind | null,
-  markedTabIds: number[],
-  markedWindowIds: number[],
-  markedGroupKeys: string[]
-): number[] {
-  if (markedKind === "tab") {
-    return [...markedTabIds].sort((a, b) => a - b)
-  }
-  if (markedKind === "window") {
-    const windowSet = new Set(markedWindowIds)
-    const out: number[] = []
-    for (const row of rows) {
-      if (row.kind === "tab" && windowSet.has(row.windowId)) {
-        out.push(row.tabId)
-      }
-    }
-    return out.sort((a, b) => a - b)
-  }
-  if (markedKind === "group") {
-    const groupSet = new Set(markedGroupKeys)
-    const out: number[] = []
-    for (const row of rows) {
-      if (row.kind !== "tab") {
-        continue
-      }
-      const key = groupRowKey(row.windowId, row.groupId)
-      if (groupSet.has(key)) {
-        out.push(row.tabId)
-      }
-    }
-    return out.sort((a, b) => a - b)
-  }
-  return []
-}
-
 function tabIdsForRow(rows: TabPickerRow[], row: TabPickerRow): number[] {
   if (row.kind === "tab") {
     return [row.tabId]
   }
   if (row.kind === "window") {
-    const out: number[] = []
-    for (const r of rows) {
-      if (r.kind === "tab" && r.windowId === row.windowId) {
-        out.push(r.tabId)
-      }
-    }
-    return out.sort((a, b) => a - b)
+    return computeSelectedTabIdsFromMarks(rows, "window", [], [row.windowId], [])
   }
   if (row.kind === "group" && row.groupId !== null) {
-    const key = groupRowKey(row.windowId, row.groupId)
-    const out: number[] = []
-    for (const r of rows) {
-      if (r.kind !== "tab") {
-        continue
-      }
-      if (groupRowKey(r.windowId, r.groupId) === key) {
-        out.push(r.tabId)
-      }
-    }
-    return out.sort((a, b) => a - b)
+    return computeSelectedTabIdsFromMarks(
+      rows,
+      "group",
+      [],
+      [],
+      [groupRowKey(row.windowId, row.groupId)]
+    )
   }
   return []
 }
@@ -122,7 +76,13 @@ export function resolveActionMenuTabTargets(
 ): ActionMenuTabTarget[] {
   const tabIds =
     markedKind !== null
-      ? tabIdsForMarked(rows, markedKind, markedTabIds, markedWindowIds, markedGroupKeys)
+      ? computeSelectedTabIdsFromMarks(
+          rows,
+          markedKind,
+          markedTabIds,
+          markedWindowIds,
+          markedGroupKeys
+        )
       : row
         ? tabIdsForRow(rows, row)
         : []

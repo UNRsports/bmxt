@@ -8,10 +8,8 @@ import { mapVisibleIndicesToPlanRows } from "./tab-picker-plan-rows"
 import type { PickerReducerState } from "./state-machine"
 import {
   validatePickerExecute,
-  resolvePickerTarget,
   resolvePickerGroupTarget,
-  resolvePickerConfirmPlan,
-  resolvePickerMovePlan
+  resolvePickerConfirmPlan
 } from "./state-machine"
 import {
   type ExecutionContext,
@@ -26,9 +24,10 @@ import { executePickerFocusPlan } from "../side-picker/model/focus-picker-entry"
 import { pickerEntryAtVisibleHi } from "../side-picker/model/from-tab-row"
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url"
 import {
-  buildRemoteMoveOp,
+  buildRemoteMoveOpFromSlot,
   classifyPickerSelection
 } from "./remote-picker-ops.ts"
+import { resolveMoveInsertSlot } from "./resolve-move-insert-slot.ts"
 import { runRemoteTabsOp } from "./run-remote-tabs-op.ts"
 import { resolveFamilySendDestination } from "./resolve-family-send-dest.ts"
 import {
@@ -277,13 +276,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     if (visibleRowIndices.length === 0) {
       return
     }
-    const targetRows = mapVisibleIndicesToPlanRows(rows, visibleRowIndices)
-    const target = resolvePickerTarget(moveDestHi, targetRows)
-    if (!target) {
-      return
-    }
-    const plan = resolvePickerMovePlan(markedKind, target, markedGroupKeys)
-    if (!plan) {
+    const slot = resolveMoveInsertSlot(rows, visibleRowIndices, moveDestHi)
+    if (slot === null) {
       return
     }
     const toMove = [...selectedTabIds]
@@ -293,7 +287,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     const classified = classifyPickerSelection(rows, toMove)
     try {
       if (classified.kind === "remote") {
-        const op = buildRemoteMoveOp(rows, classified.peerTabIds, plan)
+        const op = buildRemoteMoveOpFromSlot(rows, classified.peerTabIds, slot)
         if (op === null) {
           await onAppendLog?.([tTabs("tabs.picker.remote.moveTargetMismatch", locale)])
         } else {
@@ -307,20 +301,14 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           }
         }
       } else if (classified.kind === "local") {
-        if (!submitLine || plan.targetWindowId === null) {
+        if (!submitLine) {
           await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
         } else {
           const line = buildTabMoveCommandLine(classified.tabIds, {
-            windowId: plan.targetWindowId,
-            groupId:
-              plan.shouldGroupToTargetAfterMove && plan.targetGroupId !== null
-                ? plan.targetGroupId
-                : undefined,
-            ungroup: plan.shouldUngroupAfterMove,
-            beforeTabId:
-              plan.targetKind === "tab" && plan.targetTabId !== null
-                ? plan.targetTabId
-                : undefined
+            windowId: slot.windowId,
+            groupId: slot.groupId !== null ? slot.groupId : undefined,
+            ungroup: slot.ungroup,
+            beforeTabId: slot.beforeTabId !== null ? slot.beforeTabId : undefined
           })
           if (line !== null) {
             clearMarkedViaReducer()
@@ -341,8 +329,6 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     clearMarkedViaReducer,
     executeFamilySendAtDest,
     locale,
-    markedKind,
-    markedGroupKeys,
     moveCloseAfter,
     moveDestHi,
     onAppendLog,
@@ -599,6 +585,7 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         markedWindowIds: execMarkedWindowIds,
         selectedTabIds: execTabIds
       }
+      let moveSlot: ReturnType<typeof resolveMoveInsertSlot> = null
       if (intent === "executeMove") {
         const familyHandled = await executeFamilySendAtDest(
           snapshot.moveDestHi,
@@ -611,18 +598,11 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           await onRefreshRows?.()
           return
         }
-        const targetRows = mapVisibleIndicesToPlanRows(rows, visibleRowIndices)
-        const target = resolvePickerTarget(snapshot.moveDestHi, targetRows)
-        if (!target) {
+        moveSlot = resolveMoveInsertSlot(rows, visibleRowIndices, snapshot.moveDestHi)
+        if (moveSlot === null) {
           setBulkSubMode(null)
           return
         }
-        const movePlan = resolvePickerMovePlan(execMarkedKind, target, snapshot.markedGroupKeys)
-        if (!movePlan) {
-          setBulkSubMode(null)
-          return
-        }
-        ctx.movePlan = movePlan
       } else if (intent === "executeGroup") {
         const groupTarget = resolvePickerGroupTarget(
           groupPickIndex,
@@ -653,8 +633,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           return
         }
         if (classified.kind === "remote") {
-          if (intent === "executeMove" && ctx.movePlan) {
-            const op = buildRemoteMoveOp(rows, classified.peerTabIds, ctx.movePlan)
+          if (intent === "executeMove" && moveSlot !== null) {
+            const op = buildRemoteMoveOpFromSlot(rows, classified.peerTabIds, moveSlot)
             if (op === null) {
               await onAppendLog?.([tTabs("tabs.picker.remote.moveTargetMismatch", locale)])
               setBulkSubMode(null)
@@ -724,19 +704,12 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
               return
             }
           }
-          if (intent === "executeMove" && ctx.movePlan && ctx.movePlan.targetWindowId !== null) {
-            const movePlan = ctx.movePlan
+          if (intent === "executeMove" && moveSlot !== null) {
             const line = buildTabMoveCommandLine(classified.tabIds, {
-              windowId: movePlan.targetWindowId,
-              groupId:
-                movePlan.shouldGroupToTargetAfterMove && movePlan.targetGroupId !== null
-                  ? movePlan.targetGroupId
-                  : undefined,
-              ungroup: movePlan.shouldUngroupAfterMove,
-              beforeTabId:
-                movePlan.targetKind === "tab" && movePlan.targetTabId !== null
-                  ? movePlan.targetTabId
-                  : undefined
+              windowId: moveSlot.windowId,
+              groupId: moveSlot.groupId !== null ? moveSlot.groupId : undefined,
+              ungroup: moveSlot.ungroup,
+              beforeTabId: moveSlot.beforeTabId !== null ? moveSlot.beforeTabId : undefined
             })
             if (line !== null) {
               clearMarkedViaReducer()

@@ -1,5 +1,6 @@
 import type { HostEffect } from "../../effect-types"
 import type { DispatchHostContext } from "../../dispatch-context"
+import { moveTabsContiguous } from "../../../tabs/controller/move-tabs-contiguous"
 import { effectT } from "../effect-i18n"
 
 type E = Extract<HostEffect, { kind: "tabs_move" }>
@@ -50,18 +51,22 @@ export async function applyTabsMoveEffect(
       return [effectT(ctx, "effect.tabsMove.noTabs")]
     }
     const resolved = await resolveMoveIndex(windowId, beforeTabId)
-    await chrome.tabs.move(moveIds, {
-      windowId: resolved.windowId,
-      index: resolved.index
-    })
+    const orderedMoved = await moveTabsContiguous(
+      moveIds,
+      resolved.windowId,
+      resolved.index
+    )
+    if (orderedMoved.length === 0) {
+      return [effectT(ctx, "effect.tabsMove.noTabs")]
+    }
     if (groupId > 0) {
-      await chrome.tabs.group({ groupId, tabIds: moveIds })
+      await chrome.tabs.group({ groupId, tabIds: orderedMoved })
     } else if (groupId === 0) {
-      await chrome.tabs.ungroup(moveIds)
+      await chrome.tabs.ungroup(orderedMoved)
     }
     return [
       effectT(ctx, "effect.tabsMove.done", {
-        count: String(moveIds.length),
+        count: String(orderedMoved.length),
         windowId: String(resolved.windowId),
         groupId: String(groupId)
       })

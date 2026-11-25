@@ -1,3 +1,5 @@
+import { moveTabsContiguous } from "./move-tabs-contiguous"
+
 type MovePlan = {
   targetKind: "tab" | "window" | "group"
   targetTabId: number | null
@@ -64,11 +66,14 @@ export async function executeMoveAction(params: {
     if (winId === undefined) {
       return
     }
-    await chrome.tabs.move(toMove, { windowId: winId, index: idx })
+    const moved = await moveTabsContiguous(toMove, winId, idx)
+    if (moved.length === 0) {
+      return
+    }
     if (plan.shouldGroupToTargetAfterMove && plan.targetGroupId !== null) {
-      await chrome.tabs.group({ groupId: plan.targetGroupId, tabIds: toMove })
+      await chrome.tabs.group({ groupId: plan.targetGroupId, tabIds: moved })
     } else if (plan.shouldUngroupAfterMove) {
-      await chrome.tabs.ungroup(toMove)
+      await chrome.tabs.ungroup(moved)
     }
     return
   }
@@ -88,19 +93,22 @@ export async function executeMoveAction(params: {
       }
       const rest = toMove.filter((id) => !movedTabIds.has(id))
       if (rest.length > 0) {
-        await chrome.tabs.move(rest, { windowId: winId, index: -1 })
+        await moveTabsContiguous(rest, winId, -1)
       }
       return
     }
-    await chrome.tabs.move(toMove, { windowId: winId, index: -1 })
+    await moveTabsContiguous(toMove, winId, -1)
     return
   }
   if (plan.targetKind === "group" && plan.targetWindowId !== null) {
-    await chrome.tabs.move(toMove, { windowId: plan.targetWindowId, index: -1 })
+    const moved = await moveTabsContiguous(toMove, plan.targetWindowId, -1)
+    if (moved.length === 0) {
+      return
+    }
     if (plan.shouldGroupToTargetAfterMove && plan.targetGroupId !== null) {
-      await chrome.tabs.group({ groupId: plan.targetGroupId, tabIds: toMove })
+      await chrome.tabs.group({ groupId: plan.targetGroupId, tabIds: moved })
     } else if (plan.shouldUngroupAfterMove) {
-      await chrome.tabs.ungroup(toMove)
+      await chrome.tabs.ungroup(moved)
     }
   }
 }

@@ -396,8 +396,8 @@
     "en": "group new — ↑↓ highlight · Tab select · Enter name/color · / char highlight · Esc"
   },
   "tabs.picker.headline.move": {
-    "ja": "Tab picker — [MOVE] ↑↓ 移動先 · Enter 適用 · {common}",
-    "en": "Tab picker — [MOVE] ↑↓ dest · Enter apply · {common}"
+    "ja": "Tab picker — [MOVE] ↑↓ 挿入位置（タブの間） · Enter 適用 · {common}",
+    "en": "Tab picker — [MOVE] ↑↓ insert slot (between tabs) · Enter apply · {common}"
   },
   "tabs.picker.headline.newTab": {
     "ja": "Tab picker — [NEW TAB] Enter で URL 入力 · {common}",

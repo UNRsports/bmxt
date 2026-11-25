@@ -59,7 +59,12 @@ export function buildSearchOpenCommandLine(
   return `open ${quoted}`
 }
 
-/** EN: `#t:… | move --window <id> [--before-tab <id>]` / `--group` / `--ungroup`. */
+/**
+ * EN: `#t:… | move --window <id> [--before-tab <id>]` / `--group` / `--ungroup`.
+ *     Picker MOVE uses insert *slots*: `--before-tab` = gap above that tab;
+ *     omit = end of window (window-row slot).
+ * JA: ピッカー MOVE は挿入スロット。`--before-tab`＝そのタブ直前、省略＝ウィンドウ末尾。
+ */
 export function buildTabMoveCommandLine(
   tabIds: readonly number[],
   opts: {

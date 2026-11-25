@@ -107,6 +107,86 @@ export function classifyPickerSelection(
   }
 }
 
+/**
+ * EN: Build a remote move op from an insert *slot* (gap between tabs), not a destination tab row.
+ * JA: 移動先タブ行ではなく挿入スロット（タブ間）からリモート move を組み立てる。
+ */
+export function buildRemoteMoveOpFromSlot(
+  rows: readonly TabPickerRow[],
+  peerTabIds: number[],
+  slot: {
+    windowId: number
+    beforeTabId: number | null
+    groupId: number | null
+    ungroup: boolean
+  }
+): SyncTabsOp | null {
+  if (peerTabIds.length === 0) {
+    return null
+  }
+
+  let peerWindowId: number | null = null
+  let peerBeforeTabId: number | null = null
+  let peerGroupId: number | null = null
+
+  if (slot.beforeTabId !== null) {
+    const beforeRow = tabRowByPickerTabId(rows, slot.beforeTabId)
+    if (
+      beforeRow === null ||
+      !beforeRow.remote ||
+      beforeRow.peerTabId === null ||
+      beforeRow.peerWindowId === null
+    ) {
+      return null
+    }
+    peerWindowId = beforeRow.peerWindowId
+    peerBeforeTabId = beforeRow.peerTabId
+    if (slot.groupId !== null && !slot.ungroup) {
+      peerGroupId = beforeRow.peerGroupId
+    }
+  } else {
+    const win = windowRowByPickerWindowId(rows, slot.windowId)
+    if (win === null || !win.remote || win.peerWindowId === null) {
+      return null
+    }
+    peerWindowId = win.peerWindowId
+  }
+
+  if (slot.groupId !== null && !slot.ungroup && peerGroupId === null) {
+    for (const row of rows) {
+      if (
+        row.kind === "group" &&
+        row.windowId === slot.windowId &&
+        row.groupId === slot.groupId &&
+        row.remote &&
+        row.peerGroupId !== null
+      ) {
+        peerGroupId = row.peerGroupId
+        if (row.peerWindowId !== null) {
+          peerWindowId = row.peerWindowId
+        }
+        break
+      }
+    }
+  }
+
+  if (peerWindowId === null) {
+    return null
+  }
+
+  return {
+    kind: "move",
+    tabIds: peerTabIds,
+    windowId: peerWindowId,
+    index: -1,
+    beforeTabId: peerBeforeTabId,
+    groupId: slot.ungroup ? null : peerGroupId,
+    ungroup: slot.ungroup,
+    groupAfter: !slot.ungroup && peerGroupId !== null
+  }
+}
+
+/** @deprecated Prefer `buildRemoteMoveOpFromSlot` (insert-slot model). */
 export function buildRemoteMoveOp(
   rows: readonly TabPickerRow[],
   peerTabIds: number[],
@@ -119,73 +199,29 @@ export function buildRemoteMoveOp(
     shouldGroupToTargetAfterMove: boolean
   }
 ): SyncTabsOp | null {
-  if (peerTabIds.length === 0) {
-    return null
-  }
   if (plan.targetKind === "tab" && plan.targetTabId !== null) {
-    const row = tabRowByPickerTabId(rows, plan.targetTabId)
-    if (row === null || !row.remote || row.peerTabId === null || row.peerWindowId === null) {
-      return null
-    }
-    return {
-      kind: "move",
-      tabIds: peerTabIds,
-      windowId: row.peerWindowId,
-      index: -1,
-      beforeTabId: row.peerTabId,
-      groupId: plan.shouldGroupToTargetAfterMove ? row.peerGroupId : null,
-      ungroup: plan.shouldUngroupAfterMove,
-      groupAfter: plan.shouldGroupToTargetAfterMove && row.peerGroupId !== null
-    }
+    return buildRemoteMoveOpFromSlot(rows, peerTabIds, {
+      windowId: plan.targetWindowId ?? -1,
+      beforeTabId: plan.targetTabId,
+      groupId: plan.shouldGroupToTargetAfterMove ? plan.targetGroupId : null,
+      ungroup: plan.shouldUngroupAfterMove
+    })
   }
   if (plan.targetKind === "window" && plan.targetWindowId !== null) {
-    const row = windowRowByPickerWindowId(rows, plan.targetWindowId)
-    if (row === null || !row.remote || row.peerWindowId === null) {
-      return null
-    }
-    return {
-      kind: "move",
-      tabIds: peerTabIds,
-      windowId: row.peerWindowId,
-      index: -1,
+    return buildRemoteMoveOpFromSlot(rows, peerTabIds, {
+      windowId: plan.targetWindowId,
       beforeTabId: null,
       groupId: null,
-      ungroup: false,
-      groupAfter: false
-    }
+      ungroup: false
+    })
   }
   if (plan.targetKind === "group" && plan.targetWindowId !== null) {
-    let peerWindowId: number | null = null
-    let peerGroupId: number | null = null
-    for (const row of rows) {
-      if (
-        row.kind === "group" &&
-        row.windowId === plan.targetWindowId &&
-        row.groupId === plan.targetGroupId &&
-        row.remote
-      ) {
-        peerWindowId = row.peerWindowId
-        peerGroupId = row.peerGroupId
-        break
-      }
-    }
-    if (peerWindowId === null) {
-      const win = windowRowByPickerWindowId(rows, plan.targetWindowId)
-      peerWindowId = win?.peerWindowId ?? null
-    }
-    if (peerWindowId === null) {
-      return null
-    }
-    return {
-      kind: "move",
-      tabIds: peerTabIds,
-      windowId: peerWindowId,
-      index: -1,
+    return buildRemoteMoveOpFromSlot(rows, peerTabIds, {
+      windowId: plan.targetWindowId,
       beforeTabId: null,
-      groupId: plan.shouldGroupToTargetAfterMove ? peerGroupId : null,
-      ungroup: plan.shouldUngroupAfterMove,
-      groupAfter: plan.shouldGroupToTargetAfterMove && peerGroupId !== null
-    }
+      groupId: plan.shouldGroupToTargetAfterMove ? plan.targetGroupId : null,
+      ungroup: plan.shouldUngroupAfterMove
+    })
   }
   return null
 }

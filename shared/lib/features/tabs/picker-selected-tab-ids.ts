@@ -1,6 +1,10 @@
-import type { TabPickerRow } from "./picker-rows"
-import { groupRowKey } from "./tab-picker-keyboard"
-import type { SelectKind } from "./tab-picker-overlay-types"
+import type { TabPickerRow } from "./picker-rows.ts"
+import type { SelectKind } from "./tab-picker-overlay-types.ts"
+
+/** EN: Same format as `groupRowKey` in tab-picker-keyboard (kept local for node:test). */
+function groupRowKey(windowId: number, groupId: number | null): string {
+  return `${windowId}:${groupId === null ? "none" : String(groupId)}`
+}
 
 export type PickerMarkSnapshot = {
   hi: number
@@ -10,7 +14,13 @@ export type PickerMarkSnapshot = {
   markedGroupKeys: string[]
 }
 
-/** EN: Resolve tab IDs targeted by current mark state (same rules as the picker derived hook). */
+/**
+ * EN: Resolve tab IDs targeted by current mark state (same rules as the picker derived hook).
+ *     Order follows picker `rows` (windowId + tab.strip index) — never numeric tab-id sort,
+ *     so bulk move / new-window keep visual order.
+ * JA: マーク状態から対象タブ ID を解決。順序はピッカー行（ウィンドウ＋タブバー index）に合わせ、
+ *     タブ ID 数値ソートはしない（一括移動・新規ウィンドウで表示順を保つ）。
+ */
 export function computeSelectedTabIdsFromMarks(
   rows: TabPickerRow[],
   markedKind: SelectKind | null,
@@ -19,7 +29,14 @@ export function computeSelectedTabIdsFromMarks(
   markedGroupKeys: string[]
 ): number[] {
   if (markedKind === "tab") {
-    return [...markedTabIds].sort((a, b) => a - b)
+    const idSet = new Set(markedTabIds)
+    const out: number[] = []
+    for (const row of rows) {
+      if (row.kind === "tab" && idSet.has(row.tabId)) {
+        out.push(row.tabId)
+      }
+    }
+    return out
   }
   if (markedKind === "window") {
     const windowSet = new Set(markedWindowIds)
@@ -29,7 +46,7 @@ export function computeSelectedTabIdsFromMarks(
         out.push(row.tabId)
       }
     }
-    return out.sort((a, b) => a - b)
+    return out
   }
   if (markedKind === "group") {
     const groupSet = new Set(markedGroupKeys)
@@ -43,7 +60,7 @@ export function computeSelectedTabIdsFromMarks(
         out.push(row.tabId)
       }
     }
-    return out.sort((a, b) => a - b)
+    return out
   }
   return []
 }
