@@ -459,10 +459,10 @@ bmxt-browser-backup/
 
 - peer 上の履歴削除
 - 履歴 DB への完全書き戻し（Chrome API 非対応）
-- peer 上での BM 削除／移動（必要なら次フェーズ `bookmarks_ops`）
+- peer 上での BM 削除／移動 → **§16 `bookmarks_ops`**
 - Netscape HTML を主形式にすること（任意 interop は後回し可）
 
-**参照:** plan `bookmark_history_ops` · skill `bmxt-add-command` · `shared/lib/features/search/cache/` · `shared/lib/features/sync/` · `shared/manifest/bmxt-rule.json`
+**参照:** plan `bookmark_history_ops` · skill `bmxt-add-command` · `shared/lib/features/search/cache/` · `shared/lib/features/sync/` · `shared/manifest/bmxt-rule.json` · **§16**
 
 ### 10. 端末版 BMXt（Rust CLI peer · Family DataChannel）
 
@@ -840,6 +840,86 @@ BMXt grammar line
 - OS パス redirect / 外部プロセス / POSIX shell 互換
 
 **参照:** §13 · §14 · plan `posix_i_o_foundation` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md` · `tests/unit/features/command-line/conformance/posix-profile.test.ts`
+
+### 16. CLI bookmark/history パリティ + 拡張残ギャップ
+
+**前提:** §9（拡張側 `bookmark` / `history` 本線完了）· §10（CLI = ブラウザ API なし・Family DataChannel）· §7（picker = コマンド組み立て）· §15（POSIX Profile ゲート）。
+
+**目標:** CLI peer で tabs 相当に bookmark / history を操作できるようにし、拡張側の残ギャップ（picker send モード · peer `bookmarks_ops` · スモーク）を閉じる。コマンド文法は既存 `bmxt-core` のまま。picker は引き続き `submitConstructedLine` のみ。
+
+**現状ギャップ**
+
+| 面 | 状態 |
+|----|------|
+| 拡張 `bookmark` / `history` | CRUD · picker · backup · `bookmarks_import`（TS）まで実装済 |
+| CLI | `tab` のみフル。`OpenPlainList` / `OpenPicker` の `bookmark`/`history` は `listLimited` / `pickerLimited`。`--peers` 経由の flat `search_query` のみ可 |
+| Wire | TS に `bookmarks_import` あり。**Rust `bmxt-sync-wire` / CLI `BusClient` 未移植**。`bookmarks_ops` 未着手 |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| CLI 在庫 | ローカル Chrome 無し → bare `bookmark -list` / `history -list` は接続 peer へ fan-out（初段は既存 `search_query`） |
+| 一覧の初段 | **flat のみ**。フォルダ／日付ツリー TUI · 専用 `bookmarks_list` RPC は後段（16.7） |
+| peer BM 変更 | **`bookmarks_ops`** を新設（`tabs_ops` 同型: create / create_folder / remove / move）。拡張 handler + CLI effect を同じ RPC に載せる |
+| peer history delete | **作らない**（§9 どおり）。CLI の `history -delete*` は当面 unsupported / misuse |
+| 送信 | `bookmark -send --open\|--save\|--both` を CLI でも実装（`open_tabs` + `bookmarks_import`） |
+| スコープ外 | CLI backup/restore · `window` first-command 拡張 · downloads 等の未着手 API · 真のインクリメンタル配信 |
+
+**アーキテクチャ（要約）**
+
+```
+CLI / 拡張 同一文法（bmxt-core）
+  → DispatchBundle（OpenPlainList / SyncBookmarkSend / Bookmark* effects）
+  → CLI adapter:
+       list  → search_query fan-out（flat）→ stdout / Interactive browse → open_tabs
+       send  → open_tabs_on / bookmarks_import_on
+       mutate → bookmarks_ops_on（接続 peer）
+  → 拡張:
+       picker send モード UI → submitConstructedLine
+       apply-remote-bookmarks-ops ← DataChannel
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `hosts/cli/src/adapter.rs` | `list_id` bookmark/history 許可 · SyncBookmarkSend · Bookmark* → RPC · pipe consumers |
+| `hosts/cli/src/bus.rs` | `bookmarks_import_on` · `bookmarks_ops_on` |
+| `shared/crates/bmxt-sync-wire` | `bookmarks_import` / `_result` · `bookmarks_ops` / `_result`（TS と同期） |
+| `shared/lib/features/sync/types.ts` · `adapters/webrtc-command-bus.ts` | 拡張側 wire · waiter |
+| `shared/lib/features/sync/bus/apply-remote-bookmarks-ops.ts`（新） | peer 上 `chrome.bookmarks.*` |
+| `shared/lib/features/bookmark/` · `picker/build-picker-command-line.ts` | picker `--save`/`--both` UI |
+| `SyncRemoteSearchHit` | optional `bookmarkId` / `parentId`（remove/move の id 手渡し） |
+
+**実装チェック（段階）**
+
+- [ ] **16.0 契約:** 本節方針を `_context/cli-peer/CONTRACT.md`（または本節参照）に追記。§9 スコープ外の `bookmarks_ops` を本節へ移管済みであること
+- [ ] **16.1 拡張 picker send モード（A1）:** bookmark picker から `--open\|--save\|--both` を選択可能。typed CUI と同形行を `submitConstructedLine`
+- [ ] **16.2 CLI flat 一覧（B1）:** `OpenPlainList` / `OpenPicker` で `list_id` ∈ {bookmark, history} を許可し `search_query` へ寄せる。Interactive flat browse → `open_tabs`。NonInteractive は stdout のみ。i18n `listLimited` / `pickerLimited` 更新
+- [ ] **16.3 CLI Family send（B2）:** Rust wire に `bookmarks_import` / `_result` · `BusClient` · adapter `UiAction::SyncBookmarkSend`（`--open`/`--save`/`--both`）。pipe `| bookmark -send` は URL materialize 後に同経路
+- [ ] **16.4 peer `bookmarks_ops`（B3 · 拡張+CLI）:** wire（TS+Rust）· `apply-remote-bookmarks-ops` · search hit に optional `bookmarkId` · CLI の `BookmarkCreate`/`_Folder`/`_Remove`/`_Move` → `bookmarks_ops_on` · pipe `BookmarkRemove`/`Move`/`Add`/`Send`
+- [ ] **16.5 検証（A2）:** §9 手元スモーク（ローカル CRUD · send · Chrome↔Firefox · backup）再実施。`remote-bookmarks-import` / backup の薄い unit。`check:cli-command-io` · `verify:host-blind` · cargo/tsc
+- [ ] **16.6（任意）:** bookmark picker の add / new-folder ウィザード（§7 任意の続き · `submitConstructedLine` のみ）
+- [ ] **16.7（後続・必須でない）:** 構造化 `bookmarks_list` RPC · フォルダ／日付ツリー plain print · ratatui ツリー TUI
+
+**手元スモーク**
+
+- [ ] 拡張: picker から `bookmark -send <id> --save` / `--both` が history/ログに残り、peer で期待どおり動く
+- [ ] CLI: `bookmark -list` / `history -list` が接続 peer の flat 一覧を stdout に出す
+- [ ] CLI Interactive: `bookmark -list | browse` → Enter で peer に URL open
+- [ ] CLI: `bookmark -send <deviceId> --open|--save|--both <url…>` 成功
+- [ ] CLI: `bookmark -add` / `-folder` / `-remove` / `-move` が `bookmarks_ops` 経由で peer に反映
+- [ ] CLI: `history -delete*` が明確に unsupported（ハングしない）
+- [ ] `bmxt exec -- 'bookmark -list'` が NonInteractive で一覧のみ（browse なし）
+
+**スコープ外（本節）**
+
+- peer 履歴削除 · 履歴 DB 書き戻し
+- CLI 上の `bookmark|history -backup/-restore`（拡張 FSA のまま）
+- `window` の list/manage first-command 化（既存 `tab` / `close --window` で足りる）
+- downloads / cookies / browsingData / readingList / `chrome.sessions`
+- 16.7 完了前のツリー TUI 必須化
+
+**参照:** §7 · §9 · §10 · §15 · `hosts/cli/src/adapter.rs` · `shared/crates/bmxt-sync-wire` · `shared/lib/features/sync/` · `shared/lib/features/bookmark/` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md`
 
 ---
 
