@@ -47,7 +47,16 @@ export async function applyRemoteTabsOps(op: SyncTabsOp): Promise<{ ok: boolean;
           index = -1
         }
       }
-      const moved = await moveTabsContiguous(tabIds, destWindowId, index)
+      const moved = await moveTabsContiguous(
+        tabIds,
+        destWindowId,
+        index,
+        op.beforeTabId !== null &&
+          Number.isInteger(op.beforeTabId) &&
+          op.beforeTabId >= 0
+          ? { beforeTabId: op.beforeTabId }
+          : undefined
+      )
       if (moved.length === 0) {
         return { ok: false, detail: "no_tabs_moved" }
       }

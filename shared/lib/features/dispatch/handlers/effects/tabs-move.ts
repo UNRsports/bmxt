@@ -54,7 +54,10 @@ export async function applyTabsMoveEffect(
     const orderedMoved = await moveTabsContiguous(
       moveIds,
       resolved.windowId,
-      resolved.index
+      resolved.index,
+      Number.isFinite(beforeTabId) && beforeTabId >= 0
+        ? { beforeTabId }
+        : undefined
     )
     if (orderedMoved.length === 0) {
       return [effectT(ctx, "effect.tabsMove.noTabs")]

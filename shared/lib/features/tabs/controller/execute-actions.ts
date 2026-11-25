@@ -66,7 +66,9 @@ export async function executeMoveAction(params: {
     if (winId === undefined) {
       return
     }
-    const moved = await moveTabsContiguous(toMove, winId, idx)
+    const moved = await moveTabsContiguous(toMove, winId, idx, {
+      beforeTabId: plan.targetTabId
+    })
     if (moved.length === 0) {
       return
     }
