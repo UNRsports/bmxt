@@ -322,8 +322,6 @@ impl PickerEntry {
 /** EN: Flat URL hit for bookmark/history CLI browse (open via open_tabs). */
 #[derive(Debug, Clone)]
 pub struct PeerUrlHit {
-    pub peer_device_id: String,
-    pub peer_display_name: String,
     pub source: String,
     pub title: String,
     pub url: String,
@@ -332,18 +330,35 @@ pub struct PeerUrlHit {
 
 #[derive(Debug, Clone)]
 pub struct UrlPickerSelection {
-    pub peer_device_id: String,
+    #[allow(dead_code)] // EN: Kept for status / future labels.
     pub title: String,
     pub url: String,
 }
 
+/** EN: Connected peer offered as open destination. */
+#[derive(Debug, Clone)]
+pub struct UrlOpenPeer {
+    pub device_id: String,
+    pub display_name: String,
+}
+
+enum UrlPickerMode {
+    Browse,
+    PickPeer,
+}
+
 /**
- * EN: Interactive flat URL list. Enter opens via `on_open`; Esc/q closes.
- * JA: flat URL 一覧。Enter で `on_open`、Esc/q で閉じる。
+ * EN: Interactive flat URL list with Space multi-mark and destination-peer pick.
+ *     Enter opens marked rows (or the highlighted row when none marked).
+ * JA: flat URL 一覧。Space で複数マーク、Enter で開く先ピアを選ぶ。
  */
-pub fn run_url_picker<F>(hits: Vec<PeerUrlHit>, mut on_open: F) -> Result<()>
+pub fn run_url_picker<F>(
+    hits: Vec<PeerUrlHit>,
+    open_peers: Vec<UrlOpenPeer>,
+    mut on_open: F,
+) -> Result<()>
 where
-    F: FnMut(&UrlPickerSelection) -> Result<()>,
+    F: FnMut(&str, &[UrlPickerSelection]) -> Result<()>,
 {
     let entries: Vec<(String, UrlPickerSelection)> = hits
         .into_iter()
@@ -354,14 +369,10 @@ where
                 .as_ref()
                 .map(|id| format!(" id={id}"))
                 .unwrap_or_default();
-            let label = format!(
-                "[{}] {} — {}{}  ({})",
-                h.source, h.title, h.url, id_part, h.peer_display_name
-            );
+            let label = format!("[{}] {} — {}{}", h.source, h.title, h.url, id_part);
             (
                 label,
                 UrlPickerSelection {
-                    peer_device_id: h.peer_device_id,
                     title: h.title,
                     url: h.url,
                 },
@@ -372,6 +383,9 @@ where
         println!("(empty list)");
         return Ok(());
     }
+    if open_peers.is_empty() {
+        return Err(anyhow::anyhow!("no connected peers for open destination"));
+    }
 
     enable_raw_mode()?;
     stdout().execute(EnterAlternateScreen)?;
@@ -381,121 +395,264 @@ where
         state.select(Some(0));
         let mut filter = String::new();
         let mut searching = false;
-        let mut status = t_cli("cmd.cli.picker.help", &[]);
+        let mut marked: std::collections::HashSet<usize> = std::collections::HashSet::new();
+        let mut mode = UrlPickerMode::Browse;
+        let mut pending_open: Vec<UrlPickerSelection> = Vec::new();
+        let mut peer_state = ListState::default();
+        peer_state.select(Some(0));
+        let mut status = t_cli("cmd.cli.urlPicker.help", &[]);
 
         loop {
-            let filtered: Vec<usize> = entries
-                .iter()
-                .enumerate()
-                .filter(|(_, (label, _))| {
-                    if filter.is_empty() {
-                        true
-                    } else {
-                        label.to_lowercase().contains(&filter.to_lowercase())
-                    }
-                })
-                .map(|(i, _)| i)
-                .collect();
+            match mode {
+                UrlPickerMode::Browse => {
+                    let filtered: Vec<usize> = entries
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, (label, _))| {
+                            if filter.is_empty() {
+                                true
+                            } else {
+                                label.to_lowercase().contains(&filter.to_lowercase())
+                            }
+                        })
+                        .map(|(i, _)| i)
+                        .collect();
 
-            if let Some(sel) = state.selected() {
-                if filtered.is_empty() {
-                    state.select(None);
-                } else if sel >= filtered.len() {
-                    state.select(Some(filtered.len() - 1));
-                }
-            } else if !filtered.is_empty() {
-                state.select(Some(0));
-            }
+                    if let Some(sel) = state.selected() {
+                        if filtered.is_empty() {
+                            state.select(None);
+                        } else if sel >= filtered.len() {
+                            state.select(Some(filtered.len() - 1));
+                        }
+                    } else if !filtered.is_empty() {
+                        state.select(Some(0));
+                    }
 
-            terminal.draw(|frame| {
-                let chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([Constraint::Min(3), Constraint::Length(3)])
-                    .split(frame.area());
-                let items: Vec<ListItem> = filtered
-                    .iter()
-                    .map(|idx| ListItem::new(entries[*idx].0.as_str()))
-                    .collect();
-                let list = List::new(items)
-                    .block(
-                        Block::default()
-                            .borders(Borders::ALL)
-                            .title("BMXt URL picker"),
-                    )
-                    .highlight_symbol("▶ ");
-                frame.render_stateful_widget(list, chunks[0], &mut state);
-                let footer = if searching {
-                    format!("/{filter}_")
-                } else {
-                    status.clone()
-                };
-                frame.render_widget(
-                    Paragraph::new(footer).block(Block::default().borders(Borders::ALL)),
-                    chunks[1],
-                );
-            })?;
+                    terminal.draw(|frame| {
+                        let chunks = Layout::default()
+                            .direction(Direction::Vertical)
+                            .constraints([Constraint::Min(3), Constraint::Length(3)])
+                            .split(frame.area());
+                        let items: Vec<ListItem> = filtered
+                            .iter()
+                            .map(|idx| {
+                                let mark = if marked.contains(idx) { "[x] " } else { "[ ] " };
+                                ListItem::new(format!("{mark}{}", entries[*idx].0))
+                            })
+                            .collect();
+                        let title = format!(
+                            "BMXt URL picker · marked {}",
+                            marked.len()
+                        );
+                        let list = List::new(items)
+                            .block(Block::default().borders(Borders::ALL).title(title))
+                            .highlight_symbol("▶ ");
+                        frame.render_stateful_widget(list, chunks[0], &mut state);
+                        let footer = if searching {
+                            format!("/{filter}_")
+                        } else {
+                            status.clone()
+                        };
+                        frame.render_widget(
+                            Paragraph::new(footer).block(Block::default().borders(Borders::ALL)),
+                            chunks[1],
+                        );
+                    })?;
 
-            if !event::poll(std::time::Duration::from_millis(200))? {
-                continue;
-            }
-            let Event::Key(key) = event::read()? else {
-                continue;
-            };
-            if key.kind != KeyEventKind::Press {
-                continue;
-            }
-            if searching {
-                match key.code {
-                    KeyCode::Esc => {
-                        searching = false;
-                        filter.clear();
+                    if !event::poll(std::time::Duration::from_millis(200))? {
+                        continue;
                     }
-                    KeyCode::Enter => searching = false,
-                    KeyCode::Backspace => {
-                        filter.pop();
+                    let Event::Key(key) = event::read()? else {
+                        continue;
+                    };
+                    if key.kind != KeyEventKind::Press {
+                        continue;
                     }
-                    KeyCode::Char(c) => filter.push(c),
-                    _ => {}
-                }
-                continue;
-            }
-            match key.code {
-                KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
-                KeyCode::Char('/') => {
-                    searching = true;
-                    filter.clear();
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    let i = state.selected().unwrap_or(0);
-                    if i + 1 < filtered.len() {
-                        state.select(Some(i + 1));
+                    if searching {
+                        match key.code {
+                            KeyCode::Esc => {
+                                searching = false;
+                                filter.clear();
+                            }
+                            KeyCode::Enter => searching = false,
+                            KeyCode::Backspace => {
+                                filter.pop();
+                            }
+                            KeyCode::Char(c) => filter.push(c),
+                            _ => {}
+                        }
+                        continue;
                     }
-                }
-                KeyCode::Up | KeyCode::Char('k') => {
-                    let i = state.selected().unwrap_or(0);
-                    if i > 0 {
-                        state.select(Some(i - 1));
-                    }
-                }
-                KeyCode::Enter => {
-                    if let Some(fi) = state.selected() {
-                        if let Some(entry_idx) = filtered.get(fi) {
-                            let sel = &entries[*entry_idx].1;
-                            match on_open(sel) {
-                                Ok(()) => {
-                                    status = format!(
-                                        "opened {} — {} · q/Esc close",
-                                        sel.title, sel.url
+                    match key.code {
+                        KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+                        KeyCode::Char('/') => {
+                            searching = true;
+                            filter.clear();
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            let i = state.selected().unwrap_or(0);
+                            if i + 1 < filtered.len() {
+                                state.select(Some(i + 1));
+                            }
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            let i = state.selected().unwrap_or(0);
+                            if i > 0 {
+                                state.select(Some(i - 1));
+                            }
+                        }
+                        KeyCode::Char(' ') => {
+                            if let Some(fi) = state.selected() {
+                                if let Some(entry_idx) = filtered.get(fi).copied() {
+                                    if !marked.remove(&entry_idx) {
+                                        marked.insert(entry_idx);
+                                    }
+                                    status = t_cli(
+                                        "cmd.cli.urlPicker.marked",
+                                        &[("count", &marked.len().to_string())],
                                     );
-                                }
-                                Err(err) => {
-                                    status = format!("error: {err} · q/Esc close");
                                 }
                             }
                         }
+                        KeyCode::Enter => {
+                            let targets: Vec<UrlPickerSelection> = if marked.is_empty() {
+                                if let Some(fi) = state.selected() {
+                                    filtered
+                                        .get(fi)
+                                        .map(|idx| entries[*idx].1.clone())
+                                        .into_iter()
+                                        .collect()
+                                } else {
+                                    Vec::new()
+                                }
+                            } else {
+                                let mut idxs: Vec<usize> = marked.iter().copied().collect();
+                                idxs.sort_unstable();
+                                idxs.into_iter()
+                                    .filter_map(|idx| entries.get(idx).map(|e| e.1.clone()))
+                                    .collect()
+                            };
+                            if targets.is_empty() {
+                                status = t_cli("cmd.cli.urlPicker.noneSelected", &[]);
+                                continue;
+                            }
+                            if open_peers.len() == 1 {
+                                let peer = &open_peers[0];
+                                match on_open(&peer.device_id, &targets) {
+                                    Ok(()) => {
+                                        status = t_cli(
+                                            "cmd.cli.urlPicker.opened",
+                                            &[
+                                                ("count", &targets.len().to_string()),
+                                                ("peer", &peer.display_name),
+                                            ],
+                                        );
+                                        marked.clear();
+                                    }
+                                    Err(err) => {
+                                        status = format!("error: {err} · q/Esc close");
+                                    }
+                                }
+                            } else {
+                                pending_open = targets;
+                                mode = UrlPickerMode::PickPeer;
+                                peer_state.select(Some(0));
+                                status = t_cli(
+                                    "cmd.cli.urlPicker.pickPeer",
+                                    &[("count", &pending_open.len().to_string())],
+                                );
+                            }
+                        }
+                        _ => {}
                     }
                 }
-                _ => {}
+                UrlPickerMode::PickPeer => {
+                    terminal.draw(|frame| {
+                        let chunks = Layout::default()
+                            .direction(Direction::Vertical)
+                            .constraints([Constraint::Min(3), Constraint::Length(3)])
+                            .split(frame.area());
+                        let items: Vec<ListItem> = open_peers
+                            .iter()
+                            .map(|p| {
+                                let name = if p.display_name.is_empty() {
+                                    p.device_id.as_str()
+                                } else {
+                                    p.display_name.as_str()
+                                };
+                                ListItem::new(format!("{name}  ({})", p.device_id))
+                            })
+                            .collect();
+                        let list = List::new(items)
+                            .block(
+                                Block::default()
+                                    .borders(Borders::ALL)
+                                    .title("Open on peer"),
+                            )
+                            .highlight_symbol("▶ ");
+                        frame.render_stateful_widget(list, chunks[0], &mut peer_state);
+                        frame.render_widget(
+                            Paragraph::new(status.clone())
+                                .block(Block::default().borders(Borders::ALL)),
+                            chunks[1],
+                        );
+                    })?;
+
+                    if !event::poll(std::time::Duration::from_millis(200))? {
+                        continue;
+                    }
+                    let Event::Key(key) = event::read()? else {
+                        continue;
+                    };
+                    if key.kind != KeyEventKind::Press {
+                        continue;
+                    }
+                    match key.code {
+                        KeyCode::Char('q') => return Ok(()),
+                        KeyCode::Esc => {
+                            pending_open.clear();
+                            mode = UrlPickerMode::Browse;
+                            status = t_cli("cmd.cli.urlPicker.help", &[]);
+                        }
+                        KeyCode::Down | KeyCode::Char('j') => {
+                            let i = peer_state.selected().unwrap_or(0);
+                            if i + 1 < open_peers.len() {
+                                peer_state.select(Some(i + 1));
+                            }
+                        }
+                        KeyCode::Up | KeyCode::Char('k') => {
+                            let i = peer_state.selected().unwrap_or(0);
+                            if i > 0 {
+                                peer_state.select(Some(i - 1));
+                            }
+                        }
+                        KeyCode::Enter => {
+                            if let Some(i) = peer_state.selected() {
+                                if let Some(peer) = open_peers.get(i) {
+                                    let targets = pending_open.clone();
+                                    match on_open(&peer.device_id, &targets) {
+                                        Ok(()) => {
+                                            status = t_cli(
+                                                "cmd.cli.urlPicker.opened",
+                                                &[
+                                                    ("count", &targets.len().to_string()),
+                                                    ("peer", &peer.display_name),
+                                                ],
+                                            );
+                                            marked.clear();
+                                            pending_open.clear();
+                                            mode = UrlPickerMode::Browse;
+                                        }
+                                        Err(err) => {
+                                            status = format!("error: {err} · Esc back");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             }
         }
     })();

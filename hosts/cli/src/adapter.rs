@@ -894,19 +894,16 @@ impl<'a> CliHostAdapter<'a> {
         let client = self.require_client()?.clone();
         let self_device_id = self.cfg.device_id.clone();
         let peers = client.list_connected().await;
-        let peer_name = |id: &str| -> String {
-            peers
-                .iter()
-                .find(|(pid, _)| pid == id)
-                .map(|(_, name)| name.clone())
-                .unwrap_or_else(|| id.to_string())
-        };
-        // EN: search_query fans out; attribute hits to first connected peer for open routing.
-        // JA: search_query は fan-out。open 経路のため先頭接続 peer に帰属させる。
-        let default_peer = peers
-            .first()
-            .map(|(id, _)| id.clone())
-            .ok_or_else(|| anyhow!("no connected peers"))?;
+        if peers.is_empty() {
+            return Err(anyhow!("no connected peers"));
+        }
+        let open_peers: Vec<tui::UrlOpenPeer> = peers
+            .into_iter()
+            .map(|(device_id, display_name)| tui::UrlOpenPeer {
+                device_id,
+                display_name,
+            })
+            .collect();
         let total = hits.len();
         let capped: Vec<SyncRemoteSearchHit> = hits.into_iter().take(MAX_URL_PICKER_ROWS).collect();
         if total > capped.len() {
@@ -921,8 +918,6 @@ impl<'a> CliHostAdapter<'a> {
         let rows: Vec<tui::PeerUrlHit> = capped
             .into_iter()
             .map(|hit| tui::PeerUrlHit {
-                peer_device_id: default_peer.clone(),
-                peer_display_name: peer_name(&default_peer),
                 source: hit.source,
                 title: hit.title,
                 url: hit.url,
@@ -931,13 +926,17 @@ impl<'a> CliHostAdapter<'a> {
             .collect();
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            tui::run_url_picker(rows, |sel| {
+            tui::run_url_picker(rows, open_peers, |dest_peer_id, sels| {
+                let urls: Vec<String> = sels.iter().map(|s| s.url.clone()).collect();
+                if urls.is_empty() {
+                    return Ok(());
+                }
                 handle.block_on(async {
                     client
                         .open_tabs_on(
                             &self_device_id,
-                            &sel.peer_device_id,
-                            vec![sel.url.clone()],
+                            dest_peer_id,
+                            urls,
                             None,
                             None,
                         )

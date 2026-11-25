@@ -1295,6 +1295,26 @@
     "ja": "一覧を更新しました · ↑↓ 移動 · / 絞り込み · Enter · q/Esc",
     "en": "list refreshed · ↑↓ move · / filter · Enter · q/Esc"
   },
+  "cmd.cli.urlPicker.help": {
+    "ja": "↑↓ 移動 · Space マーク · Enter で開く（先に送信先ピア） · / 絞り込み · q/Esc 閉じる",
+    "en": "↑↓ move · Space mark · Enter open (then pick peer) · / filter · q/Esc close"
+  },
+  "cmd.cli.urlPicker.marked": {
+    "ja": "マーク {count} 件 · Enter で開く · Space で解除",
+    "en": "marked {count} · Enter open · Space unmark"
+  },
+  "cmd.cli.urlPicker.noneSelected": {
+    "ja": "行を選ぶか Space でマークしてください",
+    "en": "highlight a row or Space-mark items first"
+  },
+  "cmd.cli.urlPicker.pickPeer": {
+    "ja": "{count} 件を開く送信先ピアを選択 · Enter 確定 · Esc 戻る",
+    "en": "pick destination peer for {count} URL(s) · Enter confirm · Esc back"
+  },
+  "cmd.cli.urlPicker.opened": {
+    "ja": "{count} 件を {peer} で開きました · 続けて操作可 · q/Esc 閉じる",
+    "en": "opened {count} on {peer} · keep browsing · q/Esc close"
+  },
   "cmd.cli.handshake.familyReady": {
     "ja": "Family 準備完了。",
     "en": "Family ready."
