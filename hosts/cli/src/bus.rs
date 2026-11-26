@@ -103,6 +103,21 @@ struct PendingSearchRpc {
     event_tx: mpsc::UnboundedSender<SearchStreamEvent>,
 }
 
+enum DomStreamEvent {
+    Done {
+        ok: bool,
+        detail: Option<String>,
+        lines: Vec<String>,
+    },
+}
+
+/** EN: Accumulate dom_list_chunk until eof (extension bus parity). */
+struct PendingDomRpc {
+    lines: Vec<String>,
+    next_seq: u32,
+    event_tx: mpsc::UnboundedSender<DomStreamEvent>,
+}
+
 struct HubInner {
     self_id: String,
     display_name: String,
@@ -115,6 +130,7 @@ struct HubInner {
     display_by_remote: HashMap<String, String>,
     pending_rpc: HashMap<String, PendingRpc>,
     pending_search: HashMap<String, PendingSearchRpc>,
+    pending_dom: HashMap<String, PendingDomRpc>,
     /// remote → introducer (relay) device id
     relay_by_remote: HashMap<String, String>,
     offer_busy_until: HashMap<String, Instant>,
@@ -153,6 +169,7 @@ impl BusClient {
             display_by_remote: HashMap::new(),
             pending_rpc: HashMap::new(),
             pending_search: HashMap::new(),
+            pending_dom: HashMap::new(),
             relay_by_remote: HashMap::new(),
             offer_busy_until: HashMap::new(),
             last_connected_key: String::new(),
@@ -664,35 +681,75 @@ impl BusClient {
         if remote.is_empty() {
             return Err(anyhow!("dom_list: empty remote device id"));
         }
+        // EN: Chunk streams need longer than a single RPC round-trip (search parity).
+        // JA: チャンクストリームは単発 RPC より長い（search と揃える）。
+        const DOM_STREAM_TIMEOUT_MS: u64 = 90_000;
         let id = new_id("dom");
-        let resp = self
-            .request_on(
-                remote,
-                SyncBusCommand::DomList {
-                    id,
-                    from: from.to_string(),
-                    tab_id,
-                    scope: scope.to_string(),
-                    flavor: flavor.to_string(),
-                    show_tag,
-                    pattern: pattern.to_string(),
+        let (event_tx, mut event_rx) = mpsc::unbounded_channel();
+        let session = {
+            let mut guard = self.inner.lock().await;
+            let session = guard
+                .by_remote
+                .get(remote)
+                .cloned()
+                .ok_or_else(|| anyhow!("not connected to {remote}"))?;
+            guard.pending_dom.insert(
+                id.clone(),
+                PendingDomRpc {
+                    lines: Vec::new(),
+                    next_seq: 0,
+                    event_tx,
                 },
-            )
-            .await?;
-        match resp {
-            SyncBusCommand::DomListResult {
-                ok,
-                detail,
-                lines,
-                ..
-            } => {
-                if !ok {
-                    return Err(anyhow!(detail.unwrap_or_else(|| "dom_list failed".into())));
-                }
-                Ok(lines)
-            }
-            other => Err(anyhow!("unexpected reply: {other:?}")),
+            );
+            session
+        };
+        let cmd = SyncBusCommand::DomList {
+            id: id.clone(),
+            from: from.to_string(),
+            tab_id,
+            scope: scope.to_string(),
+            flavor: flavor.to_string(),
+            show_tag,
+            pattern: pattern.to_string(),
+        };
+        if let Err(err) = session.send_command(&cmd).await {
+            let mut guard = self.inner.lock().await;
+            guard.pending_dom.remove(&id);
+            return Err(anyhow!(err));
         }
+
+        let deadline =
+            tokio::time::Instant::now() + Duration::from_millis(DOM_STREAM_TIMEOUT_MS);
+        let (ok, detail, lines) = loop {
+            let left = deadline.saturating_duration_since(tokio::time::Instant::now());
+            if left.is_zero() {
+                let mut guard = self.inner.lock().await;
+                guard.pending_dom.remove(&id);
+                return Err(anyhow!("RPC timeout waiting for {id}"));
+            }
+            match tokio::time::timeout(left, event_rx.recv()).await {
+                Ok(Some(DomStreamEvent::Done { ok, detail, lines })) => {
+                    break (ok, detail, lines);
+                }
+                Ok(None) => {
+                    let mut guard = self.inner.lock().await;
+                    guard.pending_dom.remove(&id);
+                    return Err(anyhow!("RPC canceled waiting for {id}"));
+                }
+                Err(_) => {
+                    let mut guard = self.inner.lock().await;
+                    guard.pending_dom.remove(&id);
+                    return Err(anyhow!("RPC timeout waiting for {id}"));
+                }
+            }
+        };
+
+        if !ok {
+            return Err(anyhow!(
+                detail.unwrap_or_else(|| "dom_list failed".into())
+            ));
+        }
+        Ok(lines)
     }
 
     pub async fn nav_control_on(
@@ -1000,8 +1057,8 @@ async fn dispatch_loop(
 }
 
 async fn handle_command(inner: Arc<Mutex<HubInner>>, via_remote: &str, cmd: SyncBusCommand) {
-    // EN: search_query_result / search_query_chunk → pending_search (accumulate until eof).
-    // JA: search 結果は pending_search で eof まで蓄積する。
+    // EN: search/dom result+chunk → pending_* (accumulate until eof).
+    // JA: search/dom 結果は pending_* で eof まで蓄積する。
     match &cmd {
         SyncBusCommand::SearchQueryResult {
             reply_to,
@@ -1049,6 +1106,52 @@ async fn handle_command(inner: Arc<Mutex<HubInner>>, via_remote: &str, cmd: Sync
                             ok: *ok,
                             detail: detail.clone(),
                             hits: pending.hits,
+                        });
+                    }
+                }
+                return;
+            }
+        }
+        SyncBusCommand::DomListResult {
+            reply_to,
+            ok,
+            detail,
+            lines,
+            ..
+        } => {
+            let mut guard = inner.lock().await;
+            if let Some(pending) = guard.pending_dom.remove(reply_to) {
+                let _ = pending.event_tx.send(DomStreamEvent::Done {
+                    ok: *ok,
+                    detail: detail.clone(),
+                    lines: lines.clone(),
+                });
+                return;
+            }
+        }
+        SyncBusCommand::DomListChunk {
+            reply_to,
+            ok,
+            detail,
+            seq,
+            eof,
+            lines,
+            ..
+        } => {
+            let mut guard = inner.lock().await;
+            if guard.pending_dom.contains_key(reply_to) {
+                if let Some(pending) = guard.pending_dom.get_mut(reply_to) {
+                    if *seq == pending.next_seq {
+                        pending.lines.extend(lines.iter().cloned());
+                        pending.next_seq = seq.saturating_add(1);
+                    }
+                }
+                if *eof || !*ok {
+                    if let Some(pending) = guard.pending_dom.remove(reply_to) {
+                        let _ = pending.event_tx.send(DomStreamEvent::Done {
+                            ok: *ok,
+                            detail: detail.clone(),
+                            lines: pending.lines,
                         });
                     }
                 }
@@ -1736,6 +1839,7 @@ fn reply_to_of(cmd: &SyncBusCommand) -> Option<&str> {
         | SyncBusCommand::BookmarksOpsResult { reply_to, .. }
         | SyncBusCommand::ProbeCapabilitiesResult { reply_to, .. }
         | SyncBusCommand::DomListResult { reply_to, .. }
+        | SyncBusCommand::DomListChunk { reply_to, .. }
         | SyncBusCommand::NavControlResult { reply_to, .. } => Some(reply_to),
         _ => None,
     }

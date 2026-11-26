@@ -1,17 +1,15 @@
 /**
  * EN: Handle peer `dom_list` — capture DOM lines for a tab (document or viewport).
- * JA: peer `dom_list` — タブの DOM 行を取得（document / viewport）。
+ *     Size limiting for the wire is done by chunk packing on the command bus.
+ * JA: peer `dom_list` — タブの DOM 行を取得。wire 向け分割は command bus 側。
  */
 
 import { captureDomListForTab } from "../../dom/dom-list-capture.ts"
 import { captureDomViewportForTab } from "../../dom/dom-viewport-capture.ts"
 import type { DomListFlavor } from "../../dom/dom-picker-mode.ts"
-import { SEARCH_WIRE_SOFT_CAP_BYTES } from "../../search/peer/remote-search-wire-limits.ts"
 import { DEFAULT_UI_LOCALE } from "../../setting/locale.ts"
 
 const MAX_DOM_LIST_LINES = 4_000
-/** EN: Leave headroom under DataChannel soft cap for JSON envelope. */
-const MAX_DOM_LIST_WIRE_CHARS = Math.floor(SEARCH_WIRE_SOFT_CAP_BYTES * 0.7)
 
 export type RemoteDomListRequest = {
   tabId: number
@@ -75,22 +73,6 @@ export async function applyRemoteDomList(req: RemoteDomListRequest): Promise<{
     if (lines.length > MAX_DOM_LIST_LINES) {
       detail = `truncated to ${MAX_DOM_LIST_LINES} lines`
       lines = lines.slice(0, MAX_DOM_LIST_LINES)
-    }
-    // EN: Cap UTF-16 length so one DomListResult stays under the wire soft cap.
-    // JA: DomListResult 1 通が wire soft cap を超えないよう文字数で切る。
-    let charCount = 0
-    let cutAt = lines.length
-    for (let i = 0; i < lines.length; i += 1) {
-      charCount += lines[i]!.length + 1
-      if (charCount > MAX_DOM_LIST_WIRE_CHARS) {
-        cutAt = i
-        break
-      }
-    }
-    if (cutAt < lines.length) {
-      lines = lines.slice(0, Math.max(cutAt, 1))
-      lines.push("(truncated)")
-      detail = detail ?? `truncated to wire soft cap (~${MAX_DOM_LIST_WIRE_CHARS} chars)`
     }
     return { ok: true, detail, lines }
   } catch (err) {

@@ -206,6 +206,19 @@ pub enum SyncBusCommand {
         detail: Option<String>,
         lines: Vec<String>,
     },
+    /** EN: Ordered DOM line fragment (eof closes the stream for replyTo). */
+    #[serde(rename = "dom_list_chunk")]
+    DomListChunk {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+        seq: u32,
+        eof: bool,
+        lines: Vec<String>,
+    },
     /** EN: Drive peer nav overlay (CLI key loop / arm / disarm). */
     #[serde(rename = "nav_control")]
     NavControl {
@@ -513,6 +526,7 @@ impl SyncBusCommand {
             | SyncBusCommand::ProbeCapabilitiesResult { id, from, .. }
             | SyncBusCommand::DomList { id, from, .. }
             | SyncBusCommand::DomListResult { id, from, .. }
+            | SyncBusCommand::DomListChunk { id, from, .. }
             | SyncBusCommand::NavControl { id, from, .. }
             | SyncBusCommand::NavControlResult { id, from, .. }
             | SyncBusCommand::MeshPeers { id, from, .. }
@@ -547,6 +561,7 @@ impl SyncBusCommand {
             | SyncBusCommand::ProbeCapabilitiesResult { id, .. }
             | SyncBusCommand::DomList { id, .. }
             | SyncBusCommand::DomListResult { id, .. }
+            | SyncBusCommand::DomListChunk { id, .. }
             | SyncBusCommand::NavControl { id, .. }
             | SyncBusCommand::NavControlResult { id, .. }
             | SyncBusCommand::MeshPeers { id, .. }

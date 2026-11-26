@@ -975,7 +975,7 @@ CLI
 **実装チェック（段階）**
 
 - [x] **17.0 契約:** 本節方針を `CONTRACT.md` に追記。§10「overlay 非目標」を **端末描画非目標／遠隔操作は本節** に整合
-- [x] **17.1 Wire:** TS+Rust に `probe_capabilities` / `dom_list` / `nav_control`（+ result）。巨大 HTML は行数 soft-cap（chunk は後続可）
+- [x] **17.1 Wire:** TS+Rust に `probe_capabilities` / `dom_list` / `nav_control`（+ result）。巨大 HTML は行数 soft-cap + **`dom_list_chunk`**（search と同型）
 - [x] **17.2 拡張 handlers:** prompt bus で probe · `captureDom*` · `nav-tab-bridge` へディスパッチ
 - [x] **17.3 `aboutbmxt` CLI:** welcome URL · `-system` = 自己診断 + peer probe。拒否メッセージ撤去
 - [x] **17.4 `dom` CLI 入口:** 共有コアは拡張どおり据え置き。CLI host が `dom -list --device/--tab` · `dom -wizard` を横取り（peer RPC）

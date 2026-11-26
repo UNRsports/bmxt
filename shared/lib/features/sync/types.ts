@@ -388,6 +388,21 @@ export type SyncBusCommand =
       lines: string[]
     }
   | {
+      /**
+       * EN: Ordered DOM line fragment (eof closes the stream for replyTo).
+       * JA: 順序付き DOM 行断片（eof で replyTo のストリーム終了）。
+       */
+      type: "dom_list_chunk"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      seq: number
+      eof: boolean
+      lines: string[]
+    }
+  | {
       /** EN: Drive peer nav overlay (CLI key loop / arm / disarm). */
       type: "nav_control"
       id: string

@@ -35,6 +35,11 @@ import {
   WIRE_SOFT_CAP_BYTES
 } from "../bus/remote-query-limits"
 import {
+  DOM_REMOTE_SINGLE_RESULT_MAX_LINES,
+  packRemoteDomLinesIntoChunks,
+  shrinkLinesForDomWire
+} from "../../dom/remote-dom-list-wire.ts"
+import {
   packRemoteSearchHitsIntoChunks,
   shrinkHitsForSearchWire,
   utf8ByteLength
@@ -42,8 +47,11 @@ import {
 import { SEARCH_REMOTE_MAX_HITS_PER_PEER } from "../../search/peer/remote-search-wire-limits.ts"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 
-/** EN: Allow multi-chunk search streams longer than a single RPC round-trip. */
+/** EN: Allow multi-chunk search/dom streams longer than a single RPC round-trip. */
 const SEARCH_STREAM_TIMEOUT_MS = 60_000
+const DOM_STREAM_TIMEOUT_MS = SEARCH_STREAM_TIMEOUT_MS
+/** EN: Soft line cap when accumulating inbound dom chunks (defense). */
+const DOM_REMOTE_MAX_LINES = 4_000
 
 function mapPeerState(raw: string): SyncConnectionState {
   if (raw === "connected") {
@@ -138,6 +146,9 @@ type PendingProbeCapabilities = {
 type PendingDomList = {
   kind: "dom_list"
   at: number
+  lines: string[]
+  nextSeq: number
+  timeoutId: ReturnType<typeof setTimeout> | null
   resolve: (value: {
     ok: boolean
     detail: string | null
@@ -232,7 +243,9 @@ export function createWebrtcCommandBusStabilizer(
       // JA: search ペイロードはキューしない（大きく、単発再送が危険なため）。
       if (
         command.type === "search_query_result" ||
-        command.type === "search_query_chunk"
+        command.type === "search_query_chunk" ||
+        command.type === "dom_list_result" ||
+        command.type === "dom_list_chunk"
       ) {
         return
       }
@@ -247,6 +260,20 @@ export function createWebrtcCommandBusStabilizer(
     const budgetOk = await peerHost.waitForSendBudget(
       remoteDeviceId,
       SEARCH_STREAM_TIMEOUT_MS
+    )
+    if (!budgetOk) {
+      return false
+    }
+    return peerHost.sendCommand(remoteDeviceId, command)
+  }
+
+  async function replyDomChunk(
+    remoteDeviceId: SyncDeviceId,
+    command: SyncBusCommand
+  ): Promise<boolean> {
+    const budgetOk = await peerHost.waitForSendBudget(
+      remoteDeviceId,
+      DOM_STREAM_TIMEOUT_MS
     )
     if (!budgetOk) {
       return false
@@ -609,19 +636,97 @@ export function createWebrtcCommandBusStabilizer(
         pattern: command.pattern
       })
       const device = await loadOrCreateDeviceIdentity()
-      const reply: SyncBusCommand = {
-        type: "dom_list_result",
-        id: bytesToBase64Url(randomBytes(8)),
-        replyTo: command.id,
-        from: device.deviceId,
-        ok: result.ok,
-        detail: result.detail,
-        lines: result.lines
+      const chunks = packRemoteDomLinesIntoChunks(result.lines)
+      // EN: Tiny sets use one soft-capped result. Larger sets always stream chunks.
+      // JA: 極小は soft cap 単発。大きい結果は必ずチャンク分割。
+      if (
+        chunks.length === 1 &&
+        chunks[0]!.lines.length <= DOM_REMOTE_SINGLE_RESULT_MAX_LINES
+      ) {
+        const shrunk = shrinkLinesForDomWire(chunks[0]!.lines)
+        const detail =
+          shrunk.detailSuffix !== null
+            ? `${result.detail ?? ""};${shrunk.detailSuffix}`.replace(/^;/, "")
+            : result.detail
+        const reply: SyncBusCommand = {
+          type: "dom_list_result",
+          id: bytesToBase64Url(randomBytes(8)),
+          replyTo: command.id,
+          from: device.deviceId,
+          ok: result.ok,
+          detail: detail && detail.length > 0 ? detail : null,
+          lines: shrunk.lines
+        }
+        await replyTo(command.from, reply)
+      } else {
+        let sentChunks = 0
+        let sendOk = true
+        const chunkTotal = chunks.length
+        for (const chunk of chunks) {
+          const detailWithProgress = `${result.detail ?? ""};chunk=${chunk.seq + 1}/${chunkTotal};lines=${result.lines.length}`.replace(
+            /^;/,
+            ""
+          )
+          const reply: SyncBusCommand = {
+            type: "dom_list_chunk",
+            id: bytesToBase64Url(randomBytes(8)),
+            replyTo: command.id,
+            from: device.deviceId,
+            ok: result.ok,
+            detail: detailWithProgress.length > 0 ? detailWithProgress : null,
+            seq: chunk.seq,
+            eof: chunk.eof,
+            lines: chunk.lines
+          }
+          const ok = await replyDomChunk(command.from, reply)
+          if (!ok) {
+            sendOk = false
+            break
+          }
+          sentChunks += 1
+        }
+        if (!sendOk) {
+          if (sentChunks === 0) {
+            const shrunk = shrinkLinesForDomWire(result.lines)
+            const detailParts = [result.detail, "truncated_send_budget"]
+            if (shrunk.detailSuffix !== null) {
+              detailParts.push(shrunk.detailSuffix)
+            }
+            const reply: SyncBusCommand = {
+              type: "dom_list_result",
+              id: bytesToBase64Url(randomBytes(8)),
+              replyTo: command.id,
+              from: device.deviceId,
+              ok: result.ok,
+              detail: detailParts.filter((p) => p !== null && p.length > 0).join(";"),
+              lines: shrunk.lines
+            }
+            await replyTo(command.from, reply)
+          } else {
+            const fail: SyncBusCommand = {
+              type: "dom_list_chunk",
+              id: bytesToBase64Url(randomBytes(8)),
+              replyTo: command.id,
+              from: device.deviceId,
+              ok: true,
+              detail: `${result.detail ?? ""};truncated_send_budget;chunk=${sentChunks}/${chunkTotal}`.replace(
+                /^;/,
+                ""
+              ),
+              seq: sentChunks,
+              eof: true,
+              lines: []
+            }
+            await replyDomChunk(command.from, fail)
+          }
+        }
       }
-      await replyTo(command.from, reply)
     } else if (command.type === "dom_list_result") {
       const waiter = pending.get(command.replyTo)
       if (waiter && waiter.kind === "dom_list") {
+        if (waiter.timeoutId !== null) {
+          clearTimeout(waiter.timeoutId)
+        }
         pending.delete(command.replyTo)
         waiter.resolve({
           ok: command.ok,
@@ -629,6 +734,45 @@ export function createWebrtcCommandBusStabilizer(
           lines: Array.isArray(command.lines) ? command.lines : [],
           rttMs: Math.max(0, Date.now() - waiter.at)
         })
+      }
+    } else if (command.type === "dom_list_chunk") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "dom_list") {
+        if (command.seq === waiter.nextSeq) {
+          for (const line of command.lines) {
+            if (waiter.lines.length >= DOM_REMOTE_MAX_LINES) {
+              break
+            }
+            waiter.lines.push(line)
+          }
+          waiter.nextSeq += 1
+        }
+        if (waiter.timeoutId !== null) {
+          clearTimeout(waiter.timeoutId)
+        }
+        if (command.eof || !command.ok) {
+          pending.delete(command.replyTo)
+          waiter.resolve({
+            ok: command.ok,
+            detail: command.detail,
+            lines: waiter.lines,
+            rttMs: Math.max(0, Date.now() - waiter.at)
+          })
+        } else {
+          waiter.timeoutId = setTimeout(() => {
+            const still = pending.get(command.replyTo)
+            if (!still || still.kind !== "dom_list") {
+              return
+            }
+            pending.delete(command.replyTo)
+            still.resolve({
+              ok: false,
+              detail: "timeout",
+              lines: still.lines,
+              rttMs: null
+            })
+          }, DOM_STREAM_TIMEOUT_MS)
+        }
       }
     } else if (command.type === "nav_control") {
       const result = await applyRemoteNavControl(command.tabId, command.op)
@@ -708,14 +852,26 @@ export function createWebrtcCommandBusStabilizer(
         waiter.resolve({ ok: false, detail: "timeout", created: 0, rttMs: null })
         return
       }
-      if (waiter.kind === "probe_capabilities" || waiter.kind === "dom_list") {
+      if (waiter.kind === "probe_capabilities") {
         waiter.resolve({ ok: false, detail: "timeout", lines: [], rttMs: null })
+        return
+      }
+      if (waiter.kind === "dom_list") {
+        waiter.resolve({
+          ok: false,
+          detail: "timeout",
+          lines: waiter.lines,
+          rttMs: null
+        })
         return
       }
       waiter.resolve({ ok: false, detail: "timeout", rttMs: null })
     }, timeoutMs)
     const waiter = pending.get(id)
-    if (waiter && waiter.kind === "search_query") {
+    if (
+      waiter &&
+      (waiter.kind === "search_query" || waiter.kind === "dom_list")
+    ) {
       waiter.timeoutId = timeoutId
     }
   }
@@ -988,8 +1144,15 @@ export function createWebrtcCommandBusStabilizer(
         lines: string[]
         rttMs: number | null
       }>((resolve) => {
-        pending.set(id, { kind: "dom_list", resolve, at: Date.now() })
-        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+        pending.set(id, {
+          kind: "dom_list",
+          resolve,
+          at: Date.now(),
+          lines: [],
+          nextSeq: 0,
+          timeoutId: null
+        })
+        armTimeout(id, DOM_STREAM_TIMEOUT_MS)
       })
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {
