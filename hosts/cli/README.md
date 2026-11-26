@@ -52,7 +52,7 @@ Same grammar as the extension (`bmxt-core`):
 5. With Family joined the prompt is **`BMXt>`** (accepting commands; peers may still be connecting). Extra browsers mesh automatically after the first CLI link. Unjoined Family uses `BMXt*>`.
 6. Connection events print as normal log lines; while `BMXt>` is waiting, logs use rustyline’s external printer so the prompt and caret redraw afterward.
 7. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a Rust line editor:
-   - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`) · **Tab** applies · **Enter** runs
+   - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`; `nav` + grey ` -exit`) · **Tab** lists candidates on the next line and applies with a token-separating space · **Enter** runs
    - Tab after `-list` offers `| browse`…; after a typed `|`, Tab completes `browse` / `close` / …
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates on the owning peer, stays open until q/Esc; **live refresh** on Family `tabs_changed`)
    - `history -list --device <id>` (oneshot list) · `history -list --device | browse` (number-pick **source** peer, then URL picker; same for `bookmark` / `tab` / `search -list`)
@@ -166,7 +166,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 5. Family 参加済みならプロンプトは **`BMXt>`**（コマンド受付中。peer 接続は並行しうる）。追加ブラウザは CLI 経由の mesh で自動直結。未参加時は `BMXt*>`。
 6. 接続イベントは通常のログ行として流す。`BMXt>` 待ち中は rustyline の external printer 経由で出し、ログ後にプロンプトとキャレットを描き直す。
 7. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ Rust 行編集:
-   - **↑↓** 履歴 · **灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）· **Tab** で適用 · **Enter** で実行
+   - **↑↓** 履歴 · **灰色の残りヒント**（例: `sync -se` ＋ 灰色 `tup`、`nav` ＋ 灰色 ` -exit`）· **Tab** で次行に候補一覧＋トークン間スペース付き適用 · **Enter** で実行
    - `-list` 後の Tab で `| browse` 等、既に `|` を打った右辺では `browse` / `close` 等を補完
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で所有 peer へ activate、q/Esc まで開いたまま。Family `tabs_changed` で**ライブ更新**）
    - `history -list --device <id>`（ワンショット一覧）· `history -list --device | browse`（番号で**取得元**ピア選択→URL picker。`bookmark` / `tab` / `search -list` も同様）

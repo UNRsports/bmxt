@@ -1,5 +1,5 @@
-//! EN: Interactive prompt — history (↑↓), grey remainder completion hints, Tab apply.
-//! JA: 対話プロンプト。履歴・灰色の残り補完ヒント・Tab 適用。
+//! EN: Interactive prompt — history (↑↓), grey remainder hints, Tab list + apply.
+//! JA: 対話プロンプト。履歴・灰色ヒント・Tab で候補一覧＋適用。
 
 use std::borrow::Cow;
 use std::path::PathBuf;
@@ -79,13 +79,12 @@ fn pick_primary_candidate(candidates: &[String]) -> Option<&str> {
 }
 
 /**
- * EN: When appending `| browse` at EOL with no trailing space, rustyline must insert a
- *     leading space so the line becomes `… -list | browse` (extension pick-line policy).
+ * EN: EOL / empty-span append — insert a leading space when the char before
+ *     `token_start` is non-whitespace (extension append-at-end policy).
+ *     Examples: `nav` + `-exit` → ` -exit`; `tab -list` + `| browse` → ` | browse`.
+ * JA: 行末への追記で、直前が非空白なら候補先頭に空白を入れる（拡張の append と同方針）。
  */
 fn completion_replacement(line: &str, token_start: usize, candidate: &str) -> String {
-    if !is_pipe_continuation_token(candidate) {
-        return candidate.to_string();
-    }
     let needs_space = token_start > 0
         && !line[..token_start]
             .chars()
@@ -101,6 +100,7 @@ fn completion_replacement(line: &str, token_start: usize, candidate: &str) -> St
 /**
  * EN: Build grey remainder hint from `complete_line` when the cursor is at EOL.
  *     Example: line `sync -se` → display/completion `tup` (shown grey after typed text).
+ *     Example: line `nav` → display/completion ` -exit` (leading space for grammar).
  * JA: カーソルが行末のとき `complete_line` から灰色の残りヒントを作る。
  */
 fn completion_remainder_hint(line: &str, pos: usize) -> Option<BmxtHint> {
@@ -114,8 +114,8 @@ fn completion_remainder_hint(line: &str, pos: usize) -> Option<BmxtHint> {
     let typed_lower = typed.to_ascii_lowercase();
     let repl_lower = replacement.to_ascii_lowercase();
     if !repl_lower.starts_with(&typed_lower) {
-        // EN: Pipe append with leading space — typed prefix is empty; show full replacement.
-        if typed.is_empty() && is_pipe_continuation_token(candidate) {
+        // EN: Empty typed span with leading-space replacement — show full replacement.
+        if typed.is_empty() && !replacement.is_empty() {
             return Some(BmxtHint {
                 display: replacement.clone(),
                 completion: replacement,
@@ -206,8 +206,8 @@ impl PromptShell {
     pub fn open() -> Result<Self> {
         let config = Config::builder()
             .history_ignore_space(true)
-            // EN: Tab applies the next full candidate (same primary as the grey hint).
-            .completion_type(CompletionType::Circular)
+            // EN: Tab lists candidates on the next line (no extension-style dropdown).
+            .completion_type(CompletionType::List)
             .color_mode(ColorMode::Enabled)
             .auto_add_history(false)
             .build();
@@ -295,6 +295,32 @@ mod tests {
         let line = "tab -list ";
         let repl = completion_replacement(line, line.len(), "| browse");
         assert_eq!(repl, "| browse");
+    }
+
+    #[test]
+    fn second_tier_replacement_inserts_leading_space_after_nav() {
+        let line = "nav";
+        let repl = completion_replacement(line, line.len(), "-exit");
+        assert_eq!(repl, " -exit");
+    }
+
+    #[test]
+    fn second_tier_replacement_keeps_existing_space_after_nav() {
+        let line = "nav ";
+        let repl = completion_replacement(line, line.len(), "-exit");
+        assert_eq!(repl, "-exit");
+    }
+
+    #[test]
+    fn hint_shows_leading_space_after_complete_first() {
+        let line = "nav";
+        let hint = completion_remainder_hint(line, line.len()).expect("hint");
+        assert!(
+            hint.display.starts_with(' '),
+            "expected leading space in hint, got {:?}",
+            hint.display
+        );
+        assert!(hint.display.contains('-'));
     }
 
     #[test]
