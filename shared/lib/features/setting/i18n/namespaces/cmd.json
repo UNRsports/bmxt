@@ -1460,12 +1460,12 @@
     "en": "Pick capture scope:"
   },
   "cmd.cli.dom.scopeDocument": {
-    "ja": "ページ全体 (document)",
-    "en": "full page (document)"
+    "ja": "ページ全体 (document) — 推奨",
+    "en": "full page (document) — recommended"
   },
   "cmd.cli.dom.scopeViewport": {
-    "ja": "ビューポート (viewport)",
-    "en": "viewport"
+    "ja": "画面内のみ (viewport) — 空になりやすい",
+    "en": "viewport only — often empty"
   },
   "cmd.cli.dom.pickFlavor": {
     "ja": "形式を選んでください:",
@@ -1476,8 +1476,8 @@
     "en": "capture: scope={scope} · flavor={flavor} · tab={tabId}"
   },
   "cmd.cli.dom.viewportEmptyHint": {
-    "ja": "ヒント: ビューポート内に列挙要素がありませんでした。wizard で「ページ全体 (document)」を選ぶか、ページをスクロールしてから再実行してください。ヘッダの `dom -list --with` は viewport 取得の表示名です。",
-    "en": "Hint: no viewport elements were listed. In the wizard pick full page (document), or scroll the page and retry. The `dom -list --with` header is the viewport capture label."
+    "ja": "ヒント: ビューポート内に列挙要素がありませんでした。`dom -wizard` はページ全体 (document) を使います。画面内だけが必要なら `dom -list --device <id> --tab <n> --viewport` を使ってください。",
+    "en": "Hint: no viewport elements were listed. `dom -wizard` uses full page (document). For viewport-only use `dom -list --device <id> --tab <n> --viewport`."
   },
   "cmd.cli.nav.pickTab": {
     "ja": "nav 対象タブを番号で選んでください:",

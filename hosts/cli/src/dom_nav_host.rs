@@ -204,8 +204,12 @@ fn peer_tab_rows_for(
 }
 
 /**
- * EN: Interactive 4-step source pick for `dom -wizard` (ratatui pickers).
- * JA: `dom -wizard` の 4 段選択（peer → tab → scope → flavor）。ratatui picker。
+ * EN: Interactive source pick for `dom -wizard` (ratatui pickers).
+ *     Scope is always `document` (full-page tree). Viewport/`--with` is easy to
+ *     pick by mistake in a 4-step wizard and often returns empty on complex pages;
+ *     use `dom -list --device … --tab … --viewport` for that path.
+ * JA: `dom -wizard` の選択（peer → tab → flavor）。scope は常に `document`。
+ *     viewport/`--with` は誤選択しやすく空になりがちなので oneshot の `--viewport` へ。
  */
 pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<DomCapturePlan> {
     let peers = client.list_connected().await;
@@ -214,16 +218,6 @@ pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<
     let bundles = client.tabs_all(self_device_id, true).await?;
     let rows = peer_tab_rows_for(bundles, &remote_id);
     let tab = tokio::task::block_in_place(|| picker::pick_tab_once(rows))?;
-
-    let scope = tokio::task::block_in_place(|| {
-        picker::pick_labeled_once(
-            &t_cli("cmd.cli.dom.pickScope", &[]),
-            &[
-                ("document".into(), t_cli("cmd.cli.dom.scopeDocument", &[])),
-                ("viewport".into(), t_cli("cmd.cli.dom.scopeViewport", &[])),
-            ],
-        )
-    })?;
 
     let flavor = tokio::task::block_in_place(|| {
         picker::pick_labeled_once(
@@ -238,7 +232,7 @@ pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<
     Ok(DomCapturePlan {
         remote_id,
         tab_id: tab.tab_id,
-        scope,
+        scope: "document".to_string(),
         flavor,
         show_tag: false,
         pattern: String::new(),

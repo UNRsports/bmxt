@@ -9,9 +9,10 @@ export type DomTreeTagParts = {
   suffix: string
 }
 
-const TREE_LINE_RE = /^(\s*)(\S+)$/
+/** EN: Leading indent (`"  ".repeat(depth)`) + rest of tree row (react tag or HTML open tag). */
+const TREE_LINE_RE = /^(\s*)(\S.*)$/
 
-/** EN: Depth from react-tree capture (`"  ".repeat(depth) + tag…`). */
+/** EN: Depth from tree capture (`"  ".repeat(depth) + content`). */
 export function parseDomTreeSourceLine(line: string): { depth: number; content: string } | null {
   const m = line.match(TREE_LINE_RE)
   if (!m) {
