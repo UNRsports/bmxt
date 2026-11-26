@@ -611,19 +611,16 @@ impl<'a> CliHostAdapter<'a> {
         }
         let client = self.require_client()?;
         let plan = dom_nav_host::run_dom_wizard(client, &self.cfg.device_id).await?;
-        // EN: Print before buffered stdout dump (CommandIo flushes stdout then stderr).
-        // JA: バッファ dump より先に出す（CommandIo は stdout のあと stderr）。
-        eprintln!(
-            "{}",
-            t_cli(
-                "cmd.cli.dom.planSummary",
-                &[
-                    ("scope", plan.scope.as_str()),
-                    ("flavor", plan.flavor.as_str()),
-                    ("tabId", &plan.tab_id.to_string()),
-                ],
-            )
-        );
+        // EN: Plan summary on stdout before list rows (CommandIo flushes stdout then stderr).
+        // JA: 一覧より先に plan 要約を stdout へ（CommandIo は stdout のあと stderr）。
+        self.out(t_cli(
+            "cmd.cli.dom.planSummary",
+            &[
+                ("scope", plan.scope.as_str()),
+                ("flavor", plan.flavor.as_str()),
+                ("tabId", &plan.tab_id.to_string()),
+            ],
+        ));
         let lines = client
             .dom_list_on(
                 &self.cfg.device_id,

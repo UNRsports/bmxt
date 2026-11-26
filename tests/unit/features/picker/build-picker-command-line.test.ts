@@ -38,7 +38,8 @@ describe("build-picker-command-line tab/window/group wizard lines", () => {
   })
 
   it("builds activate / close window / close group", () => {
-    assert.equal(buildTabActivateCommandLine(42), "tab -activate 42")
+    assert.equal(buildTabActivateCommandLine(42), "tab -activate 42 --focus")
+
     assert.equal(buildCloseWindowsCommandLine([4, 5]), "close --window 4 5")
     assert.equal(buildCloseGroupCommandLine(7), "close --group 7")
   })

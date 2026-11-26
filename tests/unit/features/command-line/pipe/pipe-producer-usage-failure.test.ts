@@ -1,7 +1,8 @@
 /**
- * EN: Incomplete `-list` producers must fail via Rust exitStatus — not succeed and then
- * surface a misleading `pipe.error.notProducer` after stdout suppression.
- * JA: 不完全な `-list` 左辺は Rust exitStatus で失敗。成功扱い→notProducer 化を防ぐ。
+ * EN: Pipe-producer contracts — stamped exitStatus maps to failure; bare `--device` is a
+ * valid open_plain_list plan (empty id) for host browse / misuse, not a core msgs failure.
+ * JA: pipe 左辺契約。stamp 済み exitStatus は失敗へ。ID なし `--device` は空 id の
+ * open_plain_list（ホストが browse / misuse）でありコア msgs 失敗ではない。
  */
 import assert from "node:assert/strict"
 import { before, describe, it } from "node:test"
@@ -22,7 +23,11 @@ before(() => {
 type WasmBundle = {
   ty: string
   msgs?: Array<{ key?: string }>
-  action?: { kind?: string }
+  action?: {
+    kind?: string
+    device_id?: string
+    device_scope?: string
+  }
   exitStatus?: number
 }
 
@@ -37,17 +42,13 @@ describe("pipe producer usage failure (WASM exitStatus)", () => {
     assert.equal(matchPlainListCommand("tab -list --device"), null)
   })
 
-  it("WASM stamps exitStatus=2 (misuse) for tab -list --device", () => {
+  it("WASM emits open_plain_list with empty device_id for tab -list --device", () => {
     const bundle = parseWasmBundle(wasmRun("tab -list --device", "en"))
-    assert.equal(bundle.ty, "msgs")
-    assert.equal(bundle.exitStatus, EXIT_MISUSE)
-    const keys = (bundle.msgs ?? [])
-      .map((m) => m.key)
-      .filter((k): k is string => typeof k === "string")
-    assert.ok(
-      keys.includes("cmd.tabs.error.invalidListUsage"),
-      `expected invalidListUsage, got ${JSON.stringify(keys)}`
-    )
+    assert.equal(bundle.ty, "ui")
+    assert.equal(bundle.action?.kind, "open_plain_list")
+    assert.equal(bundle.action?.device_scope, "device")
+    assert.equal(bundle.action?.device_id, "")
+    assert.equal(bundle.exitStatus ?? EXIT_SUCCESS, EXIT_SUCCESS)
   })
 
   it("maps stamped exitStatus to failure without relying on line scrape", () => {
