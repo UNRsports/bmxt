@@ -151,7 +151,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         await runRemoteTabsOp(row.deviceId, {
           kind: "activate",
           tabId: row.peerTabId,
-          windowId: row.peerWindowId
+          windowId: row.peerWindowId,
+          focusWindow: true
         })
         setActiveTabId(row.tabId)
         return

@@ -43,7 +43,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-list", trailingTokens: ["-url","--device","--peers"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
-    { head: "-activate", trailingTokens: [] as const, tail: "rest" },
+    { head: "-activate", trailingTokens: ["--device","--focus"] as const, tail: "rest" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" },
     { head: "-send", trailingTokens: [] as const, tail: "rest" },

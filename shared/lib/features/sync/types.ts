@@ -472,6 +472,8 @@ export type SyncTabsOp =
       kind: "activate"
       tabId: number
       windowId: number
+      /** EN: When true, also focus the browser window (OS foreground). Default true if omitted (wire compat). */
+      focusWindow?: boolean
     }
   | {
       kind: "close_tabs"

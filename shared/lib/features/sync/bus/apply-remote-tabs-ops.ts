@@ -68,11 +68,22 @@ export async function applyRemoteTabsOps(op: SyncTabsOp): Promise<{ ok: boolean;
       return { ok: true, detail: null }
     }
     if (op.kind === "activate") {
-      if (!Number.isInteger(op.tabId) || op.tabId < 0 || !Number.isInteger(op.windowId) || op.windowId < 0) {
+      if (!Number.isInteger(op.tabId) || op.tabId < 0) {
         return { ok: false, detail: "bad_activate_args" }
       }
+      const tab = await chrome.tabs.get(op.tabId)
       await chrome.tabs.update(op.tabId, { active: true })
-      await chrome.windows.update(op.windowId, { focused: true })
+      // EN: focusWindow defaults true when omitted (legacy wire). False keeps OS focus on CLI TTY.
+      const focusWindow = op.focusWindow !== false
+      if (focusWindow) {
+        const windowId =
+          typeof tab.windowId === "number" && tab.windowId >= 0
+            ? tab.windowId
+            : op.windowId
+        if (Number.isInteger(windowId) && windowId >= 0) {
+          await chrome.windows.update(windowId, { focused: true })
+        }
+      }
       return { ok: true, detail: null }
     }
     if (op.kind === "close_tabs") {

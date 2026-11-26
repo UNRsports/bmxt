@@ -1129,13 +1129,13 @@ tab -list | browse
 
 **実装チェック（段階）**
 
-- [ ] **19.0 契約:** CONTRACT / README にコマンド正本 · picker ウィザード · `--focus` を追記
-- [ ] **19.1 文法:** `tab -activate` に `--device` / `--focus` · codegen · HostEffect 拡張
-- [ ] **19.2 Wire:** `Activate.focusWindow` · apply-remote · ローカル `tabs-activate.ts`
-- [ ] **19.3 CLI effect:** adapter で `TabsActivate` → `tabs_ops_on`（device 必須）
-- [ ] **19.4 CLI picker:** 直接 RPC 削除 · y/N 確認 · 行組み立て → `run_line`
-- [ ] **19.5 拡張 builder:** `tab -activate <id> --focus`
-- [ ] **19.6 検証:** codegen · `cargo check/test` · tsc · i18n · 手元スモーク
+- [x] **19.0 契約:** CONTRACT / README にコマンド正本 · picker ウィザード · `--focus` を追記
+- [x] **19.1 文法:** `tab -activate` に `--device` / `--focus` · codegen · HostEffect 拡張
+- [x] **19.2 Wire:** `Activate.focusWindow` · apply-remote · ローカル `tabs-activate.ts`
+- [x] **19.3 CLI effect:** adapter で `TabsActivate` → `tabs_ops_on`（device 必須）
+- [x] **19.4 CLI picker:** 直接 RPC 削除 · y/N 確認 · 行組み立て → `run_line`
+- [x] **19.5 拡張 builder:** `tab -activate <id> --focus`
+- [x] **19.6 検証:** codegen · `cargo check/test` · tsc · i18n · 手元スモーク
 - [ ] **19.7（後続可）:** URL picker も行組み立て（`tab -send` / open 系）へ
 
 **手元スモーク**

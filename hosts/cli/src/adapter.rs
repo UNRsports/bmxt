@@ -424,6 +424,38 @@ impl<'a> CliHostAdapter<'a> {
             HostEffect::TabGoBack { .. } | HostEffect::TabGoForward { .. } => Err(anyhow!(
                 "back/forward: use the BMXt prompt, or extend CLI pipe support later"
             )),
+            HostEffect::TabsActivate {
+                tab_id,
+                device_id,
+                focus,
+            } => {
+                let device = device_id.trim();
+                if device.is_empty() {
+                    return Err(anyhow!(t_cli("cmd.cli.tabs.activateNeedDevice", &[])));
+                }
+                let remote = self.require_client()?.resolve_remote_id(device).await?;
+                let focus_window = focus == "true";
+                self.require_client()?
+                    .tabs_ops_on(
+                        &self.cfg.device_id,
+                        &remote,
+                        SyncTabsOp::Activate {
+                            tab_id,
+                            // EN: Peer resolves window via tabs.get; -1 is a placeholder.
+                            window_id: -1,
+                            focus_window,
+                        },
+                    )
+                    .await?;
+                self.out(t_cli(
+                    "cmd.cli.tabs.activateOk",
+                    &[
+                        ("tabId", &tab_id.to_string()),
+                        ("device", remote.as_str()),
+                    ],
+                ));
+                Ok(())
+            }
             HostEffect::TabsList {
                 device_id,
                 device_scope,
@@ -1255,35 +1287,40 @@ impl<'a> CliHostAdapter<'a> {
     }
 
     async fn run_picker_and_maybe_activate(
-        &self,
+        &mut self,
         rows: Vec<picker::PeerTabRow>,
         list_scope: &str,
         list_device_id: &str,
         show_url: bool,
     ) -> Result<RunOutcome> {
+        let include_focus = ask_browser_focus_confirm();
         let client = self.require_client()?.clone();
         let self_device_id = self.cfg.device_id.clone();
         let list_scope = list_scope.to_string();
         let list_device_id = list_device_id.to_string();
         let mut tabs_changed_rx = client.subscribe_tabs_changed();
-        // EN: ratatui is sync; activate / refresh over the bus without leaving the picker.
-        // JA: ratatui は同期。picker を閉じずにバス経由で activate / 再取得する。
+        // EN: Command-base — Enter builds `tab -activate …` and applies via core run_line.
+        // JA: コマンド正本。Enter は行を組み立てて core run_line 経由で適用する。
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
             picker::run_tab_picker(
                 rows,
                 |sel| {
+                    let line = build_cli_tab_activate_line(
+                        &sel.peer_device_id,
+                        sel.tab_id,
+                        include_focus,
+                    );
+                    let bundle = run_line(&line);
+                    let window_id = sel.window_id;
                     handle.block_on(async {
-                        client
-                            .tabs_ops_on(
-                                &self_device_id,
-                                &sel.peer_device_id,
-                                SyncTabsOp::Activate {
-                                    tab_id: sel.tab_id,
-                                    window_id: sel.window_id,
-                                },
-                            )
-                            .await
+                        apply_tabs_activate_bundle(
+                            &client,
+                            &self_device_id,
+                            &bundle,
+                            window_id,
+                        )
+                        .await
                     })
                 },
                 || {
@@ -1673,6 +1710,73 @@ fn format_parse_error(error: ParseSegmentError) -> String {
     }
 }
 
+/**
+ * EN: One-shot y/N before tab browse — whether Enter includes `--focus`.
+ * JA: tab browse 開始前の y/N。Enter 行に `--focus` を付けるか。
+ */
+fn ask_browser_focus_confirm() -> bool {
+    use std::io::{self, Write};
+    eprint!("{}", t_cli("cmd.cli.tabs.focusConfirm", &[]));
+    let _ = io::stderr().flush();
+    let mut line = String::new();
+    if io::stdin().read_line(&mut line).is_err() {
+        return false;
+    }
+    let trimmed = line.trim().to_ascii_lowercase();
+    trimmed == "y" || trimmed == "yes"
+}
+
+fn build_cli_tab_activate_line(device_id: &str, tab_id: i64, focus: bool) -> String {
+    if focus {
+        format!("tab -activate {tab_id} --device {device_id} --focus")
+    } else {
+        format!("tab -activate {tab_id} --device {device_id}")
+    }
+}
+
+/**
+ * EN: Apply `tab -activate` bundle from core parse (picker must not bypass grammar).
+ * JA: core が解釈した `tab -activate` bundle を適用（picker は文法を迂回しない）。
+ */
+async fn apply_tabs_activate_bundle(
+    client: &crate::bus::BusClient,
+    self_device_id: &str,
+    bundle: &DispatchBundle,
+    window_id_hint: i64,
+) -> Result<()> {
+    let DispatchBundle::Effects { effects, .. } = bundle else {
+        return Err(anyhow!("tab -activate: expected effects bundle"));
+    };
+    for effect in effects {
+        let HostEffect::TabsActivate {
+            tab_id,
+            device_id,
+            focus,
+        } = effect
+        else {
+            continue;
+        };
+        let device = device_id.trim();
+        if device.is_empty() {
+            return Err(anyhow!(t_cli("cmd.cli.tabs.activateNeedDevice", &[])));
+        }
+        let remote = client.resolve_remote_id(device).await?;
+        let focus_window = focus == "true";
+        client
+            .tabs_ops_on(
+                self_device_id,
+                &remote,
+                SyncTabsOp::Activate {
+                    tab_id: *tab_id,
+                    window_id: window_id_hint,
+                    focus_window,
+                },
+            )
+            .await?;
+    }
+    Ok(())
+}
+
 /** EN: Group tab ids by owning peer — tab ids are not globally unique across browsers. */
 fn tab_ids_by_peer(rows: &[picker::PeerTabRow]) -> Vec<(String, Vec<i64>)> {
     let mut map: std::collections::BTreeMap<String, Vec<i64>> = std::collections::BTreeMap::new();
@@ -1780,6 +1884,7 @@ fn effect_kind(effect: &HostEffect) -> &'static str {
         HostEffect::TabGoBack { .. } => "tab_go_back",
         HostEffect::TabGoForward { .. } => "tab_go_forward",
         HostEffect::TabReload { .. } => "tab_reload",
+        HostEffect::TabsActivate { .. } => "tabs_activate",
         HostEffect::TabsList { .. } => "tabs_list",
         HostEffect::TabsMove { .. } => "tabs_move",
         HostEffect::TabsMoveUrl { .. } => "tabs_move_url",

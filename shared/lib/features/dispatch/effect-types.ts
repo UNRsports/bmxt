@@ -9,6 +9,7 @@ export type HostEffect =
   | { device_id: string; device_scope: string; dispatch_line: string; kind: "search_list"; peer_dispatch_line: string }
   | { device_id: string; device_scope: string; folder_id: string; kind: "bookmark_list" }
   | { device_id: string; device_scope: string; kind: "tabs_list"; show_url: string }
+  | { device_id: string; focus: string; kind: "tabs_activate"; tab_id: number }
   | { dup_mode: string; kind: "bookmark_create"; parent_id: string; title: string; url: string }
   | { end_ms: string; kind: "history_delete_range"; start_ms: string }
   | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
@@ -43,7 +44,6 @@ export type HostEffect =
   | { kind: "tab_go_back"; tab_ids: number[] }
   | { kind: "tab_go_forward"; tab_ids: number[] }
   | { kind: "tab_reload"; tab_ids: number[] }
-  | { kind: "tabs_activate"; tab_id: number }
   | { kind: "tabs_move_url"; url: string }
   | { kind: "tabs_new_window"; tab_ids: number[] }
   | { kind: "tabs_nu" }

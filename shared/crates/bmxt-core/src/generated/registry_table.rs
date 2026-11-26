@@ -68,7 +68,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "tab",
         aliases: &[],
-        usage_primary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -activate <tabId> | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
+        usage_primary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -activate <tabId> [--device <id>] [--focus] | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
     },
     CmdMeta {
         name: "nav",
@@ -220,7 +220,7 @@ static BRANCHES_TAB: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-activate",
-        trailing_tokens: &[],
+        trailing_tokens: &["--device", "--focus"],
     },
     SubcommandBranch {
         head: "-moveurl",

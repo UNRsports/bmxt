@@ -145,12 +145,12 @@ export function buildOpenIntoWindowCommandLine(
   return `open --into-window ${windowId} ${shellQuote(url)}`
 }
 
-/** EN: `tab -activate <tabId>` — local tab focus from picker Enter. */
+/** EN: `tab -activate <tabId> --focus` — local tab + window focus from picker Enter. */
 export function buildTabActivateCommandLine(tabId: number): string | null {
   if (tabId < 0) {
     return null
   }
-  return `tab -activate ${tabId}`
+  return `tab -activate ${tabId} --focus`
 }
 
 /** EN: `close --window <id…>` for marked window close. */

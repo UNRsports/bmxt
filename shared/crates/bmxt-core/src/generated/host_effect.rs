@@ -166,6 +166,8 @@ pub enum HostEffect {
     },
     #[serde(rename = "tabs_activate")]
     TabsActivate {
+    device_id: String,
+    focus: String,
     tab_id: i64,
     },
     #[serde(rename = "tabs_list")]

@@ -254,6 +254,10 @@ fn default_first_tab() -> String {
     "tab".to_string()
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum SyncRemoteTabRow {
@@ -347,6 +351,9 @@ pub enum SyncTabsOp {
         tab_id: i64,
         #[serde(rename = "windowId")]
         window_id: i64,
+        /// EN: Focus OS window. Omitted/default true keeps legacy senders focusing.
+        #[serde(rename = "focusWindow", default = "default_true")]
+        focus_window: bool,
     },
     #[serde(rename = "close_tabs")]
     CloseTabs {

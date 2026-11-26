@@ -379,6 +379,10 @@
     "ja": "タブ {tabId} の前面化に失敗: {reason}",
     "en": "failed to activate tab {tabId}: {reason}"
   },
+  "effect.tabsActivate.remoteRefused": {
+    "ja": "他デバイスの tab -activate は UI の peer 経路で実行してください（tabId={tabId}）",
+    "en": "cross-device tab -activate must run via the UI peer path (tabId={tabId})"
+  },
   "effect.closeWindow.done": {
     "ja": "ウィンドウ {windowId} を閉じました",
     "en": "closed window {windowId}"

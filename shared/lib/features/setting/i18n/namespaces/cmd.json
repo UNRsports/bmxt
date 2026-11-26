@@ -1808,12 +1808,24 @@
     "en": "  - {deviceId} ({detail})"
   },
   "cmd.tabs.usage.line7": {
-    "ja": "        tab -activate <tabId> — 指定タブを前面にする",
-    "en": "        tab -activate <tabId> — bring the tab to the front"
+    "ja": "        tab -activate <tabId> [--device <id>] [--focus] — 指定タブをアクティブにする（--focus でウィンドウ前面）",
+    "en": "        tab -activate <tabId> [--device <id>] [--focus] — activate tab (--focus brings the window forward)"
   },
   "cmd.tabs.error.activateUsage": {
-    "ja": "usage: tab -activate <tabId>",
-    "en": "usage: tab -activate <tabId>"
+    "ja": "usage: tab -activate <tabId> [--device <id>] [--focus]",
+    "en": "usage: tab -activate <tabId> [--device <id>] [--focus]"
+  },
+  "cmd.cli.tabs.focusConfirm": {
+    "ja": "Enter でブラウザウィンドウへフォーカスしますか？ [y/N]: ",
+    "en": "Focus the browser window on Enter? [y/N]: "
+  },
+  "cmd.cli.tabs.activateNeedDevice": {
+    "ja": "`tab -activate` には CLI では `--device <id>` が必要です。",
+    "en": "`tab -activate` on CLI requires `--device <id>`."
+  },
+  "cmd.cli.tabs.activateOk": {
+    "ja": "activated tab {tabId} on {device}",
+    "en": "activated tab {tabId} on {device}"
   },
   "cmd.window.usage.line": {
     "ja": "usage: window rename <windowId> <name>",

@@ -54,7 +54,8 @@ Same grammar as the extension (`bmxt-core`):
 7. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a Rust line editor:
    - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`; `nav` + grey ` -exit`) · **Tab** lists candidates on the next line and applies with a token-separating space · **Enter** runs
    - Tab after `-list` offers `| browse`…; after a typed `|`, Tab completes `browse` / `close` / …
-   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates on the owning peer, stays open until q/Esc; **live refresh** on Family `tabs_changed`)
+   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker assembles `tab -activate … --device …` [+`--focus` after y/N]; ↑↓ `/` Enter; stays open until q/Esc; live `tabs_changed`)
+   - `tab -activate <tabId> --device <id> [--focus]` (oneshot; `--focus` brings the peer browser window forward)
    - `history -list --device <id>` (oneshot list) · `history -list --device | browse` (number-pick **source** peer, then URL picker; same for `bookmark` / `tab` / `search -list`)
    - `aboutbmxt` / `aboutbmxt -system` (welcome URL · CLI self-diag + peer `probe_capabilities`)
    - **CLI-only** (not shared extension grammar): `dom -list --device <id> --tab <n> […]` · Interactive `dom -wizard` / `nav -enter` (ratatui peer→tab pickers under `hosts/cli/src/picker/`)
@@ -168,7 +169,8 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 7. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ Rust 行編集:
    - **↑↓** 履歴 · **灰色の残りヒント**（例: `sync -se` ＋ 灰色 `tup`、`nav` ＋ 灰色 ` -exit`）· **Tab** で次行に候補一覧＋トークン間スペース付き適用 · **Enter** で実行
    - `-list` 後の Tab で `| browse` 等、既に `|` を打った右辺では `browse` / `close` 等を補完
-   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で所有 peer へ activate、q/Esc まで開いたまま。Family `tabs_changed` で**ライブ更新**）
+   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（picker は `tab -activate … --device …` を組み立て [開始時 y/N で `--focus`]；↑↓ `/` Enter；q/Esc まで開いたまま；`tabs_changed` ライブ更新）
+   - `tab -activate <tabId> --device <id> [--focus]`（ワンショット。`--focus` で peer ブラウザを前面化）
    - `history -list --device <id>`（ワンショット一覧）· `history -list --device | browse`（番号で**取得元**ピア選択→URL picker。`bookmark` / `tab` / `search -list` も同様）
    - **CLI 専用**（拡張の共有文法には載せない）: `dom -list --device <id> --tab <n> …` · Interactive `dom -wizard` / `nav -enter`（peer→tab picker · 矢印=24px 移動 · Alt+矢印=大移動 · Enter=`click` · **端末フォーカス維持** · Shift+矢印は端末スクロールのため非使用）
    - URL picker: Space で URL マーク → Enter → **Tab** で**送信先**ピアを1台以上マーク → Enter で開く（取得元≠送信先可）。typed: `tab -send <id> …` / `bookmark -send <id> --open|--save|--both …`
