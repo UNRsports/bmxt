@@ -6,6 +6,58 @@ use crate::normalize::{
 };
 use crate::types::{HostUiMode, SearchLegendMode, UiLocale, UiSettings};
 
+/**
+ * EN: Closed key tokens for `setting -set` candidates (order = menu order; match extension TS).
+ * JA: `setting -set` 候補キー（並び＝メニュー順。拡張 TS と一致）。
+ */
+pub const SETTING_SET_KEY_TOKENS: &[&str] = &[
+    "locale",
+    "edit-picker",
+    "ime-candidate-help",
+    "prompt-fire",
+    "search-legend",
+    "host-ui",
+    "fg",
+    "bg-color",
+    "size",
+    "font",
+    "search-hit-highlight",
+    "search-jump-highlight",
+    "picker-fg",
+    "picker-bg-color",
+    "picker-size",
+    "picker-font",
+    "sync-hold-ms",
+    "cli-door-retry-ms",
+    "bg-image",
+    "picker-bg-image",
+];
+
+const SETTING_SET_BOOL_VALUE_TOKENS: &[&str] = &["on", "off"];
+const SETTING_SET_CLEAR_VALUE_TOKENS: &[&str] = &["default", "reset"];
+const SETTING_SET_LOCALE_VALUE_TOKENS: &[&str] = &["ja", "en"];
+const SETTING_SET_HOST_UI_VALUE_TOKENS: &[&str] = &["auto", "desktop", "mobile", "default"];
+const SETTING_SET_SEARCH_LEGEND_VALUE_TOKENS: &[&str] = &["text", "emoji", "text_emoji"];
+const SETTING_SET_TIMING_VALUE_TOKENS: &[&str] = &["default"];
+
+/**
+ * EN: Discrete value tokens for `setting -set <key> ` (null = free-form / unknown key).
+ * JA: `setting -set <key> ` の離散値候補（不明キーは null）。
+ */
+pub fn setting_set_value_candidates(key: &str) -> Option<&'static [&'static str]> {
+    match key.trim().to_ascii_lowercase().as_str() {
+        "locale" => Some(SETTING_SET_LOCALE_VALUE_TOKENS),
+        "edit-picker" | "ime-candidate-help" | "prompt-fire" => Some(SETTING_SET_BOOL_VALUE_TOKENS),
+        "search-legend" => Some(SETTING_SET_SEARCH_LEGEND_VALUE_TOKENS),
+        "host-ui" => Some(SETTING_SET_HOST_UI_VALUE_TOKENS),
+        "sync-hold-ms" | "cli-door-retry-ms" => Some(SETTING_SET_TIMING_VALUE_TOKENS),
+        "fg" | "bg-color" | "size" | "font" | "search-hit-highlight" | "search-jump-highlight"
+        | "picker-fg" | "picker-bg-color" | "picker-size" | "picker-font" | "bg-image"
+        | "picker-bg-image" => Some(SETTING_SET_CLEAR_VALUE_TOKENS),
+        _ => None,
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SettingSetPatch {
     pub locale: Option<UiLocale>,

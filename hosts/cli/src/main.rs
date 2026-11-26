@@ -15,6 +15,7 @@ mod paste;
 mod progress;
 #[cfg(test)]
 mod posix_io_tests;
+mod prompt_fx;
 mod repl_log;
 mod shell;
 mod picker;
@@ -276,6 +277,14 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
     let mut setting_draft: Option<bmxt_ui_settings::UiSettings> = None;
     let mut continuation: Option<String> = None;
     loop {
+        // EN: Effective `prompt-fire` from draft (if any) else committed settings.
+        let prompt_fire = setting_draft
+            .as_ref()
+            .map(|s| s.prompt_fire)
+            .or_else(|| ui_settings_host::load_committed().ok().map(|s| s.prompt_fire))
+            .unwrap_or(false);
+        shell.set_prompt_fire(prompt_fire);
+
         // EN: `BMXt>` = accepting commands (Family ready and/or peers linked).
         //     `BMXt*>` = not in a Family yet (local setup only).
         // JA: `BMXt>` = コマンド受付中（Family 準備済み／peer 接続）。`BMXt*>` = 未参加。
@@ -409,6 +418,21 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
         };
         match adapter.run_line(&line).await {
             Ok(outcome) => {
+                // EN: Keep command I/O in the managed session ring (viewport for prompt-fire).
+                shell.push_session_output_lines(
+                    outcome
+                        .output
+                        .stdout
+                        .iter()
+                        .chain(outcome.output.stderr.iter()),
+                );
+                // EN: `setting -set prompt-fire …` persists immediately — refresh shell gate now.
+                if line.trim().starts_with("setting -set") {
+                    let fire = ui_settings_host::load_committed()
+                        .map(|s| s.prompt_fire)
+                        .unwrap_or(false);
+                    shell.set_prompt_fire(fire);
+                }
                 if let Some(c) = outcome.new_client {
                     // EN: Adapter may still return a fresh hub from older paths — prefer shared.
                     if hub.is_none() {

@@ -2,6 +2,7 @@
 //!     The typed line always stays on a single `BMXt>` row; candidates never become a second prompt.
 //! JA: 対話プロンプト。ベースコマンド行は常に1行の `BMXt>`。候補は独立オーバーレイ（第二プロンプトにしない）。
 
+use std::collections::VecDeque;
 use std::io::{stdout, Write};
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
@@ -16,7 +17,14 @@ use crossterm::terminal::{
     disable_raw_mode, enable_raw_mode, Clear, ClearType, ScrollUp,
 };
 use crossterm::{execute, queue};
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 use unicode_width::UnicodeWidthStr;
+
+use crate::prompt_fx::{
+    particle_color, push_session_line, session_ring_cap, spawn_radial_burst, step_particles,
+    TextParticle,
+};
 
 /** EN: Same modes as extension `CandidateMatchMode` (ime-token-match.ts). */
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -458,6 +466,44 @@ fn should_auto_open_menu(
 }
 
 /**
+ * EN: `setting -set` key/value slots (extension `resolveSettingSetImeOverlay` parity).
+ *     Includes `prompt-fire` → `on` / `off`.
+ * JA: `setting -set` のキー／値スロット（拡張 overlay 相当。`prompt-fire` → on/off 含む）。
+ */
+fn setting_set_completion_slot(
+    line: &str,
+    cursor: usize,
+) -> Option<(usize, usize, String, Vec<String>)> {
+    let (token_start, token_end) = word_bounds(line, cursor);
+    let before = tokens_before_byte(line, token_start);
+    if !before.first()?.eq_ignore_ascii_case("setting") {
+        return None;
+    }
+    if before.len() < 2 || !before[1].eq_ignore_ascii_case("-set") {
+        return None;
+    }
+    let typed_end = if cursor >= token_start {
+        cursor.min(line.len())
+    } else {
+        token_start
+    };
+    let typed = line.get(token_start..typed_end)?.to_string();
+    if before.len() == 2 {
+        let keys: Vec<String> = bmxt_ui_settings::SETTING_SET_KEY_TOKENS
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
+        return Some((token_start, token_end, typed, sort_candidates(keys)));
+    }
+    if before.len() == 3 {
+        let values = bmxt_ui_settings::setting_set_value_candidates(before[2])?;
+        let cands: Vec<String> = values.iter().map(|s| (*s).to_string()).collect();
+        return Some((token_start, token_end, typed, sort_candidates(cands)));
+    }
+    None
+}
+
+/**
  * EN: Full tier candidate list for the token under `cursor`.
  *     Mirrors extension Tab + `emptyFirstPrefixShowsAll`: empty / first-token
  *     slot uses `all_completion_tokens` when core returns None for empty prefix.
@@ -467,6 +513,9 @@ fn complete_full_slot(
     line: &str,
     cursor: usize,
 ) -> Option<(usize, usize, String, Vec<String>)> {
+    if let Some(hit) = setting_set_completion_slot(line, cursor) {
+        return Some(hit);
+    }
     if let Some(hit) = complete_line(line, cursor) {
         let token_start = hit.token_start.min(line.len());
         let token_end = hit.token_end.min(line.len()).max(token_start);
@@ -563,6 +612,11 @@ pub struct PromptShell {
     history: Vec<String>,
     history_path: PathBuf,
     pending_logs: Arc<Mutex<Vec<String>>>,
+    /** EN: Session lines for managed viewport paint (particles may fly over these). */
+    session_log_ring: VecDeque<String>,
+    particles: Vec<TextParticle>,
+    prompt_fire: bool,
+    rng: StdRng,
 }
 
 impl PromptShell {
@@ -584,7 +638,19 @@ impl PromptShell {
             history,
             history_path,
             pending_logs: Arc::new(Mutex::new(Vec::new())),
+            session_log_ring: VecDeque::new(),
+            particles: Vec::new(),
+            prompt_fire: false,
+            rng: StdRng::from_entropy(),
         })
+    }
+
+    /** EN: Mirror UI setting `prompt-fire` (effective draft or committed). */
+    pub fn set_prompt_fire(&mut self, enabled: bool) {
+        self.prompt_fire = enabled;
+        if !enabled {
+            self.particles.clear();
+        }
     }
 
     /**
@@ -598,6 +664,23 @@ impl PromptShell {
             guard.push(msg);
         });
         Ok(())
+    }
+
+    /**
+     * EN: Append a session log line into the managed ring (visible viewport source).
+     * JA: 管理リングへセッション行を追加（可視ビューポートの元データ）。
+     */
+    pub fn push_session_line(&mut self, line: impl Into<String>) {
+        let (_cols, rows) = crossterm::terminal::size().unwrap_or((80, 24));
+        let cap = session_ring_cap(rows);
+        push_session_line(&mut self.session_log_ring, line, cap);
+    }
+
+    /** EN: Append command stdout/stderr lines after Interactive flush. */
+    pub fn push_session_output_lines(&mut self, lines: impl IntoIterator<Item = impl AsRef<str>>) {
+        for line in lines {
+            self.push_session_line(line.as_ref());
+        }
     }
 
     pub fn remember(&mut self, line: &str) {
@@ -627,6 +710,7 @@ impl PromptShell {
 
     fn read_line_raw(&mut self, prompt: &str) -> Result<ReadOutcome> {
         let mut out = stdout();
+        // EN: Keep the natural caret row — do not invent a full-screen FX canvas.
         let (_col, mut prompt_row) = cursor::position().context("cursor position")?;
         let mut state = LineEditState::new();
 
@@ -635,7 +719,12 @@ impl PromptShell {
         loop {
             self.drain_logs(&mut out, prompt, &state, &mut prompt_row)?;
 
-            if !event::poll(Duration::from_millis(100)).context("event poll")? {
+            let poll_ms = if self.particles.is_empty() { 100 } else { 30 };
+            if !event::poll(Duration::from_millis(poll_ms)).context("event poll")? {
+                if !self.particles.is_empty() {
+                    self.step_fx(prompt_row);
+                    self.draw(&mut out, prompt, &state, &mut prompt_row)?;
+                }
                 continue;
             }
             let Event::Key(key) = event::read().context("event read")? else {
@@ -645,20 +734,27 @@ impl PromptShell {
                 continue;
             }
 
-            match self.handle_key(key, &mut state)? {
+            match self.handle_key(key, &mut state, prompt, prompt_row)? {
                 KeyAction::Continue => {
+                    if !self.particles.is_empty() {
+                        self.step_fx(prompt_row);
+                    }
                     self.draw(&mut out, prompt, &state, &mut prompt_row)?;
                 }
                 KeyAction::Submit => {
-                    // EN: Keep the base command line in scrollback; only clear the menu overlay.
+                    // EN: Echo into the session ring; keep the base line in scrollback.
+                    self.push_session_line(format!("{prompt}{}", state.line));
+                    self.particles.clear();
                     self.clear_menu_overlay(&mut out, prompt_row)?;
                     return Ok(ReadOutcome::Line(state.line));
                 }
                 KeyAction::Interrupt => {
+                    self.particles.clear();
                     self.clear_menu_overlay(&mut out, prompt_row)?;
                     return Ok(ReadOutcome::Interrupt);
                 }
                 KeyAction::Eof => {
+                    self.particles.clear();
                     self.clear_menu_overlay(&mut out, prompt_row)?;
                     return Ok(ReadOutcome::Eof);
                 }
@@ -666,8 +762,19 @@ impl PromptShell {
         }
     }
 
+    /**
+     * EN: Step particles; drop any that leave the CLI-managed band
+     *     (prompt row and rows below — never paint into terminal history above).
+     */
+    fn step_fx(&mut self, prompt_row: u16) {
+        let (cols, rows) = crossterm::terminal::size().unwrap_or((80, 24));
+        step_particles(&mut self.particles, cols, rows, 1.0, &mut self.rng);
+        let min_y = prompt_row as f32 - 0.49;
+        self.particles.retain(|p| p.y >= min_y);
+    }
+
     fn drain_logs(
-        &self,
+        &mut self,
         out: &mut impl Write,
         prompt: &str,
         state: &LineEditState,
@@ -683,25 +790,24 @@ impl PromptShell {
             }
             guard.drain(..).collect()
         };
-        self.erase_from_prompt(out, *prompt_row)?;
-        for msg in messages {
+        let (_cols, term_rows) = crossterm::terminal::size().unwrap_or((80, 24));
+        let cap = session_ring_cap(term_rows);
+        // EN: Leave terminal history intact — scroll logs in place, then redraw prompt.
+        self.particles.clear();
+        queue!(
+            out,
+            MoveTo(0, *prompt_row),
+            Clear(ClearType::FromCursorDown)
+        )?;
+        for msg in &messages {
             let text = msg.trim_end_matches('\n');
+            push_session_line(&mut self.session_log_ring, text, cap);
             queue!(out, Print(text), Print("\r\n"))?;
         }
         out.flush()?;
         let (_c, row) = cursor::position().context("cursor after logs")?;
         *prompt_row = row;
         self.draw(out, prompt, state, prompt_row)?;
-        Ok(())
-    }
-
-    fn erase_from_prompt(&self, out: &mut impl Write, prompt_row: u16) -> Result<()> {
-        queue!(
-            out,
-            MoveTo(0, prompt_row),
-            Clear(ClearType::FromCursorDown)
-        )?;
-        out.flush()?;
         Ok(())
     }
 
@@ -755,13 +861,12 @@ impl PromptShell {
     }
 
     /**
-     * EN: Base command line stays on `prompt_row`. Candidate menu is an independent
-     *     overlay on the rows below (absolute MoveTo — never `\r\n`, which would scroll
-     *     and leave a second ghost `BMXt>`). Isearch replaces the base line label.
-     * JA: ベース行は常に prompt_row。候補は直下の独立オーバーレイ。isearch 時はラベル置換。
+     * EN: Base command line on `prompt_row` only — never clear rows above (terminal logs stay).
+     *     FX particles paint only on the prompt row and overlay rows below.
+     * JA: ベース行は prompt_row のみ。上の端末ログは消さない。粒子はプロンプト行＋直下のみ。
      */
     fn draw(
-        &self,
+        &mut self,
         out: &mut impl Write,
         prompt: &str,
         state: &LineEditState,
@@ -828,6 +933,8 @@ impl PromptShell {
             }
         }
 
+        self.paint_particles(out, *prompt_row)?;
+
         let end = state.cursor_byte.min(state.line.len());
         let cursor_cols = display_width(prompt) + display_width(&state.line[..end]);
         let cursor_col = u16::try_from(cursor_cols).unwrap_or(u16::MAX);
@@ -837,11 +944,37 @@ impl PromptShell {
     }
 
     /**
+     * EN: Paint FX only on/after the prompt row (CLI-managed band).
+     * JA: プロンプト行以降（CLI 管理帯）だけに粒子を描く。
+     */
+    fn paint_particles(&self, out: &mut impl Write, prompt_row: u16) -> Result<()> {
+        for p in &self.particles {
+            if p.x < 0.0 || p.y < prompt_row as f32 - 0.49 {
+                continue;
+            }
+            let col = p.x.round() as u16;
+            let row = p.y.round() as u16;
+            if row < prompt_row {
+                continue;
+            }
+            let color = particle_color(p.life, p.max_life);
+            queue!(
+                out,
+                MoveTo(col, row),
+                SetForegroundColor(color),
+                Print(p.ch),
+                ResetColor
+            )?;
+        }
+        Ok(())
+    }
+
+    /**
      * EN: `(reverse-i-search)'query': match` on the base row + dim key hint below.
      * JA: ベース行に `(reverse-i-search)'query': match`、直下に薄い操作ヒント。
      */
     fn draw_isearch(
-        &self,
+        &mut self,
         out: &mut impl Write,
         state: &LineEditState,
         prompt_row: &mut u16,
@@ -858,7 +991,8 @@ impl PromptShell {
         let preview = matches
             .get(cycle)
             .map(String::as_str)
-            .unwrap_or("(no match)");
+            .unwrap_or("(no match)")
+            .to_string();
 
         // EN: One hint row under the isearch line (extension shows the same keys).
         self.ensure_room_for_menu(out, prompt_row, 1)?;
@@ -882,14 +1016,14 @@ impl PromptShell {
             queue!(
                 out,
                 SetForegroundColor(Color::DarkGrey),
-                Print(preview),
+                Print(&preview),
                 ResetColor
             )?;
         } else {
             queue!(
                 out,
                 SetForegroundColor(Color::Green),
-                Print(preview),
+                Print(&preview),
                 ResetColor
             )?;
         }
@@ -903,12 +1037,48 @@ impl PromptShell {
             ResetColor
         )?;
 
+        self.paint_particles(out, *prompt_row)?;
+
         let caret = state.cursor_byte.min(state.line.len());
         let cursor_cols = display_width(PREFIX) + display_width(&state.line[..caret]);
         let cursor_col = u16::try_from(cursor_cols).unwrap_or(u16::MAX);
         queue!(out, MoveTo(cursor_col, *prompt_row))?;
         out.flush()?;
         Ok(())
+    }
+
+    /**
+     * EN: Spawn radial text particles at the caret when prompt-fire is on.
+     *     Fires on keystrokes even while the candidate menu or isearch is open.
+     * JA: prompt-fire 時は候補メニュー／isearch 開中でも打鍵で粒子を出す。
+     */
+    fn maybe_spawn_fx(
+        &mut self,
+        state: &LineEditState,
+        line_prefix: &str,
+        prompt_row: u16,
+        primary: char,
+        delete: bool,
+    ) {
+        if !self.prompt_fire {
+            return;
+        }
+        if primary.is_control() {
+            return;
+        }
+        let caret = state.cursor_byte.min(state.line.len());
+        let origin_x = (display_width(line_prefix) + display_width(&state.line[..caret])) as f32;
+        let origin_y = prompt_row as f32;
+        let nearby: Vec<char> = state.line.chars().take(8).collect();
+        spawn_radial_burst(
+            &mut self.particles,
+            origin_x,
+            origin_y,
+            primary,
+            &nearby,
+            delete,
+            &mut self.rng,
+        );
     }
 
     /**
@@ -941,12 +1111,18 @@ impl PromptShell {
         Ok(())
     }
 
-    fn handle_key(&self, key: KeyEvent, state: &mut LineEditState) -> Result<KeyAction> {
+    fn handle_key(
+        &mut self,
+        key: KeyEvent,
+        state: &mut LineEditState,
+        prompt: &str,
+        prompt_row: u16,
+    ) -> Result<KeyAction> {
         if state.isearch.is_some() {
-            return self.handle_key_isearch(key, state);
+            return self.handle_key_isearch(key, state, prompt_row);
         }
         if state.menu.is_some() {
-            return self.handle_key_menu_open(key, state);
+            return self.handle_key_menu_open(key, state, prompt, prompt_row);
         }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match key.code {
@@ -989,9 +1165,14 @@ impl PromptShell {
             KeyCode::Backspace => {
                 if state.cursor_byte > 0 {
                     let prev = prev_char_boundary(&state.line, state.cursor_byte);
+                    let removed = state.line[prev..state.cursor_byte]
+                        .chars()
+                        .next()
+                        .unwrap_or(' ');
                     state.line.drain(prev..state.cursor_byte);
                     state.cursor_byte = prev;
                     state.clear_hist_browse();
+                    self.maybe_spawn_fx(state, prompt, prompt_row, removed, true);
                 }
                 self.maybe_auto_open_menu(state);
                 Ok(KeyAction::Continue)
@@ -999,8 +1180,13 @@ impl PromptShell {
             KeyCode::Delete => {
                 if state.cursor_byte < state.line.len() {
                     let next = next_char_boundary(&state.line, state.cursor_byte);
+                    let removed = state.line[state.cursor_byte..next]
+                        .chars()
+                        .next()
+                        .unwrap_or(' ');
                     state.line.drain(state.cursor_byte..next);
                     state.clear_hist_browse();
+                    self.maybe_spawn_fx(state, prompt, prompt_row, removed, true);
                 }
                 self.maybe_auto_open_menu(state);
                 Ok(KeyAction::Continue)
@@ -1035,6 +1221,7 @@ impl PromptShell {
                 state.line.insert(state.cursor_byte, ch);
                 state.cursor_byte += ch.len_utf8();
                 state.clear_hist_browse();
+                self.maybe_spawn_fx(state, prompt, prompt_row, ch, false);
                 self.maybe_auto_open_menu(state);
                 Ok(KeyAction::Continue)
             }
@@ -1043,9 +1230,11 @@ impl PromptShell {
     }
 
     fn handle_key_menu_open(
-        &self,
+        &mut self,
         key: KeyEvent,
         state: &mut LineEditState,
+        prompt: &str,
+        prompt_row: u16,
     ) -> Result<KeyAction> {
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match key.code {
@@ -1102,9 +1291,14 @@ impl PromptShell {
             KeyCode::Backspace => {
                 if state.cursor_byte > 0 {
                     let prev = prev_char_boundary(&state.line, state.cursor_byte);
+                    let removed = state.line[prev..state.cursor_byte]
+                        .chars()
+                        .next()
+                        .unwrap_or(' ');
                     state.line.drain(prev..state.cursor_byte);
                     state.cursor_byte = prev;
                     state.clear_hist_browse();
+                    self.maybe_spawn_fx(state, prompt, prompt_row, removed, true);
                 }
                 self.open_or_refresh_menu(state);
                 Ok(KeyAction::Continue)
@@ -1112,8 +1306,13 @@ impl PromptShell {
             KeyCode::Delete => {
                 if state.cursor_byte < state.line.len() {
                     let next = next_char_boundary(&state.line, state.cursor_byte);
+                    let removed = state.line[state.cursor_byte..next]
+                        .chars()
+                        .next()
+                        .unwrap_or(' ');
                     state.line.drain(state.cursor_byte..next);
                     state.clear_hist_browse();
+                    self.maybe_spawn_fx(state, prompt, prompt_row, removed, true);
                 }
                 self.open_or_refresh_menu(state);
                 Ok(KeyAction::Continue)
@@ -1132,6 +1331,7 @@ impl PromptShell {
                 state.line.insert(state.cursor_byte, ch);
                 state.cursor_byte += ch.len_utf8();
                 state.clear_hist_browse();
+                self.maybe_spawn_fx(state, prompt, prompt_row, ch, false);
                 self.open_or_refresh_menu(state);
                 Ok(KeyAction::Continue)
             }
@@ -1140,7 +1340,7 @@ impl PromptShell {
     }
 
     /** EN: Enter reverse-i-search; query starts empty (`line` holds the query while active). */
-    fn enter_isearch(&self, state: &mut LineEditState) {
+    fn enter_isearch(&mut self, state: &mut LineEditState) {
         state.menu = None;
         state.isearch = Some(ISearchState {
             cycle: 0,
@@ -1153,7 +1353,7 @@ impl PromptShell {
     }
 
     /** EN: Accept current match into the prompt without running (second Enter runs). */
-    fn accept_isearch(&self, state: &mut LineEditState) {
+    fn accept_isearch(&mut self, state: &mut LineEditState) {
         let Some(isearch) = state.isearch.take() else {
             return;
         };
@@ -1169,7 +1369,7 @@ impl PromptShell {
     }
 
     /** EN: Cancel reverse-i-search and restore the pre-search line. */
-    fn cancel_isearch(&self, state: &mut LineEditState) {
+    fn cancel_isearch(&mut self, state: &mut LineEditState) {
         let Some(isearch) = state.isearch.take() else {
             return;
         };
@@ -1183,10 +1383,12 @@ impl PromptShell {
      * JA: reverse-i-search 中のキー（拡張の isearch モード相当）。
      */
     fn handle_key_isearch(
-        &self,
+        &mut self,
         key: KeyEvent,
         state: &mut LineEditState,
+        prompt_row: u16,
     ) -> Result<KeyAction> {
+        const ISEARCH_LINE_PREFIX: &str = "(reverse-i-search)'";
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match key.code {
             KeyCode::Esc => {
@@ -1217,8 +1419,13 @@ impl PromptShell {
             KeyCode::Backspace => {
                 if state.cursor_byte > 0 {
                     let prev = prev_char_boundary(&state.line, state.cursor_byte);
+                    let removed = state.line[prev..state.cursor_byte]
+                        .chars()
+                        .next()
+                        .unwrap_or(' ');
                     state.line.drain(prev..state.cursor_byte);
                     state.cursor_byte = prev;
+                    self.maybe_spawn_fx(state, ISEARCH_LINE_PREFIX, prompt_row, removed, true);
                 }
                 self.isearch_reset_cycle(state);
                 Ok(KeyAction::Continue)
@@ -1226,7 +1433,12 @@ impl PromptShell {
             KeyCode::Delete => {
                 if state.cursor_byte < state.line.len() {
                     let next = next_char_boundary(&state.line, state.cursor_byte);
+                    let removed = state.line[state.cursor_byte..next]
+                        .chars()
+                        .next()
+                        .unwrap_or(' ');
                     state.line.drain(state.cursor_byte..next);
+                    self.maybe_spawn_fx(state, ISEARCH_LINE_PREFIX, prompt_row, removed, true);
                 }
                 self.isearch_reset_cycle(state);
                 Ok(KeyAction::Continue)
@@ -1250,6 +1462,7 @@ impl PromptShell {
             KeyCode::Char(ch) if !ctrl && !key.modifiers.contains(KeyModifiers::ALT) => {
                 state.line.insert(state.cursor_byte, ch);
                 state.cursor_byte += ch.len_utf8();
+                self.maybe_spawn_fx(state, ISEARCH_LINE_PREFIX, prompt_row, ch, false);
                 self.isearch_reset_cycle(state);
                 Ok(KeyAction::Continue)
             }
@@ -1257,13 +1470,13 @@ impl PromptShell {
         }
     }
 
-    fn isearch_reset_cycle(&self, state: &mut LineEditState) {
+    fn isearch_reset_cycle(&mut self, state: &mut LineEditState) {
         if let Some(isearch) = state.isearch.as_mut() {
             isearch.cycle = 0;
         }
     }
 
-    fn isearch_cycle_older(&self, state: &mut LineEditState) {
+    fn isearch_cycle_older(&mut self, state: &mut LineEditState) {
         let Some(isearch) = state.isearch.as_mut() else {
             return;
         };
@@ -1275,7 +1488,7 @@ impl PromptShell {
         isearch.cycle = (isearch.cycle + 1) % n;
     }
 
-    fn isearch_cycle_newer(&self, state: &mut LineEditState) {
+    fn isearch_cycle_newer(&mut self, state: &mut LineEditState) {
         let Some(isearch) = state.isearch.as_mut() else {
             return;
         };
@@ -1292,7 +1505,7 @@ impl PromptShell {
      *     Empty line / empty typed stay Tab-only. Honours Esc/↑ suppress-until-Tab.
      * JA: メニュー閉時の入力・削除後。非空の部分トークンに一致すれば自動オープン。
      */
-    fn maybe_auto_open_menu(&self, state: &mut LineEditState) {
+    fn maybe_auto_open_menu(&mut self, state: &mut LineEditState) {
         if !should_auto_open_menu(
             &state.line,
             state.cursor_byte,
@@ -1304,7 +1517,7 @@ impl PromptShell {
         self.open_or_refresh_menu(state);
     }
 
-    fn open_or_refresh_menu(&self, state: &mut LineEditState) {
+    fn open_or_refresh_menu(&mut self, state: &mut LineEditState) {
         let was_open = state.menu.is_some();
         let Some((token_start, token_end, typed, full)) =
             complete_full_slot(&state.line, state.cursor_byte)
@@ -1720,5 +1933,38 @@ mod tests {
             resolve_isearch_accept(&history, "zzz", 0, "kept draft"),
             "kept draft"
         );
+    }
+
+    #[test]
+    fn setting_set_slot_lists_prompt_fire_key() {
+        let line = "setting -set ";
+        let (_s, _e, typed, full) =
+            complete_full_slot(line, line.len()).expect("setting -set key slot");
+        assert_eq!(typed, "");
+        assert!(
+            full.iter().any(|c| c == "prompt-fire"),
+            "expected prompt-fire in {full:?}"
+        );
+    }
+
+    #[test]
+    fn setting_set_prompt_fire_values_are_on_off() {
+        let line = "setting -set prompt-fire ";
+        let (_s, _e, typed, full) =
+            complete_full_slot(line, line.len()).expect("prompt-fire value slot");
+        assert_eq!(typed, "");
+        assert!(full.iter().any(|c| c == "on"), "{full:?}");
+        assert!(full.iter().any(|c| c == "off"), "{full:?}");
+        assert_eq!(full.len(), 2);
+    }
+
+    #[test]
+    fn setting_set_partial_prompt_fire_filters() {
+        let line = "setting -set pr";
+        let (_s, _e, typed, full) =
+            complete_full_slot(line, line.len()).expect("partial key");
+        assert_eq!(typed, "pr");
+        let prefixed = match_candidates(&full, &typed, CandidateMatchMode::Prefix);
+        assert_eq!(prefixed, vec!["prompt-fire".to_string()]);
     }
 }
