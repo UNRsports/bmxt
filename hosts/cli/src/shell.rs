@@ -1,4 +1,4 @@
-//! EN: Interactive prompt — one base command line + Tab candidate overlay (extension-like).
+//! EN: Interactive prompt — one base command line + candidate overlay (Tab or partial typing).
 //!     The typed line always stays on a single `BMXt>` row; candidates never become a second prompt.
 //! JA: 対話プロンプト。ベースコマンド行は常に1行の `BMXt>`。候補は独立オーバーレイ（第二プロンプトにしない）。
 
@@ -41,7 +41,7 @@ struct BmxtHint {
     completion: String,
 }
 
-/** EN: Open candidate menu state (Tab-triggered; mirrors extension IME list). */
+/** EN: Open candidate menu state (Tab or non-empty partial token; mirrors extension IME list). */
 struct CandidateMenu {
     token_start: usize,
     token_end: usize,
@@ -49,11 +49,22 @@ struct CandidateMenu {
     highlight: usize,
 }
 
+/**
+ * EN: Reverse-i-search (Ctrl+R) — query is `LineEditState.line` while active (extension parity).
+ * JA: Ctrl+R 逆検索。稼働中のクエリは `LineEditState.line`（拡張と同じ）。
+ */
+struct ISearchState {
+    cycle: usize,
+    snapshot_line: String,
+    snapshot_cursor: usize,
+}
+
 /** EN: Mutable line-edit + menu state for one `read_line` call. */
 struct LineEditState {
     line: String,
     cursor_byte: usize,
     menu: Option<CandidateMenu>,
+    isearch: Option<ISearchState>,
     suppressed_until_tab: bool,
     hist_index: Option<usize>,
     hist_stash: Option<String>,
@@ -65,6 +76,7 @@ impl LineEditState {
             line: String::new(),
             cursor_byte: 0,
             menu: None,
+            isearch: None,
             suppressed_until_tab: false,
             hist_index: None,
             hist_stash: None,
@@ -75,6 +87,39 @@ impl LineEditState {
         self.hist_index = None;
         self.hist_stash = None;
     }
+}
+
+/**
+ * EN: Newest-first substring matches (case-sensitive). Empty query → all history.
+ *     Same contract as extension `matchesForSearch` in `text-utils.ts`.
+ * JA: 新しい順の部分一致（大文字小文字区別）。空クエリは履歴全件。拡張と同じ。
+ */
+fn matches_for_search(history: &[String], query: &str) -> Vec<String> {
+    let newest_first = history.iter().rev();
+    if query.is_empty() {
+        return newest_first.cloned().collect();
+    }
+    newest_first
+        .filter(|ln| ln.contains(query))
+        .cloned()
+        .collect()
+}
+
+/**
+ * EN: Line to restore on isearch Enter — current match, or snapshot when none.
+ * JA: isearch の Enter でプロンプトに戻す行（一致が無ければスナップショット）。
+ */
+fn resolve_isearch_accept(
+    history: &[String],
+    query: &str,
+    cycle: usize,
+    snapshot: &str,
+) -> String {
+    let matches = matches_for_search(history, query);
+    if matches.is_empty() {
+        return snapshot.to_string();
+    }
+    matches[cycle % matches.len()].clone()
 }
 
 /** EN: Prefer shortest non-pipe; if only pipe, prefer `| browse` then shortest. */
@@ -206,9 +251,21 @@ fn option_token_body(token: &str) -> &str {
 }
 
 /**
- * EN: Filter candidates (prefix on open / contains while open). Mirrors
- *     `matchCandidates` in `ime-token-match.ts` so `en` matches `-enter`.
- * JA: 拡張と同じ prefix / contains。`en` が `-enter` に当たる。
+ * EN: Consumer name inside a pipe-continuation token (`| browse` → `browse`).
+ *     Same policy as bmxt-core `match_pipe_continuation_candidates`.
+ * JA: `| browse` の consumer 名。コアのパイプ継続フィルタと同じ。
+ */
+fn pipe_consumer_name(token: &str) -> Option<&str> {
+    if !is_pipe_continuation_token(token) {
+        return None;
+    }
+    Some(token.trim_start_matches('|').trim_start())
+}
+
+/**
+ * EN: Filter candidates (prefix on open / contains while open).
+ *     Option body: `en` → `-enter`. Pipe consumer name: `b` → `| browse`.
+ * JA: 開時 prefix / 開中 contains。option body とパイプ名の両方を見る。
  */
 fn match_candidates(
     candidates: &[String],
@@ -220,11 +277,27 @@ fn match_candidates(
     }
     let p = prefix.to_ascii_lowercase();
     let p_body = option_token_body(&p);
+    let p_after_pipe = p.trim_start_matches('|').trim_start();
     match mode {
         CandidateMatchMode::Contains => candidates
             .iter()
             .filter(|c| {
                 let cl = c.to_ascii_lowercase();
+                if let Some(name) = pipe_consumer_name(&cl) {
+                    // EN: Dash options never match pipe tokens (core policy).
+                    if p.starts_with('-') {
+                        return false;
+                    }
+                    if cl.starts_with(&p) || cl.contains(&p) {
+                        return true;
+                    }
+                    if p.starts_with('|') {
+                        return name.starts_with(p_after_pipe)
+                            || (p_after_pipe.len() >= 2 && name.contains(p_after_pipe));
+                    }
+                    return name.starts_with(&p)
+                        || (p.len() >= 2 && name.contains(p.as_str()));
+                }
                 let body = option_token_body(&cl);
                 if p.starts_with('-') {
                     return cl.starts_with(&p)
@@ -243,6 +316,18 @@ fn match_candidates(
             .iter()
             .filter(|c| {
                 let cl = c.to_ascii_lowercase();
+                if let Some(name) = pipe_consumer_name(&cl) {
+                    if p.starts_with('-') {
+                        return false;
+                    }
+                    if cl.starts_with(&p) {
+                        return true;
+                    }
+                    if p.starts_with('|') {
+                        return name.starts_with(p_after_pipe);
+                    }
+                    return name.starts_with(&p);
+                }
                 if cl.starts_with(&p) {
                     return true;
                 }
@@ -317,6 +402,59 @@ fn merge_cli_host_candidates(line: &str, token_start: usize, mut candidates: Vec
         }
     }
     sort_candidates(candidates)
+}
+
+/**
+ * EN: Prefix on first open; contains while open. If prefix yields nothing for a
+ *     non-empty needle, fall back to contains so `nav en` still finds `-enter`.
+ * JA: 初回は prefix、開中は contains。prefix 0 件なら contains にフォールバック。
+ */
+fn filter_menu_candidates(full: &[String], typed: &str, was_open: bool) -> Vec<String> {
+    let candidates = if was_open {
+        match_candidates(full, typed, CandidateMatchMode::Contains)
+    } else {
+        let prefixed = match_candidates(full, typed, CandidateMatchMode::Prefix);
+        if prefixed.is_empty() && !typed.is_empty() {
+            match_candidates(full, typed, CandidateMatchMode::Contains)
+        } else {
+            prefixed
+        }
+    };
+    sort_candidates(candidates)
+}
+
+/**
+ * EN: Whether closed-menu typing may auto-open the candidate overlay (CLI-only).
+ *     Requires non-empty typed prefix at EOL, matches after open filter, and not
+ *     an exact sole candidate (so Enter still runs a complete token).
+ * JA: メニュー閉時の自動オープン可否。行末・非空 typed・一致候補あり、かつ唯一候補と完全一致でないこと。
+ */
+fn should_auto_open_menu(
+    line: &str,
+    cursor_byte: usize,
+    menu_open: bool,
+    suppressed_until_tab: bool,
+) -> bool {
+    if menu_open || suppressed_until_tab {
+        return false;
+    }
+    if cursor_byte < line.len() {
+        return false;
+    }
+    let Some((_token_start, _token_end, typed, full)) = complete_full_slot(line, cursor_byte) else {
+        return false;
+    };
+    if typed.is_empty() {
+        return false;
+    }
+    let candidates = filter_menu_candidates(&full, &typed, false);
+    if candidates.is_empty() {
+        return false;
+    }
+    if candidates.len() == 1 && candidates[0].eq_ignore_ascii_case(&typed) {
+        return false;
+    }
+    true
 }
 
 /**
@@ -619,8 +757,8 @@ impl PromptShell {
     /**
      * EN: Base command line stays on `prompt_row`. Candidate menu is an independent
      *     overlay on the rows below (absolute MoveTo — never `\r\n`, which would scroll
-     *     and leave a second ghost `BMXt>`).
-     * JA: ベース行は常に prompt_row。候補は直下の独立オーバーレイ（絶対座標。`\\r\\n` 禁止）。
+     *     and leave a second ghost `BMXt>`). Isearch replaces the base line label.
+     * JA: ベース行は常に prompt_row。候補は直下の独立オーバーレイ。isearch 時はラベル置換。
      */
     fn draw(
         &self,
@@ -629,6 +767,10 @@ impl PromptShell {
         state: &LineEditState,
         prompt_row: &mut u16,
     ) -> Result<()> {
+        if state.isearch.is_some() {
+            return self.draw_isearch(out, state, prompt_row);
+        }
+
         let menu_paint = state.menu.as_ref().map(|m| {
             let total = m.candidates.len();
             let hi = m.highlight.min(total.saturating_sub(1));
@@ -695,6 +837,81 @@ impl PromptShell {
     }
 
     /**
+     * EN: `(reverse-i-search)'query': match` on the base row + dim key hint below.
+     * JA: ベース行に `(reverse-i-search)'query': match`、直下に薄い操作ヒント。
+     */
+    fn draw_isearch(
+        &self,
+        out: &mut impl Write,
+        state: &LineEditState,
+        prompt_row: &mut u16,
+    ) -> Result<()> {
+        let Some(isearch) = state.isearch.as_ref() else {
+            return Ok(());
+        };
+        let matches = matches_for_search(&self.history, &state.line);
+        let cycle = if matches.is_empty() {
+            0
+        } else {
+            isearch.cycle % matches.len()
+        };
+        let preview = matches
+            .get(cycle)
+            .map(String::as_str)
+            .unwrap_or("(no match)");
+
+        // EN: One hint row under the isearch line (extension shows the same keys).
+        self.ensure_room_for_menu(out, prompt_row, 1)?;
+        queue!(
+            out,
+            MoveTo(0, *prompt_row),
+            Clear(ClearType::FromCursorDown)
+        )?;
+
+        const PREFIX: &str = "(reverse-i-search)'";
+        const MID: &str = "': ";
+        queue!(out, Print(PREFIX))?;
+        queue!(
+            out,
+            SetForegroundColor(Color::Yellow),
+            Print(&state.line),
+            ResetColor
+        )?;
+        queue!(out, Print(MID))?;
+        if matches.is_empty() {
+            queue!(
+                out,
+                SetForegroundColor(Color::DarkGrey),
+                Print(preview),
+                ResetColor
+            )?;
+        } else {
+            queue!(
+                out,
+                SetForegroundColor(Color::Green),
+                Print(preview),
+                ResetColor
+            )?;
+        }
+
+        let hint_row = prompt_row.saturating_add(1);
+        queue!(
+            out,
+            MoveTo(0, hint_row),
+            SetForegroundColor(Color::DarkGrey),
+            Print("Ctrl+R older · ↑ newer · ↓ older · Enter · Esc"),
+            ResetColor
+        )?;
+
+        let caret = state.cursor_byte.min(state.line.len());
+        let cursor_cols = display_width(PREFIX) + display_width(&state.line[..caret]);
+        let cursor_col = u16::try_from(cursor_cols).unwrap_or(u16::MAX);
+        queue!(out, MoveTo(cursor_col, *prompt_row))?;
+        out.flush()?;
+        Ok(())
+    }
+
+    /**
      * EN: When the menu is open, reverse-video the replace span (`token_start..token_end`).
      * JA: メニュー開中は置換対象トークンを反転表示する。
      */
@@ -725,6 +942,9 @@ impl PromptShell {
     }
 
     fn handle_key(&self, key: KeyEvent, state: &mut LineEditState) -> Result<KeyAction> {
+        if state.isearch.is_some() {
+            return self.handle_key_isearch(key, state);
+        }
         if state.menu.is_some() {
             return self.handle_key_menu_open(key, state);
         }
@@ -753,6 +973,10 @@ impl PromptShell {
                 state.clear_hist_browse();
                 Ok(KeyAction::Continue)
             }
+            KeyCode::Char('r') | KeyCode::Char('R') if ctrl => {
+                self.enter_isearch(state);
+                Ok(KeyAction::Continue)
+            }
             KeyCode::Tab => {
                 state.suppressed_until_tab = false;
                 self.open_or_refresh_menu(state);
@@ -769,6 +993,7 @@ impl PromptShell {
                     state.cursor_byte = prev;
                     state.clear_hist_browse();
                 }
+                self.maybe_auto_open_menu(state);
                 Ok(KeyAction::Continue)
             }
             KeyCode::Delete => {
@@ -777,6 +1002,7 @@ impl PromptShell {
                     state.line.drain(state.cursor_byte..next);
                     state.clear_hist_browse();
                 }
+                self.maybe_auto_open_menu(state);
                 Ok(KeyAction::Continue)
             }
             KeyCode::Left => {
@@ -809,6 +1035,7 @@ impl PromptShell {
                 state.line.insert(state.cursor_byte, ch);
                 state.cursor_byte += ch.len_utf8();
                 state.clear_hist_browse();
+                self.maybe_auto_open_menu(state);
                 Ok(KeyAction::Continue)
             }
             _ => Ok(KeyAction::Continue),
@@ -822,6 +1049,12 @@ impl PromptShell {
     ) -> Result<KeyAction> {
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match key.code {
+            KeyCode::Char('r') | KeyCode::Char('R') if ctrl => {
+                // EN: Leave the candidate menu and start reverse-i-search (extension parity).
+                state.menu = None;
+                self.enter_isearch(state);
+                Ok(KeyAction::Continue)
+            }
             KeyCode::Esc => {
                 state.menu = None;
                 state.suppressed_until_tab = true;
@@ -846,6 +1079,8 @@ impl PromptShell {
                 if let Some(m) = state.menu.as_mut() {
                     if m.highlight == 0 {
                         state.menu = None;
+                        // EN: Same as Esc — stay closed until Tab (avoid instant reopen on next char).
+                        state.suppressed_until_tab = true;
                     } else {
                         m.highlight -= 1;
                     }
@@ -904,6 +1139,171 @@ impl PromptShell {
         }
     }
 
+    /** EN: Enter reverse-i-search; query starts empty (`line` holds the query while active). */
+    fn enter_isearch(&self, state: &mut LineEditState) {
+        state.menu = None;
+        state.isearch = Some(ISearchState {
+            cycle: 0,
+            snapshot_line: state.line.clone(),
+            snapshot_cursor: state.cursor_byte,
+        });
+        state.line.clear();
+        state.cursor_byte = 0;
+        state.clear_hist_browse();
+    }
+
+    /** EN: Accept current match into the prompt without running (second Enter runs). */
+    fn accept_isearch(&self, state: &mut LineEditState) {
+        let Some(isearch) = state.isearch.take() else {
+            return;
+        };
+        let next = resolve_isearch_accept(
+            &self.history,
+            &state.line,
+            isearch.cycle,
+            &isearch.snapshot_line,
+        );
+        state.line = next;
+        state.cursor_byte = state.line.len();
+        state.clear_hist_browse();
+    }
+
+    /** EN: Cancel reverse-i-search and restore the pre-search line. */
+    fn cancel_isearch(&self, state: &mut LineEditState) {
+        let Some(isearch) = state.isearch.take() else {
+            return;
+        };
+        state.line = isearch.snapshot_line;
+        state.cursor_byte = isearch.snapshot_cursor.min(state.line.len());
+        state.clear_hist_browse();
+    }
+
+    /**
+     * EN: Keys while reverse-i-search is active (extension `mode === "isearch"`).
+     * JA: reverse-i-search 中のキー（拡張の isearch モード相当）。
+     */
+    fn handle_key_isearch(
+        &self,
+        key: KeyEvent,
+        state: &mut LineEditState,
+    ) -> Result<KeyAction> {
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        match key.code {
+            KeyCode::Esc => {
+                self.cancel_isearch(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Enter => {
+                self.accept_isearch(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Char('c') if ctrl => {
+                state.isearch = None;
+                Ok(KeyAction::Interrupt)
+            }
+            KeyCode::Char('r') | KeyCode::Char('R') if ctrl => {
+                self.isearch_cycle_older(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Down => {
+                self.isearch_cycle_older(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Up => {
+                self.isearch_cycle_newer(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Tab => Ok(KeyAction::Continue),
+            KeyCode::Backspace => {
+                if state.cursor_byte > 0 {
+                    let prev = prev_char_boundary(&state.line, state.cursor_byte);
+                    state.line.drain(prev..state.cursor_byte);
+                    state.cursor_byte = prev;
+                }
+                self.isearch_reset_cycle(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Delete => {
+                if state.cursor_byte < state.line.len() {
+                    let next = next_char_boundary(&state.line, state.cursor_byte);
+                    state.line.drain(state.cursor_byte..next);
+                }
+                self.isearch_reset_cycle(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Left => {
+                state.cursor_byte = prev_char_boundary(&state.line, state.cursor_byte);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Right => {
+                state.cursor_byte = next_char_boundary(&state.line, state.cursor_byte);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Home => {
+                state.cursor_byte = 0;
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::End => {
+                state.cursor_byte = state.line.len();
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Char(ch) if !ctrl && !key.modifiers.contains(KeyModifiers::ALT) => {
+                state.line.insert(state.cursor_byte, ch);
+                state.cursor_byte += ch.len_utf8();
+                self.isearch_reset_cycle(state);
+                Ok(KeyAction::Continue)
+            }
+            _ => Ok(KeyAction::Continue),
+        }
+    }
+
+    fn isearch_reset_cycle(&self, state: &mut LineEditState) {
+        if let Some(isearch) = state.isearch.as_mut() {
+            isearch.cycle = 0;
+        }
+    }
+
+    fn isearch_cycle_older(&self, state: &mut LineEditState) {
+        let Some(isearch) = state.isearch.as_mut() else {
+            return;
+        };
+        let n = matches_for_search(&self.history, &state.line).len();
+        if n == 0 {
+            isearch.cycle = 0;
+            return;
+        }
+        isearch.cycle = (isearch.cycle + 1) % n;
+    }
+
+    fn isearch_cycle_newer(&self, state: &mut LineEditState) {
+        let Some(isearch) = state.isearch.as_mut() else {
+            return;
+        };
+        let n = matches_for_search(&self.history, &state.line).len();
+        if n == 0 {
+            isearch.cycle = 0;
+            return;
+        }
+        isearch.cycle = (isearch.cycle + n - 1) % n;
+    }
+
+    /**
+     * EN: After closed-menu typing/delete — open when a non-empty partial token matches.
+     *     Empty line / empty typed stay Tab-only. Honours Esc/↑ suppress-until-Tab.
+     * JA: メニュー閉時の入力・削除後。非空の部分トークンに一致すれば自動オープン。
+     */
+    fn maybe_auto_open_menu(&self, state: &mut LineEditState) {
+        if !should_auto_open_menu(
+            &state.line,
+            state.cursor_byte,
+            state.menu.is_some(),
+            state.suppressed_until_tab,
+        ) {
+            return;
+        }
+        self.open_or_refresh_menu(state);
+    }
+
     fn open_or_refresh_menu(&self, state: &mut LineEditState) {
         let was_open = state.menu.is_some();
         let Some((token_start, token_end, typed, full)) =
@@ -912,20 +1312,7 @@ impl PromptShell {
             state.menu = None;
             return;
         };
-        // EN: Prefix on first Tab open; contains while the menu stays open (extension).
-        //     If prefix yields nothing for a non-empty needle, fall back to contains
-        //     so `nav en` still finds `-enter` even when body-prefix is insufficient.
-        let mut candidates = if was_open {
-            match_candidates(&full, &typed, CandidateMatchMode::Contains)
-        } else {
-            let prefixed = match_candidates(&full, &typed, CandidateMatchMode::Prefix);
-            if prefixed.is_empty() && !typed.is_empty() {
-                match_candidates(&full, &typed, CandidateMatchMode::Contains)
-            } else {
-                prefixed
-            }
-        };
-        candidates = sort_candidates(candidates);
+        let candidates = filter_menu_candidates(&full, &typed, was_open);
         if candidates.is_empty() {
             state.menu = None;
             return;
@@ -1171,6 +1558,167 @@ mod tests {
         assert!(
             hit.is_empty(),
             "single-letter contains must not substring-hit --snapshot, got {hit:?}"
+        );
+    }
+
+    #[test]
+    fn auto_open_allows_nav_en_at_eol() {
+        let line = "nav en";
+        assert!(
+            should_auto_open_menu(line, line.len(), false, false),
+            "partial body needle at EOL must auto-open"
+        );
+        let (_s, _e, typed, full) = complete_full_slot(line, line.len()).expect("slot");
+        let candidates = filter_menu_candidates(&full, &typed, false);
+        assert!(
+            candidates.iter().any(|c| c == "-enter"),
+            "expected -enter in {candidates:?}"
+        );
+    }
+
+    #[test]
+    fn auto_open_rejects_empty_line() {
+        assert!(!should_auto_open_menu("", 0, false, false));
+    }
+
+    #[test]
+    fn auto_open_rejects_empty_typed_after_space() {
+        let line = "nav ";
+        assert!(
+            !should_auto_open_menu(line, line.len(), false, false),
+            "empty typed after first command stays Tab-only"
+        );
+    }
+
+    #[test]
+    fn auto_open_rejects_when_suppressed_until_tab() {
+        let line = "nav en";
+        assert!(!should_auto_open_menu(line, line.len(), false, true));
+    }
+
+    #[test]
+    fn auto_open_rejects_when_menu_already_open() {
+        let line = "nav en";
+        assert!(!should_auto_open_menu(line, line.len(), true, false));
+    }
+
+    #[test]
+    fn auto_open_rejects_cursor_not_at_eol() {
+        let line = "nav en";
+        assert!(!should_auto_open_menu(line, 4, false, false));
+    }
+
+    #[test]
+    fn auto_open_rejects_exact_sole_candidate() {
+        let line = "sync -setup";
+        assert!(
+            !should_auto_open_menu(line, line.len(), false, false),
+            "complete sole token must not steal Enter"
+        );
+    }
+
+    #[test]
+    fn auto_open_allows_partial_first_command() {
+        let line = "na";
+        assert!(
+            should_auto_open_menu(line, line.len(), false, false),
+            "partial first command at EOL must auto-open"
+        );
+    }
+
+    #[test]
+    fn prefix_pipe_name_matches_browse_for_tab_list_b() {
+        let line = "tab -list b";
+        let (_s, _e, typed, full) = complete_full_slot(line, line.len()).expect("slot");
+        assert_eq!(typed, "b");
+        let prefixed = match_candidates(&full, &typed, CandidateMatchMode::Prefix);
+        assert!(
+            prefixed.iter().any(|c| c == "| browse"),
+            "expected | browse in {prefixed:?}"
+        );
+        assert!(
+            prefixed.iter().any(|c| c == "| back"),
+            "expected | back in {prefixed:?}"
+        );
+    }
+
+    #[test]
+    fn auto_open_allows_tab_list_b_pipe_browse() {
+        let line = "tab -list b";
+        assert!(
+            should_auto_open_menu(line, line.len(), false, false),
+            "partial pipe consumer needle must auto-open"
+        );
+    }
+
+    #[test]
+    fn dash_prefix_does_not_match_pipe_browse() {
+        let all = vec!["| browse".to_string(), "-url".to_string()];
+        let hit = match_candidates(&all, "-u", CandidateMatchMode::Prefix);
+        assert_eq!(hit, vec!["-url".to_string()]);
+    }
+
+    #[test]
+    fn isearch_matches_newest_first_substring() {
+        let history = vec![
+            "tab -list".to_string(),
+            "nav -enter".to_string(),
+            "tab -list --peers".to_string(),
+        ];
+        let hits = matches_for_search(&history, "tab");
+        assert_eq!(
+            hits,
+            vec![
+                "tab -list --peers".to_string(),
+                "tab -list".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn isearch_empty_query_returns_all_newest_first() {
+        let history = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        assert_eq!(
+            matches_for_search(&history, ""),
+            vec!["c".to_string(), "b".to_string(), "a".to_string()]
+        );
+    }
+
+    #[test]
+    fn isearch_match_is_case_sensitive() {
+        let history = vec!["Tab -list".to_string(), "tab -list".to_string()];
+        let hits = matches_for_search(&history, "tab");
+        assert_eq!(hits, vec!["tab -list".to_string()]);
+    }
+
+    #[test]
+    fn isearch_accept_picks_cycled_match() {
+        let history = vec![
+            "tab -list".to_string(),
+            "tab -nowurl".to_string(),
+            "nav -enter".to_string(),
+        ];
+        // newest-first for "tab": tab -nowurl, tab -list
+        assert_eq!(
+            resolve_isearch_accept(&history, "tab", 0, "draft"),
+            "tab -nowurl"
+        );
+        assert_eq!(
+            resolve_isearch_accept(&history, "tab", 1, "draft"),
+            "tab -list"
+        );
+        assert_eq!(
+            resolve_isearch_accept(&history, "tab", 2, "draft"),
+            "tab -nowurl"
+        );
+    }
+
+    #[test]
+    fn isearch_accept_falls_back_to_snapshot_when_no_match() {
+        let history = vec!["nav -enter".to_string()];
+        assert_eq!(
+            resolve_isearch_accept(&history, "zzz", 0, "kept draft"),
+            "kept draft"
         );
     }
 }

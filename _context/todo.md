@@ -1164,8 +1164,8 @@ tab -list | browse
 
 | 項目 | 内容 |
 |------|------|
-| トリガ | **Tab** で開く（入力だけでは自動オープンしない） |
-| 操作 | ↑↓ / Tab で移動 · Enter でトークン挿入（実行しない）· Esc で閉じて Tab まで抑制 |
+| トリガ | **Tab** 明示オープン · **CLI のみ**非空部分トークン（行末）で自動オープン（空 typed / 空行は Tab のみ · 完成唯一候補は開かない） |
+| 操作 | ↑↓ / Tab で移動 · Enter でトークン挿入（実行しない）· Esc / ↑先頭で閉じて Tab まで抑制 |
 | 再フィルタ | メニュー開中の編集は `complete_line` を呼び直す |
 | 灰色ヒント | メニュー**閉**かつ行末のみ（Right で適用） |
 | 挿入文法 | `completion_replacement`（先頭空白）+ 行末は末尾空白（拡張 append と同方針） |
@@ -1183,14 +1183,15 @@ tab -list | browse
 - [x] **20.6 反転 + contains:** 開中トークン反転 · 開時 prefix（option body）· 開中 contains · prefix 0 件フォールバック
 - [x] **20.7 単一ベース行:** 候補は絶対座標オーバーレイ（`\\r\\n` スクロール二重 `BMXt>` 禁止）· Enter 確定は同行列書き換え
 - [x] **20.8 第一コマンド Tab:** 空行 Tab → `all_completion_tokens` · Right は確定しない · Enter 後に次ティア再同期
+- [x] **20.9 部分入力自動オープン:** 非空 typed · 行末 · Esc/↑抑制尊重 · 完成唯一候補は開かない · `cargo test -p bmxt-cli`
 
 **手元スモーク**
 
 - [ ] 空行 Tab → first-tier 一覧 · ↑↓ · Enter で挿入 · 再 Enter で実行
 - [ ] `sync -se` 灰色 `tup` · Tab メニューから `-setup` 確定
-- [ ] `nav en` Tab → `-enter` が出て `en` が反転 · Enter で挿入
+- [ ] `nav en`（Tab なし）→ `-enter` が出て `en` が反転 · Enter で挿入
 - [ ] `tab -list` Tab → `| browse` を選んで挿入
-- [ ] Esc 後は Tab までメニューが開かない
+- [ ] Esc / ↑先頭後は Tab までメニューが開かない
 - [ ] 接続ログが `BMXt>` 待ち中にプロンプトを壊さない
 
 **参照:** plan `cli_candidate_menu` · `hosts/cli/src/shell.rs` · `_context/cli-peer/CONTRACT.md`

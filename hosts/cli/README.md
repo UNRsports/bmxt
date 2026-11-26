@@ -52,8 +52,8 @@ Same grammar as the extension (`bmxt-core`):
 5. With Family joined the prompt is **`BMXt>`** (accepting commands; peers may still be connecting). Extra browsers mesh automatically after the first CLI link. Unjoined Family uses `BMXt*>`.
 6. Connection events print as normal log lines; while `BMXt>` is waiting, logs are queued and drained above the prompt so the caret redraws afterward.
 7. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a main-screen line editor (crossterm; not rustyline):
-   - **↑↓** command history · **grey remainder hint** when the menu is closed (visual only; **Right** does **not** apply — caret move only, same as extension)
-   - **Tab** opens a candidate **overlay** from the **first command** (empty line → all first tokens): **↑↓** / **Tab** move · **Enter** rewrites that same base line and may offer the next tier (does **not** run) · **Esc** dismisses until Tab · open **prefix** / open-while **contains** · replace span **reverse-video**
+   - **↑↓** command history · **Ctrl+R** reverse incremental history search (extension parity: type to filter · Ctrl+R/↓ older · ↑ newer · Enter accepts into the prompt without running · Esc cancels) · **grey remainder hint** when the menu is closed (visual only; **Right** does **not** apply — caret move only, same as extension)
+   - **Tab** opens a candidate **overlay** (empty line → all first tokens). **Typing a non-empty partial token at EOL** also auto-opens when there are matches (CLI-only; e.g. `nav en` → `-enter`). Empty typed stays Tab-only. **↑↓** / **Tab** move · **Enter** rewrites that same base line and may offer the next tier (does **not** run) · **Esc** or **↑** at top dismisses until Tab · open **prefix** / open-while **contains** · replace span **reverse-video**
    - Prompt **Enter** (menu closed) runs the line
    - Tab after `-list` offers `| browse`…; after a typed `|`, Tab completes `browse` / `close` / …
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker assembles `tab -activate … --device …` [+`--focus` after y/N]; ↑↓ `/` Enter; stays open until q/Esc; live `tabs_changed`)
@@ -169,8 +169,8 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 5. Family 参加済みならプロンプトは **`BMXt>`**（コマンド受付中。peer 接続は並行しうる）。追加ブラウザは CLI 経由の mesh で自動直結。未参加時は `BMXt*>`。
 6. 接続イベントは通常のログ行として流す。`BMXt>` 待ち中はキュー経由でプロンプト上に出し、ログ後にプロンプトとキャレットを描き直す。
 7. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ メイン画面の行編集（crossterm · rustyline 不使用）:
-   - **↑↓** 履歴 · メニュー閉時の **灰色ヒント**（表示のみ。**Right は確定しない** · キャレット移動のみ＝拡張同期）
-   - **Tab** で**第一コマンドから**候補オーバーレイ（空行→第一全件 · ベース `BMXt>` は常に1行）: **↑↓** / **Tab** 移動 · **Enter** で同行列を書き換え＋次ティア再表示可（**実行しない**）· **Esc** で Tab まで抑制 · 開時 prefix / 開中 contains · 置換対象は反転
+   - **↑↓** 履歴 · **Ctrl+R** 逆方向インクリメンタル履歴検索（拡張と同じ: 入力で絞込 · Ctrl+R/↓ で古い一致 · ↑ で新しい一致 · Enter でプロンプトへ挿入のみ · Esc で取消）· メニュー閉時の **灰色ヒント**（表示のみ。**Right は確定しない** · キャレット移動のみ＝拡張同期）
+   - **Tab** で候補オーバーレイ（空行→第一全件 · ベース `BMXt>` は常に1行）。**CLI のみ:** 行末の非空部分トークン入力でも一致時に自動オープン。**↑↓** / **Tab** 移動 · **Enter** で同行列を書き換え＋次ティア再表示可（**実行しない**）· **Esc** / 先頭で **↑** で Tab まで抑制 · 開時 prefix / 開中 contains · 置換対象は反転
    - メニュー閉時の **Enter** で行を実行
    - `-list` 後の Tab で `| browse` 等、既に `|` を打った右辺では `browse` / `close` 等を補完
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（picker は `tab -activate … --device …` を組み立て [開始時 y/N で `--focus`]；↑↓ `/` Enter；q/Esc まで開いたまま；`tabs_changed` ライブ更新）
