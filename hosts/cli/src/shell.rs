@@ -1,5 +1,6 @@
-//! EN: Interactive prompt — history, grey remainder hints, Tab candidate menu (extension-like).
-//! JA: 対話プロンプト。履歴・灰色ヒント・Tab 候補メニュー（拡張に近い操作感）。
+//! EN: Interactive prompt — one base command line + Tab candidate overlay (extension-like).
+//!     The typed line always stays on a single `BMXt>` row; candidates never become a second prompt.
+//! JA: 対話プロンプト。ベースコマンド行は常に1行の `BMXt>`。候補は独立オーバーレイ（第二プロンプトにしない）。
 
 use std::io::{stdout, Write};
 use std::path::PathBuf;
@@ -10,10 +11,19 @@ use anyhow::{Context, Result};
 use bmxt_core::{complete_line, is_pipe_continuation_token};
 use crossterm::cursor::{self, MoveTo};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
+use crossterm::style::{Attribute, Color, Print, ResetColor, SetAttribute, SetForegroundColor};
+use crossterm::terminal::{
+    disable_raw_mode, enable_raw_mode, Clear, ClearType, ScrollUp,
+};
 use crossterm::{execute, queue};
 use unicode_width::UnicodeWidthStr;
+
+/** EN: Same modes as extension `CandidateMatchMode` (ime-token-match.ts). */
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CandidateMatchMode {
+    Prefix,
+    Contains,
+}
 
 pub enum ReadOutcome {
     Line(String),
@@ -189,6 +199,115 @@ fn sort_candidates(mut candidates: Vec<String>) -> Vec<String> {
     candidates
 }
 
+/** EN: Strip leading `-` runs — same as extension `optionTokenBody`. */
+fn option_token_body(token: &str) -> &str {
+    token.trim_start_matches('-')
+}
+
+/**
+ * EN: Filter candidates (prefix on open / contains while open). Mirrors
+ *     `matchCandidates` in `ime-token-match.ts` so `en` matches `-enter`.
+ * JA: 拡張と同じ prefix / contains。`en` が `-enter` に当たる。
+ */
+fn match_candidates(
+    candidates: &[String],
+    prefix: &str,
+    mode: CandidateMatchMode,
+) -> Vec<String> {
+    if prefix.is_empty() {
+        return candidates.to_vec();
+    }
+    let p = prefix.to_ascii_lowercase();
+    let p_body = option_token_body(&p);
+    match mode {
+        CandidateMatchMode::Contains => candidates
+            .iter()
+            .filter(|c| {
+                let cl = c.to_ascii_lowercase();
+                let body = option_token_body(&cl);
+                if p.starts_with('-') {
+                    return cl.starts_with(&p)
+                        || cl.contains(&p)
+                        || (!p_body.is_empty() && body.starts_with(p_body));
+                }
+                if body.starts_with(p_body) {
+                    return true;
+                }
+                // EN: Substring only for 2+ chars (avoid `p` matching `--snapshot`).
+                p_body.len() >= 2 && (body.contains(p_body) || cl.contains(&p))
+            })
+            .cloned()
+            .collect(),
+        CandidateMatchMode::Prefix => candidates
+            .iter()
+            .filter(|c| {
+                let cl = c.to_ascii_lowercase();
+                if cl.starts_with(&p) {
+                    return true;
+                }
+                !p_body.is_empty() && option_token_body(&cl).starts_with(p_body)
+            })
+            .cloned()
+            .collect(),
+    }
+}
+
+/** EN: Whitespace-delimited token bounds under `pos` (same policy as bmxt-core). */
+fn word_bounds(line: &str, pos: usize) -> (usize, usize) {
+    let bytes = line.as_bytes();
+    let mut pos = pos.min(line.len());
+    while pos > 0 && !line.is_char_boundary(pos) {
+        pos -= 1;
+    }
+    let mut l = pos;
+    while l > 0 && !bytes[l - 1].is_ascii_whitespace() {
+        l -= 1;
+    }
+    let mut r = pos;
+    while r < bytes.len() && !bytes[r].is_ascii_whitespace() {
+        r += 1;
+    }
+    (l, r)
+}
+
+/**
+ * EN: Full tier candidate list for the token under `cursor` (clear typed span,
+ *     then `complete_line`), plus original replace bounds.
+ *     When core `complete_line` returns None (prefix filter empty, e.g. `nav en`),
+ *     still recover the slot via local word bounds + emptied line.
+ * JA: カーソル下トークンのティア全候補。core が prefix 0 件で None でも単語境界で復旧。
+ */
+fn complete_full_slot(
+    line: &str,
+    cursor: usize,
+) -> Option<(usize, usize, String, Vec<String>)> {
+    let (token_start, token_end) = if let Some(hit) = complete_line(line, cursor) {
+        (
+            hit.token_start.min(line.len()),
+            hit.token_end.min(line.len()).max(hit.token_start.min(line.len())),
+        )
+    } else {
+        word_bounds(line, cursor)
+    };
+    // EN: Needle is the span from token start to caret (extension prefix slice).
+    let typed_end = if cursor >= token_start {
+        cursor.min(line.len())
+    } else {
+        token_start
+    };
+    let typed = line.get(token_start..typed_end)?.to_string();
+
+    let mut emptied = String::with_capacity(line.len());
+    emptied.push_str(line.get(..token_start)?);
+    emptied.push_str(line.get(token_end..)?);
+    let full_hit = complete_line(&emptied, token_start)?;
+    let full = sort_candidates(full_hit.candidates);
+    if full.is_empty() {
+        return None;
+    }
+    Some((token_start, token_end, typed, full))
+}
+
 fn display_width(s: &str) -> usize {
     UnicodeWidthStr::width(s)
 }
@@ -288,7 +407,7 @@ impl PromptShell {
         let (_col, mut prompt_row) = cursor::position().context("cursor position")?;
         let mut state = LineEditState::new();
 
-        self.draw(&mut out, prompt, &state, prompt_row)?;
+        self.draw(&mut out, prompt, &state, &mut prompt_row)?;
 
         loop {
             self.drain_logs(&mut out, prompt, &state, &mut prompt_row)?;
@@ -305,18 +424,19 @@ impl PromptShell {
 
             match self.handle_key(key, &mut state)? {
                 KeyAction::Continue => {
-                    self.draw(&mut out, prompt, &state, prompt_row)?;
+                    self.draw(&mut out, prompt, &state, &mut prompt_row)?;
                 }
                 KeyAction::Submit => {
-                    self.erase_ui(&mut out, prompt_row)?;
+                    // EN: Keep the base command line in scrollback; only clear the menu overlay.
+                    self.clear_menu_overlay(&mut out, prompt_row)?;
                     return Ok(ReadOutcome::Line(state.line));
                 }
                 KeyAction::Interrupt => {
-                    self.erase_ui(&mut out, prompt_row)?;
+                    self.clear_menu_overlay(&mut out, prompt_row)?;
                     return Ok(ReadOutcome::Interrupt);
                 }
                 KeyAction::Eof => {
-                    self.erase_ui(&mut out, prompt_row)?;
+                    self.clear_menu_overlay(&mut out, prompt_row)?;
                     return Ok(ReadOutcome::Eof);
                 }
             }
@@ -340,7 +460,7 @@ impl PromptShell {
             }
             guard.drain(..).collect()
         };
-        self.erase_ui(out, *prompt_row)?;
+        self.erase_from_prompt(out, *prompt_row)?;
         for msg in messages {
             let text = msg.trim_end_matches('\n');
             queue!(out, Print(text), Print("\r\n"))?;
@@ -348,11 +468,11 @@ impl PromptShell {
         out.flush()?;
         let (_c, row) = cursor::position().context("cursor after logs")?;
         *prompt_row = row;
-        self.draw(out, prompt, state, *prompt_row)?;
+        self.draw(out, prompt, state, prompt_row)?;
         Ok(())
     }
 
-    fn erase_ui(&self, out: &mut impl Write, prompt_row: u16) -> Result<()> {
+    fn erase_from_prompt(&self, out: &mut impl Write, prompt_row: u16) -> Result<()> {
         queue!(
             out,
             MoveTo(0, prompt_row),
@@ -362,19 +482,94 @@ impl PromptShell {
         Ok(())
     }
 
+    /**
+     * EN: Clear only rows below the base prompt (candidate overlay), leave the line.
+     * JA: 候補オーバーレイだけ消し、ベースのコマンド行は残す。
+     */
+    fn clear_menu_overlay(&self, out: &mut impl Write, prompt_row: u16) -> Result<()> {
+        let (_cols, rows) = crossterm::terminal::size().unwrap_or((80, 24));
+        if prompt_row.saturating_add(1) < rows {
+            queue!(
+                out,
+                MoveTo(0, prompt_row.saturating_add(1)),
+                Clear(ClearType::FromCursorDown)
+            )?;
+            out.flush()?;
+        }
+        Ok(())
+    }
+
+    /**
+     * EN: If the prompt sits too low for `menu_rows`, scroll the screen up and
+     *     move `prompt_row` with it so the base line never duplicates.
+     * JA: メニュー行数が足りなければ ScrollUp し、prompt_row を追従させて二重 BMXt> を防ぐ。
+     */
+    fn ensure_room_for_menu(
+        &self,
+        out: &mut impl Write,
+        prompt_row: &mut u16,
+        menu_rows: usize,
+    ) -> Result<()> {
+        if menu_rows == 0 {
+            return Ok(());
+        }
+        let (_cols, term_rows) = crossterm::terminal::size().context("terminal size")?;
+        let term_rows = term_rows as usize;
+        if term_rows < 2 {
+            return Ok(());
+        }
+        let max_prompt_row = term_rows.saturating_sub(1).saturating_sub(menu_rows);
+        let current = *prompt_row as usize;
+        if current <= max_prompt_row {
+            return Ok(());
+        }
+        let scroll = current - max_prompt_row;
+        let scroll_u16 = u16::try_from(scroll).unwrap_or(u16::MAX);
+        queue!(out, ScrollUp(scroll_u16))?;
+        *prompt_row = u16::try_from(max_prompt_row).unwrap_or(0);
+        out.flush()?;
+        Ok(())
+    }
+
+    /**
+     * EN: Base command line stays on `prompt_row`. Candidate menu is an independent
+     *     overlay on the rows below (absolute MoveTo — never `\r\n`, which would scroll
+     *     and leave a second ghost `BMXt>`).
+     * JA: ベース行は常に prompt_row。候補は直下の独立オーバーレイ（絶対座標。`\\r\\n` 禁止）。
+     */
     fn draw(
         &self,
         out: &mut impl Write,
         prompt: &str,
         state: &LineEditState,
-        prompt_row: u16,
+        prompt_row: &mut u16,
     ) -> Result<()> {
+        let menu_paint = state.menu.as_ref().map(|m| {
+            let total = m.candidates.len();
+            let hi = m.highlight.min(total.saturating_sub(1));
+            let max_rows = MENU_MAX_ROWS.min(total).max(1);
+            let start = if total <= max_rows {
+                0
+            } else if hi < max_rows / 2 {
+                0
+            } else if hi + (max_rows - max_rows / 2) >= total {
+                total - max_rows
+            } else {
+                hi - max_rows / 2
+            };
+            let end = (start + max_rows).min(total);
+            (start, end, hi)
+        });
+        let menu_rows = menu_paint.map(|(s, e, _)| e - s).unwrap_or(0);
+        self.ensure_room_for_menu(out, prompt_row, menu_rows)?;
+
         queue!(
             out,
-            MoveTo(0, prompt_row),
+            MoveTo(0, *prompt_row),
             Clear(ClearType::FromCursorDown)
         )?;
-        queue!(out, Print(prompt), Print(&state.line))?;
+        queue!(out, Print(prompt))?;
+        self.draw_line_with_token_span(out, state)?;
 
         if state.menu.is_none() {
             if let Some(hint) = completion_remainder_hint(&state.line, state.cursor_byte) {
@@ -387,25 +582,11 @@ impl PromptShell {
             }
         }
 
-        if let Some(m) = state.menu.as_ref() {
-            let (_cols, rows) = crossterm::terminal::size().unwrap_or((80, 24));
-            let room = rows.saturating_sub(prompt_row.saturating_add(1)) as usize;
-            let max_rows = MENU_MAX_ROWS.min(room).max(1);
-            let total = m.candidates.len();
-            let hi = m.highlight.min(total.saturating_sub(1));
-            let start = if total <= max_rows {
-                0
-            } else if hi < max_rows / 2 {
-                0
-            } else if hi + (max_rows - max_rows / 2) >= total {
-                total - max_rows
-            } else {
-                hi - max_rows / 2
-            };
-            let end = (start + max_rows).min(total);
-            for idx in start..end {
+        if let (Some(m), Some((start, end, hi))) = (state.menu.as_ref(), menu_paint) {
+            for (vis_i, idx) in (start..end).enumerate() {
+                let row = prompt_row.saturating_add(1).saturating_add(vis_i as u16);
                 let cand = &m.candidates[idx];
-                queue!(out, Print("\r\n"))?;
+                queue!(out, MoveTo(0, row))?;
                 if idx == hi {
                     queue!(
                         out,
@@ -423,8 +604,38 @@ impl PromptShell {
         let end = state.cursor_byte.min(state.line.len());
         let cursor_cols = display_width(prompt) + display_width(&state.line[..end]);
         let cursor_col = u16::try_from(cursor_cols).unwrap_or(u16::MAX);
-        queue!(out, MoveTo(cursor_col, prompt_row))?;
+        queue!(out, MoveTo(cursor_col, *prompt_row))?;
         out.flush()?;
+        Ok(())
+    }
+
+    /**
+     * EN: When the menu is open, reverse-video the replace span (`token_start..token_end`).
+     * JA: メニュー開中は置換対象トークンを反転表示する。
+     */
+    fn draw_line_with_token_span(
+        &self,
+        out: &mut impl Write,
+        state: &LineEditState,
+    ) -> Result<()> {
+        let Some(m) = state.menu.as_ref() else {
+            queue!(out, Print(&state.line))?;
+            return Ok(());
+        };
+        let start = m.token_start.min(state.line.len());
+        let end = m.token_end.min(state.line.len()).max(start);
+        if start >= end {
+            queue!(out, Print(&state.line))?;
+            return Ok(());
+        }
+        queue!(out, Print(&state.line[..start]))?;
+        queue!(
+            out,
+            SetAttribute(Attribute::Reverse),
+            Print(&state.line[start..end]),
+            SetAttribute(Attribute::NoReverse)
+        )?;
+        queue!(out, Print(&state.line[end..]))?;
         Ok(())
     }
 
@@ -615,11 +826,27 @@ impl PromptShell {
     }
 
     fn open_or_refresh_menu(&self, state: &mut LineEditState) {
-        let Some(hit) = complete_line(&state.line, state.cursor_byte) else {
+        let was_open = state.menu.is_some();
+        let Some((token_start, token_end, typed, full)) =
+            complete_full_slot(&state.line, state.cursor_byte)
+        else {
             state.menu = None;
             return;
         };
-        let candidates = sort_candidates(hit.candidates);
+        // EN: Prefix on first Tab open; contains while the menu stays open (extension).
+        //     If prefix yields nothing for a non-empty needle, fall back to contains
+        //     so `nav en` still finds `-enter` even when body-prefix is insufficient.
+        let mut candidates = if was_open {
+            match_candidates(&full, &typed, CandidateMatchMode::Contains)
+        } else {
+            let prefixed = match_candidates(&full, &typed, CandidateMatchMode::Prefix);
+            if prefixed.is_empty() && !typed.is_empty() {
+                match_candidates(&full, &typed, CandidateMatchMode::Contains)
+            } else {
+                prefixed
+            }
+        };
+        candidates = sort_candidates(candidates);
         if candidates.is_empty() {
             state.menu = None;
             return;
@@ -632,8 +859,8 @@ impl PromptShell {
             .and_then(|tok| candidates.iter().position(|c| c == &tok))
             .unwrap_or(0);
         state.menu = Some(CandidateMenu {
-            token_start: hit.token_start,
-            token_end: hit.token_end,
+            token_start,
+            token_end,
             candidates,
             highlight,
         });
@@ -779,5 +1006,39 @@ mod tests {
         let line = "tab -list";
         let (next, _) = apply_candidate(line, line.len(), line.len(), "| browse");
         assert_eq!(next, "tab -list | browse ");
+    }
+
+    #[test]
+    fn prefix_body_matches_enter_for_nav_en() {
+        let line = "nav en";
+        let (start, end, typed, full) = complete_full_slot(line, line.len()).expect("slot");
+        assert_eq!(typed, "en");
+        assert_eq!(&line[start..end], "en");
+        let prefixed = match_candidates(&full, &typed, CandidateMatchMode::Prefix);
+        assert!(
+            prefixed.iter().any(|c| c == "-enter"),
+            "expected -enter in {prefixed:?}"
+        );
+    }
+
+    #[test]
+    fn contains_matches_mid_token_while_open() {
+        let all = vec![
+            "-enter".to_string(),
+            "-exit".to_string(),
+            "-wizard".to_string(),
+        ];
+        let hit = match_candidates(&all, "iz", CandidateMatchMode::Contains);
+        assert_eq!(hit, vec!["-wizard".to_string()]);
+    }
+
+    #[test]
+    fn short_contains_does_not_substring_match_snapshot() {
+        let all = vec!["--snapshot".to_string()];
+        let hit = match_candidates(&all, "p", CandidateMatchMode::Contains);
+        assert!(
+            hit.is_empty(),
+            "single-letter contains must not substring-hit --snapshot, got {hit:?}"
+        );
     }
 }

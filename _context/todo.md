@@ -1180,11 +1180,14 @@ tab -list | browse
 - [x] **20.3 挿入 / ヒント:** `apply_candidate` · grey remainder · pipe / second-tier 空白
 - [x] **20.4 ログ:** `repl_log` をプロンプトキュー sink に切替（ExternalPrinter 撤廃）
 - [x] **20.5 検証:** `cargo test -p bmxt-cli`
+- [x] **20.6 反転 + contains:** 開中トークン反転 · 開時 prefix（option body）· 開中 contains · prefix 0 件フォールバック
+- [x] **20.7 単一ベース行:** 候補は絶対座標オーバーレイ（`\\r\\n` スクロール二重 `BMXt>` 禁止）· Enter 確定は同行列書き換え
 
 **手元スモーク**
 
 - [ ] 空行 Tab → first-tier 一覧 · ↑↓ · Enter で挿入 · 再 Enter で実行
 - [ ] `sync -se` 灰色 `tup` · Tab メニューから `-setup` 確定
+- [ ] `nav en` Tab → `-enter` が出て `en` が反転 · Enter で挿入
 - [ ] `tab -list` Tab → `| browse` を選んで挿入
 - [ ] Esc 後は Tab までメニューが開かない
 - [ ] 接続ログが `BMXt>` 待ち中にプロンプトを壊さない
