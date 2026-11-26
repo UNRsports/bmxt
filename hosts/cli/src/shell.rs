@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use bmxt_core::{complete_line, is_pipe_continuation_token};
+use bmxt_core::{all_completion_tokens, complete_line, is_pipe_continuation_token};
 use crossterm::cursor::{self, MoveTo};
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use crossterm::style::{Attribute, Color, Print, ResetColor, SetAttribute, SetForegroundColor};
@@ -271,31 +271,62 @@ fn word_bounds(line: &str, pos: usize) -> (usize, usize) {
 }
 
 /**
- * EN: Full tier candidate list for the token under `cursor` (clear typed span,
- *     then `complete_line`), plus original replace bounds.
- *     When core `complete_line` returns None (prefix filter empty, e.g. `nav en`),
- *     still recover the slot via local word bounds + emptied line.
- * JA: カーソル下トークンのティア全候補。core が prefix 0 件で None でも単語境界で復旧。
+ * EN: Full tier candidate list for the token under `cursor`.
+ *     Mirrors extension Tab + `emptyFirstPrefixShowsAll`: empty / first-token
+ *     slot uses `all_completion_tokens` when core returns None for empty prefix.
+ * JA: 拡張の Tab（空 prefix で第一コマンド全件）に合わせた全候補取得。
  */
 fn complete_full_slot(
     line: &str,
     cursor: usize,
 ) -> Option<(usize, usize, String, Vec<String>)> {
-    let (token_start, token_end) = if let Some(hit) = complete_line(line, cursor) {
-        (
-            hit.token_start.min(line.len()),
-            hit.token_end.min(line.len()).max(hit.token_start.min(line.len())),
-        )
+    if let Some(hit) = complete_line(line, cursor) {
+        let token_start = hit.token_start.min(line.len());
+        let token_end = hit.token_end.min(line.len()).max(token_start);
+        let typed_end = if cursor >= token_start {
+            cursor.min(line.len())
+        } else {
+            token_start
+        };
+        let typed = line.get(token_start..typed_end)?.to_string();
+        let mut emptied = String::with_capacity(line.len());
+        emptied.push_str(line.get(..token_start)?);
+        emptied.push_str(line.get(token_end..)?);
+        let full = if let Some(full_hit) = complete_line(&emptied, token_start) {
+            sort_candidates(full_hit.candidates)
+        } else if hit.tier == "first" {
+            sort_candidates(all_completion_tokens())
+        } else {
+            sort_candidates(hit.candidates)
+        };
+        if full.is_empty() {
+            return None;
+        }
+        return Some((token_start, token_end, typed, full));
+    }
+
+    // EN: core None — first-tier empty prefix (Tab on blank) or body needle (`nav en`).
+    let (token_start, token_end) = word_bounds(line, cursor);
+    let left = line.get(..token_start)?;
+    let tokens_before: Vec<&str> = if left.trim().is_empty() {
+        Vec::new()
     } else {
-        word_bounds(line, cursor)
+        left.trim().split_whitespace().collect()
     };
-    // EN: Needle is the span from token start to caret (extension prefix slice).
     let typed_end = if cursor >= token_start {
         cursor.min(line.len())
     } else {
         token_start
     };
     let typed = line.get(token_start..typed_end)?.to_string();
+
+    if tokens_before.is_empty() {
+        let full = sort_candidates(all_completion_tokens());
+        if full.is_empty() {
+            return None;
+        }
+        return Some((token_start, token_end, typed, full));
+    }
 
     let mut emptied = String::with_capacity(line.len());
     emptied.push_str(line.get(..token_start)?);
@@ -699,17 +730,9 @@ impl PromptShell {
                 Ok(KeyAction::Continue)
             }
             KeyCode::Right => {
-                if state.cursor_byte >= state.line.len() {
-                    if let Some(hint) =
-                        completion_remainder_hint(&state.line, state.cursor_byte)
-                    {
-                        state.line.push_str(&hint.completion);
-                        state.cursor_byte = state.line.len();
-                        state.clear_hist_browse();
-                    }
-                } else {
-                    state.cursor_byte = next_char_boundary(&state.line, state.cursor_byte);
-                }
+                // EN: Extension — Right only moves the caret; never commits hint/menu.
+                //     Grey remainder stays visual; confirm via Tab menu + Enter.
+                state.cursor_byte = next_char_boundary(&state.line, state.cursor_byte);
                 Ok(KeyAction::Continue)
             }
             KeyCode::Home => {
@@ -761,6 +784,8 @@ impl PromptShell {
                 }
                 state.menu = None;
                 state.clear_hist_browse();
+                // EN: Extension re-syncs after pick so the next tier can appear (e.g. `nav ` → `-enter`).
+                self.open_or_refresh_menu(state);
                 Ok(KeyAction::Continue)
             }
             KeyCode::Up => {
@@ -1019,6 +1044,31 @@ mod tests {
             prefixed.iter().any(|c| c == "-enter"),
             "expected -enter in {prefixed:?}"
         );
+    }
+
+    #[test]
+    fn empty_line_tab_slot_offers_first_commands() {
+        let line = "";
+        let (start, end, typed, full) = complete_full_slot(line, 0).expect("first-tier slot");
+        assert_eq!(start, 0);
+        assert_eq!(end, 0);
+        assert_eq!(typed, "");
+        assert!(full.iter().any(|c| c == "nav"), "expected nav in {full:?}");
+        assert!(full.iter().any(|c| c == "tab"), "expected tab in {full:?}");
+        assert!(
+            full.len() >= 2,
+            "empty Tab must list multiple first commands, got {}",
+            full.len()
+        );
+    }
+
+    #[test]
+    fn partial_first_tab_filters_nav() {
+        let line = "na";
+        let (_s, _e, typed, full) = complete_full_slot(line, line.len()).expect("slot");
+        assert_eq!(typed, "na");
+        let prefixed = match_candidates(&full, &typed, CandidateMatchMode::Prefix);
+        assert!(prefixed.iter().any(|c| c == "nav"), "{prefixed:?}");
     }
 
     #[test]

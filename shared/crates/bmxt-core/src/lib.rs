@@ -20,6 +20,11 @@ pub use complete::{complete_line, is_pipe_continuation_token, CompleteHit};
 pub use dispatch::run_line;
 pub use ir::{DispatchBundle, HostEffect, Msg, UiAction};
 
+/** EN: First-command tokens for Tab empty-prefix menus (extension `emptyFirstPrefixShowsAll`). */
+pub fn all_completion_tokens() -> Vec<String> {
+    cmd::all_completion_tokens()
+}
+
 #[cfg(feature = "wasm")]
 mod wasm_api {
     use wasm_bindgen::prelude::*;

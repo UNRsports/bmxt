@@ -1182,6 +1182,7 @@ tab -list | browse
 - [x] **20.5 検証:** `cargo test -p bmxt-cli`
 - [x] **20.6 反転 + contains:** 開中トークン反転 · 開時 prefix（option body）· 開中 contains · prefix 0 件フォールバック
 - [x] **20.7 単一ベース行:** 候補は絶対座標オーバーレイ（`\\r\\n` スクロール二重 `BMXt>` 禁止）· Enter 確定は同行列書き換え
+- [x] **20.8 第一コマンド Tab:** 空行 Tab → `all_completion_tokens` · Right は確定しない · Enter 後に次ティア再同期
 
 **手元スモーク**
 
