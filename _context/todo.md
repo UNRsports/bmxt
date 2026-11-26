@@ -1079,6 +1079,81 @@ tab -list | browse        → picker::tab live（既存意味）
 
 **参照:** plan `cli_nav_picker_wizard` · §17 · `hosts/cli/src/tui.rs` · `hosts/cli/src/dom_nav_host.rs` · `shared/lib/features/picker/` · `_context/cli-peer/CONTRACT.md`
 
+### 19. CLI 実行モデルを拡張と同一化（コマンド正本 · picker は行組み立て · `--focus`）
+
+**前提:** §7（拡張 picker = CUI 同等のコマンド構築）· §10 / §15（CLI POSIX · Interactive）· §18（`hosts/cli/src/picker/`）。plan `cli_tab_focus_option`。
+
+**目標（不変条件）:**
+
+1. **コマンドが絶対的なベース** — 副作用は必ず `run_line` / `DispatchBundle` → host effect（／peer RPC）経由
+2. **picker は 1）を組み立てるウィザードにすぎない** — Enter で型付きコマンド行を組み立てて実行するだけ。`tabs_ops` / `open_tabs` 等の **直接 RPC は禁止**
+3. ブラウザ OS フォーカスは **明示オプトイン**（oneshot `--focus` · picker 開始時 y/N → 行に `--focus` 付与）
+
+**現状ギャップ**
+
+| 面 | 状態 |
+|----|------|
+| 拡張 picker | Enter → `build*CommandLine` → `submitConstructedLine`（構文ウィザード）✓ |
+| CLI `tab -list \| browse` | Enter → **`tabs_ops Activate` 直叩き**（ウィンドウ focus 常時）✗ |
+| CLI URL picker | Enter → **`open_tabs` 直叩き**（同原則の後続） |
+| `tab -activate` | `<tabId>` のみ。CLI peer 向け `--device` / フォーカス制御なし |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 正本コマンド | `tab -activate <tabId> [--device <deviceId>] [--focus]` |
+| HostEffect | `TabsActivate { tab_id, device_id, focus }`。CLI は device 必須（ローカル browser なし） |
+| Wire | `SyncTabsOp::Activate` に `focusWindow`（欠落時 default true = 旧互換）。true のときだけ `windows.update({ focused })` |
+| CLI picker | 開始時 **一度** y/N（既定 N）→ Enter は行組み立て → `run_line`（RPC しない） |
+| CLI oneshot | 既定はウィンドウ非フォーカス。`--focus` であり |
+| 拡張 picker | `buildTabActivateCommandLine` に `--focus` を付けて **現行の前面化 UX を維持** |
+| URL picker 行組み立て化 | **本節で原則を約束 · 実装は tab 完了後の後続可** |
+
+**アーキテクチャ（要約）**
+
+```
+tab -list | browse
+  → picker（確認: focus?）
+  → build: tab -activate <id> --device <peer> [--focus]
+  → adapter.run_line → HostEffect::TabsActivate → tabs_ops Activate { focusWindow }
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `shared/manifest/bmxt-codegen.json` · `cmd/tabs.rs` | `--device` / `--focus` 文法 · effect フィールド |
+| `bmxt-sync-wire` · `apply-remote-tabs-ops.ts` | `focusWindow` |
+| `hosts/cli/src/adapter.rs` | `TabsActivate` 実装 · browse を行組み立て化 · 確認プロンプト |
+| `shared/lib/features/picker/build-picker-command-line.ts` | 拡張行に `--focus` |
+| `_context/cli-peer/CONTRACT.md` | 「CLI picker = 行組み立てのみ」不変条件 |
+
+**実装チェック（段階）**
+
+- [ ] **19.0 契約:** CONTRACT / README にコマンド正本 · picker ウィザード · `--focus` を追記
+- [ ] **19.1 文法:** `tab -activate` に `--device` / `--focus` · codegen · HostEffect 拡張
+- [ ] **19.2 Wire:** `Activate.focusWindow` · apply-remote · ローカル `tabs-activate.ts`
+- [ ] **19.3 CLI effect:** adapter で `TabsActivate` → `tabs_ops_on`（device 必須）
+- [ ] **19.4 CLI picker:** 直接 RPC 削除 · y/N 確認 · 行組み立て → `run_line`
+- [ ] **19.5 拡張 builder:** `tab -activate <id> --focus`
+- [ ] **19.6 検証:** codegen · `cargo check/test` · tsc · i18n · 手元スモーク
+- [ ] **19.7（後続可）:** URL picker も行組み立て（`tab -send` / open 系）へ
+
+**手元スモーク**
+
+- [ ] `tab -list --peers | browse` → 確認 N → Enter で peer タブ active · **端末フォーカス維持**
+- [ ] 同確認 y → Enter でブラウザウィンドウ前面
+- [ ] `tab -activate <id> --device <peer>` が非フォーカス · `… --focus` で前面
+- [ ] 拡張タブ picker Enter が従来どおり前面化
+- [ ] `bmxt exec -- 'tab -activate …'` が NonInteractive で一覧/副作用のみ（browse なし）
+
+**スコープ外（本節）**
+
+- URL / bookmark picker の完全行組み立て化（19.7）
+- nav / dom wizard の「コマンド行化」（§17–18 の CLI host 専用入口は維持可）
+- 拡張側 picker UI の再設計
+
+**参照:** plan `cli_tab_focus_option` · §7 · §18 · `hosts/cli/src/adapter.rs` · `shared/lib/features/picker/` · `_context/cli-peer/CONTRACT.md`
+
 ---
 
 ## Archive（ポインタのみ）
