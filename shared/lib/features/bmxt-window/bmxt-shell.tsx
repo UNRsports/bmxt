@@ -54,10 +54,21 @@ import {
 } from "./detail-bar-focus"
 import { PromptInput } from "./shell/PromptInput"
 import { ExtraKeysBar, useHostUiFormFactor } from "./extra-keys"
+import {
+  consumeCapabilityReportPending,
+  runCapabilityReportLines
+} from "../capability"
 import { SyncHandshakeBar } from "../sync/handshake/clipboard/sync-handshake-bar.tsx"
 import { getSyncService } from "../sync/facade/sync-service"
-import { startSyncTunnelHold } from "../sync/peer/hold-sync-tunnel"
-import { startLocalhostDoorReconnect } from "../sync/handshake/localhost/start-localhost-door-reconnect.ts"
+import {
+  setSyncTunnelHoldIntervalMs,
+  startSyncTunnelHold,
+  stopSyncTunnelHold
+} from "../sync/peer/hold-sync-tunnel"
+import {
+  setLocalhostDoorRetryMs,
+  startLocalhostDoorReconnect
+} from "../sync/handshake/localhost/start-localhost-door-reconnect.ts"
 import { SyncLinkStatusBar } from "../sync/link/sync-link-status-bar"
 import { useSyncLinkStatus } from "../sync/link/use-sync-link-status"
 import { SyncWizardPanel } from "../sync/wizard"
@@ -91,7 +102,8 @@ import {
   shouldShowSearchListPatternPlaceholder,
   type SearchListPickerState
 } from "../search/search-list-picker-input"
-import { isJobHandleActive, useSessionJobRunner } from "../job"
+import { isJobHandleActive } from "../job"
+import { useSessionJobRunner } from "../job/use-session-job-runner"
 import { useCommandBusyIndicator } from "./shell/command-busy"
 import { parseDomExitListLine, type DomListPickerState } from "../dom/dom-list-picker-input"
 import { isDomListPickerFollowEnabled } from "../dom/dom-list-follow-enabled"
@@ -101,7 +113,6 @@ import {
   useNavMode,
   type NavPositionsByTab
 } from "../nav"
-import { patchFloatBrowseStateForTab } from "../bmxt-float/float-browse-state-storage"
 import { ModeStatusBarStack } from "./mode-status-bar-stack"
 import {
   activateModeToolbar,
@@ -133,6 +144,8 @@ import { formatBulletedLines, versionUpgradeTitle } from "../setting/i18n/resolv
 import { setRunLocale } from "../setting/i18n/run-locale"
 import { settingTokenForUiLocale } from "../setting/locale"
 import { type SettingListPickerState } from "../setting/setting-list-picker-state"
+import type { BookmarkPickerState } from "../bookmark/bookmark-picker-state"
+import type { HistoryPickerState } from "../history/history-picker-state"
 import {
   parseSettingExitListLine,
   parseSettingIncompleteLine
@@ -176,15 +189,9 @@ type Props = {
     channel?: import("../command-line/command-output.ts").LogChannel
   ) => void | Promise<void>
   sessionOrderLength: number
-  /** EN: popup vs in-page float — drives `exit` host policy. */
+  /** EN: Which UI document is running commands (`exit` host policy). */
   hostKind?: import("./bmxt-host-kind").BmxtHostKind
-  /** EN: Hosting tab id when `hostKind` is float (browse-state persistence). */
-  floatTabId?: number | null
-  /** EN: Restored nav overlay ON after float remount. */
-  restoredNavActive?: boolean
   processUiReady?: boolean
-  /** EN: Float — flush sessions/browse before `close` removes the host tab. */
-  flushFloatPersist?: () => Promise<void>
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   appendCommandToHistory: (cmd: string) => void
   sessionPickers: SessionPickerState
@@ -227,10 +234,7 @@ export function BmxtShell({
   appendLogLines: appendLogLinesProp,
   sessionOrderLength,
   hostKind = "popup",
-  floatTabId = null,
-  restoredNavActive = false,
   processUiReady = true,
-  flushFloatPersist: flushFloatPersistProp,
   applyRunCmdPatches,
   appendCommandToHistory,
   sessionPickers,
@@ -285,11 +289,40 @@ export function BmxtShell({
   // JA: プロンプト窓が Family sync トンネルの宿主。SyncService 配線とキープアライブ。
   useEffect(() => {
     getSyncService()
+    stopSyncTunnelHold()
     startSyncTunnelHold(async () => {
       await getSyncService().status()
-    })
+    }, uiSettings.syncHoldIntervalMs)
     // EN: Family-authenticated auto-reconnect via CLI localhost listener (clipboard/file remain fallback).
-    startLocalhostDoorReconnect()
+    startLocalhostDoorReconnect(uiSettings.cliDoorRetryMs)
+    return () => {
+      stopSyncTunnelHold()
+    }
+  }, [])
+  useEffect(() => {
+    setSyncTunnelHoldIntervalMs(uiSettings.syncHoldIntervalMs)
+    setLocalhostDoorRetryMs(uiSettings.cliDoorRetryMs)
+  }, [uiSettings.syncHoldIntervalMs, uiSettings.cliDoorRetryMs])
+  // EN: After install/update, print browser API capability report once when the prompt opens.
+  // JA: install/update 後、プロンプト初回オープンでブラウザ API 能力レポートを一度表示する。
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const pending = await consumeCapabilityReportPending()
+      if (!pending || cancelled) {
+        return
+      }
+      const lines = await runCapabilityReportLines(uiSettings.locale)
+      if (cancelled) {
+        return
+      }
+      await appendLogLines(lines, "stdout")
+    })()
+    return () => {
+      cancelled = true
+    }
+    // EN: Mount-only — locale/appendLogLines identity must not re-trigger the pending consume.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-once
   }, [])
   const translateEnabledRef = useRef(false)
 
@@ -300,6 +333,8 @@ export function BmxtShell({
   const searchPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const domPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
   const settingPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const bookmarkPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
+  const historyPickerInputRef = useRef<HTMLTextAreaElement | null>(null)
 
   // EN: Sync during render (not useEffect) so rAF focus guards see the latest pane
   // before paint — e.g. `| browse` activatePaneFocus then compound-end focusPrompt.
@@ -320,10 +355,14 @@ export function BmxtShell({
     searchListPicker,
     domListPicker,
     settingListPicker,
+    bookmarkPicker,
+    historyPicker,
     setTabPicker,
     setSearchListPicker,
     setDomListPicker,
     setSettingListPicker,
+    setBookmarkListPicker,
+    setHistoryListPicker,
     sidePickerOpen
   } = usePickerManager({
     sessionId,
@@ -359,11 +398,15 @@ export function BmxtShell({
   const displaySearchListPicker = displaySessionPickers.search
   const displayDomListPicker = displaySessionPickers.dom
   const displaySettingListPicker = displaySessionPickers.setting
+  const displayBookmarkPicker = displaySessionPickers.bookmark
+  const displayHistoryPicker = displaySessionPickers.history
 
   const tabsPickerKeyboardActive = paneFocus === "tabs" && isFocusedPane
   const searchPickerKeyboardActive = paneFocus === "search" && isFocusedPane
   const domPickerKeyboardActive = paneFocus === "dom" && isFocusedPane
   const settingPickerKeyboardActive = paneFocus === "setting" && isFocusedPane
+  const bookmarkPickerKeyboardActive = paneFocus === "bookmark" && isFocusedPane
+  const historyPickerKeyboardActive = paneFocus === "history" && isFocusedPane
 
   const tabPickerRef = useRef<TabPickerState | null>(null)
   useEffect(() => {
@@ -381,6 +424,30 @@ export function BmxtShell({
   useEffect(() => {
     settingListPickerRef.current = settingListPicker
   }, [settingListPicker])
+  const bookmarkPickerRef = useRef<BookmarkPickerState | null>(null)
+  useEffect(() => {
+    bookmarkPickerRef.current = bookmarkPicker
+  }, [bookmarkPicker])
+  const historyPickerRef = useRef<HistoryPickerState | null>(null)
+  useEffect(() => {
+    historyPickerRef.current = historyPicker
+  }, [historyPicker])
+  const onBookmarkPickerStateChange = useCallback(
+    (update: (prev: BookmarkPickerState) => BookmarkPickerState) => {
+      setBookmarkListPicker(sessionId, (prev: BookmarkPickerState | null) =>
+        prev === null ? prev : update(prev)
+      )
+    },
+    [sessionId, setBookmarkListPicker]
+  )
+  const onHistoryPickerStateChange = useCallback(
+    (update: (prev: HistoryPickerState) => HistoryPickerState) => {
+      setHistoryListPicker(sessionId, (prev: HistoryPickerState | null) =>
+        prev === null ? prev : update(prev)
+      )
+    },
+    [sessionId, setHistoryListPicker]
+  )
   const jobRunner = useSessionJobRunner(sessionId)
   const {
     isCommandBusy,
@@ -438,35 +505,6 @@ export function BmxtShell({
   }, [appendLogLines, endCommandBusy, jobRunner, uiSettings.locale])
 
   const [navActive, setNavActive] = useState(false)
-  const [navActivePersistReady, setNavActivePersistReady] = useState(hostKind !== "float")
-  const floatNavActiveRestoredRef = useRef(false)
-  useEffect(() => {
-    if (hostKind !== "float") {
-      return
-    }
-    if (!processUiReady) {
-      // EN: Allow another restore after float re-hydrate (sessions → browse).
-      floatNavActiveRestoredRef.current = false
-      setNavActivePersistReady(false)
-      return
-    }
-    if (floatNavActiveRestoredRef.current) {
-      return
-    }
-    floatNavActiveRestoredRef.current = true
-    if (restoredNavActive) {
-      setNavActive(true)
-    }
-    // EN: Gate persist until restore applied — otherwise initial false wipes nav ON across remount.
-    setNavActivePersistReady(true)
-  }, [hostKind, processUiReady, restoredNavActive])
-
-  useEffect(() => {
-    if (hostKind !== "float" || floatTabId === null || !processUiReady || !navActivePersistReady) {
-      return
-    }
-    void patchFloatBrowseStateForTab(floatTabId, { navActive })
-  }, [floatTabId, hostKind, navActive, navActivePersistReady, processUiReady])
 
   const [translateEnabled, setTranslateEnabled] = useState(false)
   const [translatePairId, setTranslatePairId] = useState<TranslationPairId>(
@@ -657,6 +695,8 @@ export function BmxtShell({
         detailBarId ?? "",
         paneFocus,
         settingListPicker !== null ? "1" : "0",
+        bookmarkPicker !== null ? "1" : "0",
+        historyPicker !== null ? "1" : "0",
         tabPicker !== null ? "1" : "0",
         searchListPicker !== null ? "1" : "0",
         domListPicker !== null ? "1" : "0",
@@ -670,6 +710,8 @@ export function BmxtShell({
       detailBarId,
       paneFocus,
       settingListPicker,
+      bookmarkPicker,
+      historyPicker,
       tabPicker,
       searchListPicker,
       domListPicker,
@@ -738,7 +780,7 @@ export function BmxtShell({
       }
     },
     uiLocale: uiSettings.locale,
-    hostTabId: hostKind === "float" ? floatTabId : null
+    hostTabId: null
   })
 
   const navTextSelDone = navTextSelPhase === "done"
@@ -931,6 +973,8 @@ export function BmxtShell({
     exitPickerToDetailBar,
     exitDetailBarToTerminal,
     closeSettingPickerColumn,
+    closeBookmarkPickerColumn,
+    closeHistoryPickerColumn,
     focusPickerSlot,
     handleToggleNavActive
   } = usePaneFocusController({
@@ -960,6 +1004,8 @@ export function BmxtShell({
     searchListPicker,
     domListPicker,
     settingListPicker,
+    bookmarkPicker,
+    historyPicker,
     translateEnabled,
     translatePairIdRef,
     tabsPageActiveModeRef,
@@ -979,11 +1025,15 @@ export function BmxtShell({
     searchPickerInputRef,
     domPickerInputRef,
     settingPickerInputRef,
+    bookmarkPickerInputRef,
+    historyPickerInputRef,
     pickersForColumnOrder,
     openPickers,
     focusPrompt,
     closePromptPickerUi,
     setSettingListPicker,
+    setBookmarkListPicker,
+    setHistoryListPicker,
     uiLocale: uiSettings.locale,
     jobRunner,
     appendLogLines,
@@ -1008,7 +1058,6 @@ export function BmxtShell({
     sessionId,
     uiLocale: uiSettings.locale,
     appendLogLines,
-    closeSettingPickerColumn,
     setSettingListPicker,
     settingListPickerRef,
     submitConstructedLine: submitConstructedLineEarly
@@ -1112,12 +1161,6 @@ export function BmxtShell({
     submitConstructedLine
   })
 
-  const flushFloatPersist = useCallback(async () => {
-    if (flushFloatPersistProp) {
-      await flushFloatPersistProp()
-    }
-  }, [flushFloatPersistProp])
-
   const { submitLine } = useCommandDispatch({
     sessionId,
     sessionOrderLength,
@@ -1144,12 +1187,13 @@ export function BmxtShell({
     searchListPickerRef,
     domListPickerRef,
     settingListPickerRef,
+    bookmarkPickerRef,
+    historyPickerRef,
     tabsPageActiveModeRef,
     domPageActiveModeRef,
     translatePairIdRef,
     promptLine,
     syncPromptDom,
-    flushFloatPersist,
     allowEmptyFirstPickerSyncRef,
     imeTokenPickerDismissedRef,
     tabPressSeqRef,
@@ -1178,12 +1222,16 @@ export function BmxtShell({
     teardownNav,
     clearSearchLoadingProgress,
     closeSettingPickerColumn,
+    closeBookmarkPickerColumn,
+    closeHistoryPickerColumn,
     replaceUiSettingsState,
     submitConstructedLine,
     setTabPicker,
     setSearchListPicker,
     setDomListPicker,
     setSettingListPicker,
+    setBookmarkListPicker,
+    setHistoryListPicker,
     openSessionListPicker,
     setSubCmdPicker,
     runDomListAndShow,
@@ -1631,6 +1679,12 @@ export function BmxtShell({
           setting={{
             pickerOpen: settingListPicker !== null
           }}
+          bookmark={{
+            pickerOpen: bookmarkPicker !== null
+          }}
+          history={{
+            pickerOpen: historyPicker !== null
+          }}
         />
         <div ref={scrollAnchorRef} className="bmxt-scroll-anchor" aria-hidden />
     </>
@@ -1692,14 +1746,22 @@ export function BmxtShell({
           searchLoadingProgressLines={searchLoadingProgressLines}
           domListPicker={displayDomListPicker}
           settingListPicker={displaySettingListPicker}
+          bookmarkPicker={displayBookmarkPicker}
+          historyPicker={displayHistoryPicker}
           tabsPickerKeyboardActive={tabsPickerKeyboardActive}
           searchPickerKeyboardActive={searchPickerKeyboardActive}
           domPickerKeyboardActive={domPickerKeyboardActive}
           settingPickerKeyboardActive={settingPickerKeyboardActive}
+          bookmarkPickerKeyboardActive={bookmarkPickerKeyboardActive}
+          historyPickerKeyboardActive={historyPickerKeyboardActive}
           tabPickerInputRef={tabPickerInputRef}
           searchPickerInputRef={searchPickerInputRef}
           domPickerInputRef={domPickerInputRef}
           settingPickerInputRef={settingPickerInputRef}
+          bookmarkPickerInputRef={bookmarkPickerInputRef}
+          historyPickerInputRef={historyPickerInputRef}
+          onBookmarkPickerStateChange={onBookmarkPickerStateChange}
+          onHistoryPickerStateChange={onHistoryPickerStateChange}
           onSettingPickerStateChange={onSettingPickerStateChange}
           onSettingPickerRowAction={onSettingPickerRowAction}
           onSettingPickerApplyEdit={onSettingPickerApplyEdit}

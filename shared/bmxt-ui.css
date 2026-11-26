@@ -28,32 +28,6 @@ html {
   color-scheme: dark;
 }
 
-/* Float host page (iframe) — same tokens; fill the iframe viewport */
-html.bmxt-float-page .bmxt-root--terminal {
-  min-height: 0;
-}
-
-.bmxt-float-boot-gate {
-  box-sizing: border-box;
-  height: 100%;
-  padding: 1rem 1.1rem;
-  font: 600 13px/1.45 system-ui, sans-serif;
-  color: var(--bmxt-fg, #e6edf3);
-  background: var(--bmxt-bg, #0d1117);
-}
-
-.bmxt-float-boot-gate-title {
-  margin: 0 0 0.5rem;
-  font-size: 14px;
-}
-
-.bmxt-float-boot-gate-body {
-  margin: 0;
-  font-weight: 500;
-  opacity: 0.9;
-}
-
-
 body {
   margin: 0;
   padding: 0;
@@ -593,6 +567,31 @@ body {
   color: #ff7b72;
 }
 
+.bmxt-out-status {
+  font-weight: 600;
+}
+
+.bmxt-out-status--ok {
+  color: #3fb950;
+}
+
+.bmxt-out-status--ng {
+  color: #ff7b72;
+}
+
+.bmxt-picker-peer-footer {
+  margin: 0;
+  padding: 4px 8px 6px;
+  font-size: 0.92em;
+  color: #ff7b72;
+  border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.bmxt-picker-peer-footer-line {
+  margin: 0;
+  padding: 1px 0;
+}
+
 .bmxt-log-tab-chip {
   display: inline-flex;
   align-items: center;
@@ -768,6 +767,14 @@ body {
 
 .bmxt-mode-status-seg--label-setting {
   color: #e3b341;
+}
+
+.bmxt-mode-status-seg--label-bookmark {
+  color: #ff7b72;
+}
+
+.bmxt-mode-status-seg--label-history {
+  color: #a5d6ff;
 }
 
 .bmxt-mode-status-row--focused .bmxt-mode-status {
@@ -1080,7 +1087,7 @@ body {
 
 .bmxt-prompt-line {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 6px;
   min-height: 1.35em;
   line-height: 1.35;
@@ -1453,6 +1460,18 @@ body {
   min-height: 1.35em;
 }
 
+.bmxt-prompt-effects-canvas {
+  position: fixed;
+  left: 0;
+  top: 0;
+  /* EN: Sized/positioned each frame to the particle AABB (not full viewport). */
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  /* EN: Above terminal chrome, below floating pickers (z-index 50). */
+  z-index: 30;
+}
+
 .bmxt-prompt-mirror {
   position: absolute;
   left: 0;
@@ -1463,24 +1482,33 @@ body {
   min-height: 100%;
   box-sizing: border-box;
   pointer-events: none;
-  white-space: pre;
+  /* EN: Soft-wrap like a terminal; keep in sync with `.bmxt-prompt-ime`. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   overflow: hidden;
   color: #c9d1d9;
   line-height: 1.35;
+  z-index: 0;
 }
 
 .bmxt-prompt-ime {
   box-sizing: border-box;
   display: block;
+  position: relative;
+  z-index: 2;
   width: 100%;
   min-height: 1.35em;
   margin: 0;
   padding: 0;
   border: none;
   resize: none;
-  overflow-x: auto;
+  /* EN: Grow with wrap; never show a horizontal scrollbar. */
+  overflow-x: hidden;
   overflow-y: hidden;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   background: transparent;
   color: transparent;
   /* Mirror shows the blinking cell; IME composition still draws on the textarea layer. */
@@ -1506,6 +1534,16 @@ body {
   text-decoration: underline;
   text-decoration-color: #58a6ff;
   text-underline-offset: 2px;
+}
+
+/* EN: Zero-width caret proxy for prompt-effect origin (IME composition / wrap). */
+.bmxt-prompt-effect-origin {
+  display: inline-block;
+  width: 0;
+  height: 1.35em;
+  overflow: hidden;
+  vertical-align: bottom;
+  pointer-events: none;
 }
 
 .bmxt-prompt-chip-stack {
@@ -2108,12 +2146,34 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   font-style: italic;
 }
 
-.bmxt-tab-picker-row--move-dest {
-  box-shadow: inset 0 0 0 1px #a371f7;
+/* EN: MOVE cursor on a row (subtle); actual insert point is `.bmxt-tab-picker-insert-slot`. */
+.bmxt-tab-picker-row--move-cursor {
+  outline: 1px dashed rgba(163, 113, 247, 0.55);
+  outline-offset: -1px;
 }
 
-.bmxt-tab-picker-row--marked.bmxt-tab-picker-row--move-dest {
-  box-shadow: inset 0 0 0 1px #a371f7, inset 3px 0 0 #3fb950;
+.bmxt-tab-picker-row-block {
+  display: block;
+}
+
+.bmxt-tab-picker-insert-slot {
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.bmxt-tab-picker-insert-slot::before {
+  content: "";
+  display: block;
+  height: 2px;
+  margin: -1px 4px 0;
+  border-radius: 1px;
+  background: #a371f7;
+  box-shadow: 0 0 0 1px rgba(163, 113, 247, 0.35);
 }
 
 /* find/dom plain picker: one row per line (fixed height for virtual window) */
@@ -2137,6 +2197,20 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   right: 0;
   top: 0;
   will-change: transform;
+}
+
+/* tree picker (history / bookmark): fixed row height for virtual window */
+.bmxt-tab-picker-list--tree-virtual .bmxt-tab-picker-row {
+  box-sizing: border-box;
+  min-height: var(--bmxt-tree-picker-row-height, 40px);
+  margin-top: 0;
+}
+
+.bmxt-tab-picker-list--tree-virtual .bmxt-tab-picker-tab-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
 }
 
 /* dom -list picker */

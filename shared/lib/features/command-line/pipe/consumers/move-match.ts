@@ -8,6 +8,8 @@ export type MovePipeFlags = {
   windowId: number
   groupId: number
   ungroup: boolean
+  /** EN: `-1` means end of window/group (no `--before-tab`). */
+  beforeTabId: number
 }
 
 export function parseMovePipeSegment(segment: string): MovePipeFlags | null {
@@ -18,7 +20,8 @@ export function parseMovePipeSegment(segment: string): MovePipeFlags | null {
   return {
     windowId: classified.windowId,
     groupId: classified.groupId,
-    ungroup: classified.ungroup
+    ungroup: classified.ungroup,
+    beforeTabId: classified.beforeTabId
   }
 }
 

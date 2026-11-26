@@ -31,6 +31,11 @@ function parseFieldLine(line: string): { key: string; value: string } | null {
   return { key: kv[1]!.trim().toLowerCase(), value: kv[2]! }
 }
 
+function cellRefFromSnippetPrefix(snippet: string): string | undefined {
+  const m = /^([A-Z]{1,3}\d{1,7}):\s/.exec(snippet)
+  return m?.[1]
+}
+
 function parseMatchField(value: string): SearchPageMatch | null {
   const legacy = MATCH_LINE_RE.exec(value.trim())
   if (!legacy) {
@@ -41,7 +46,23 @@ function parseMatchField(value: string): SearchPageMatch | null {
   if (!snippet) {
     return null
   }
-  return { lineNo: Number.isFinite(lineNo) ? lineNo : 0, snippet, occurrence: 0 }
+  const match: SearchPageMatch = {
+    lineNo: Number.isFinite(lineNo) ? lineNo : 0,
+    snippet,
+    occurrence: 0
+  }
+  const cellRef = cellRefFromSnippetPrefix(snippet)
+  if (cellRef) {
+    match.cellRef = cellRef
+    const after = snippet.slice(cellRef.length).replace(/^:\s*/, "").trim()
+    if (after) {
+      match.cellValue = after.slice(0, 500)
+    }
+    // EN: Line-parsed A1 is untrusted (may come from filter-skewed gviz).
+    // JA: 行テキスト由来の A1 はフィルタずれの可能性があるため未信頼。
+    match.sheetsRowTrusted = false
+  }
+  return match
 }
 
 function isOpenableUrl(url: string): boolean {

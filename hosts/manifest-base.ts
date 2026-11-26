@@ -16,6 +16,16 @@ const sharedPermissions = [
   "bookmarks"
 ] as const
 
+/**
+ * EN: Required https + CLI loopback door origins (keep in sync with `http-host-access.ts`).
+ * JA: 必須 https と CLI loopback（`http-host-access.ts` と同期）。
+ */
+export const HOST_ORIGIN_PERMISSIONS = [
+  "https://*/*",
+  "http://127.0.0.1:17653/*",
+  "http://localhost:17653/*"
+] as const
+
 export function hostPermissionsList(browser: HostBrowser): string[] {
   if (browser === "chrome") {
     // Chrome: favicon API + windows permission (required for chrome.windows.create popup).
@@ -26,6 +36,25 @@ export function hostPermissionsList(browser: HostBrowser): string[] {
   // (browser.windows still works under the WebExtensions API without declaring it).
   // Family sync WebRTC lives in the BMXt prompt window only (no dedicated peer tab).
   return [...sharedPermissions]
+}
+
+/**
+ * EN: Firefox-only manifest extras for MV3 Origin Controls.
+ *     - `granted_host_permissions`: temporary about:debugging installs auto-grant on
+ *       ADDON_INSTALL (permanent AMO installs force this false at parse time).
+ *     - `optional_host_permissions`: allows `permissions.request` after Reload when
+ *       Origin Controls dropped the install-time grant.
+ * JA: Firefox MV3 Origin Controls 向け。一時アドオンの INSTALL 時自動付与と、
+ *     Reload 後の permissions.request 再取得用 optional_host_permissions。
+ */
+export function firefoxHostPermissionManifestExtras(): {
+  granted_host_permissions: true
+  optional_host_permissions: string[]
+} {
+  return {
+    granted_host_permissions: true,
+    optional_host_permissions: [...HOST_ORIGIN_PERMISSIONS]
+  }
 }
 
 export function hostCommands(browser: HostBrowser) {

@@ -13,11 +13,15 @@ import { applyBookmarkRemoveEffect } from "./effects/bookmark-remove"
 import { applyClearLogEffect } from "./effects/clear-log"
 import { applyCloseCurrentTabEffect } from "./effects/close-current-tab"
 import { applyCloseCurrentWindowEffect } from "./effects/close-current-window"
+import { applyCloseGroupEffect } from "./effects/close-group"
 import { applyCloseTabEffect } from "./effects/close-tab"
+import { applyCloseWindowEffect } from "./effects/close-window"
 import { applyDomListEffect } from "./effects/dom-list"
 import { applyExitPaneEffect } from "./effects/exit-pane"
 import { applyGroupAddEffect } from "./effects/group-add"
 import { applyGroupNewEffect } from "./effects/group-new"
+import { applyGroupRenameEffect } from "./effects/group-rename"
+import { applyGroupUngroupEffect } from "./effects/group-ungroup"
 import { applyHistoryDeleteRangeEffect } from "./effects/history-delete-range"
 import { applyHistoryDeleteUrlEffect } from "./effects/history-delete-url"
 import { applyNavigateCurrentTabEffect } from "./effects/navigate-current-tab"
@@ -26,6 +30,7 @@ import { applyOpenUrlIntoWindowEffect } from "./effects/open-url-into-window"
 import { applyOpenUrlNewTabEffect } from "./effects/open-url-new-tab"
 import { applyOpenUrlNewWindowEffect } from "./effects/open-url-new-window"
 import { applyOpenWelcomePageEffect } from "./effects/open-welcome-page"
+import { applyProbeCapabilitiesEffect } from "./effects/probe-capabilities"
 import { applySearchBookmarkEffect } from "./effects/search-bookmark"
 import { applySearchHistoryEffect } from "./effects/search-history"
 import { applySearchListEffect } from "./effects/search-list"
@@ -37,6 +42,7 @@ import { applySessionPrevEffect } from "./effects/session-prev"
 import { applyTabGoBackEffect } from "./effects/tab-go-back"
 import { applyTabGoForwardEffect } from "./effects/tab-go-forward"
 import { applyTabReloadEffect } from "./effects/tab-reload"
+import { applyTabsActivateEffect } from "./effects/tabs-activate"
 import { applyTabsListEffect } from "./effects/tabs-list"
 import { applyTabsMoveEffect } from "./effects/tabs-move"
 import { applyTabsMoveUrlEffect } from "./effects/tabs-move-url"
@@ -64,8 +70,12 @@ export async function applyOne(
       return applyCloseCurrentTabEffect(ctx, e)
     case "close_current_window":
       return applyCloseCurrentWindowEffect(ctx, e)
+    case "close_group":
+      return applyCloseGroupEffect(ctx, e)
     case "close_tab":
       return applyCloseTabEffect(ctx, e)
+    case "close_window":
+      return applyCloseWindowEffect(ctx, e)
     case "dom_list":
       return applyDomListEffect(ctx, e)
     case "exit_pane":
@@ -74,6 +84,10 @@ export async function applyOne(
       return applyGroupAddEffect(ctx, e)
     case "group_new":
       return applyGroupNewEffect(ctx, e)
+    case "group_rename":
+      return applyGroupRenameEffect(ctx, e)
+    case "group_ungroup":
+      return applyGroupUngroupEffect(ctx, e)
     case "history_delete_range":
       return applyHistoryDeleteRangeEffect(ctx, e)
     case "history_delete_url":
@@ -90,6 +104,8 @@ export async function applyOne(
       return applyOpenUrlNewWindowEffect(ctx, e)
     case "open_welcome_page":
       return applyOpenWelcomePageEffect(ctx, e)
+    case "probe_capabilities":
+      return applyProbeCapabilitiesEffect(ctx, e)
     case "search_bookmark":
       return applySearchBookmarkEffect(ctx, e)
     case "search_history":
@@ -112,6 +128,8 @@ export async function applyOne(
       return applyTabGoForwardEffect(ctx, e)
     case "tab_reload":
       return applyTabReloadEffect(ctx, e)
+    case "tabs_activate":
+      return applyTabsActivateEffect(ctx, e)
     case "tabs_list":
       return applyTabsListEffect(ctx, e)
     case "tabs_move":

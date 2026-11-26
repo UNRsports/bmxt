@@ -3,12 +3,12 @@
  * JA: インメモリのセッション／プロセス UI を所有する拡張 UI ドキュメント種別。
  */
 
-export type BmxtHostKind = "popup" | "float"
+export type BmxtHostKind = "popup"
 
-export type BmxtSessionClearHost = BmxtHostKind | "all"
+export type BmxtSessionClearHost = "popup" | "all"
 
 export function isBmxtHostKind(value: unknown): value is BmxtHostKind {
-  return value === "popup" || value === "float"
+  return value === "popup"
 }
 
 export function isBmxtSessionClearHost(value: unknown): value is BmxtSessionClearHost {

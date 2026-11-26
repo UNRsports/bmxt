@@ -1,6 +1,8 @@
 import type { Dispatch, SetStateAction } from "react"
 import type { JobRunner } from "../../job"
+import { tBookmark } from "../../setting/i18n/ns/bookmark"
 import { tDom } from "../../setting/i18n/ns/dom"
+import { tHistory } from "../../setting/i18n/ns/history"
 import { tSearch } from "../../setting/i18n/ns/search"
 import { tSetting } from "../../setting/i18n/ns/setting"
 import { tTabs } from "../../setting/i18n/ns/tabs"
@@ -18,10 +20,14 @@ export type CloseBrowsePickerColumnDeps = {
   isSearchPickerOpen: boolean
   isDomPickerOpen: boolean
   isSettingPickerOpen: boolean
+  isBookmarkPickerOpen: boolean
+  isHistoryPickerOpen: boolean
   setTabPicker: (sessionId: string, state: null) => void
   setSearchListPicker: (sessionId: string, state: null) => void
   setDomListPicker: (sessionId: string, state: null) => void
   closeSettingPickerColumn: () => void
+  closeBookmarkPickerColumn: () => void
+  closeHistoryPickerColumn: () => void
   setModeToolbarOrder: Dispatch<SetStateAction<ModeToolbarId[]>>
   activatePaneFocus: (target: PaneFocusTarget) => void
   clearSearchLoadingProgress: () => void
@@ -79,6 +85,20 @@ export function closeBrowsePickerColumn(
       }
       deps.closeSettingPickerColumn()
       return tSetting("setting.picker.closed", deps.locale)
+    }
+    case "bookmark": {
+      if (!deps.isBookmarkPickerOpen) {
+        return tBookmark("bookmark.picker.notOpen", deps.locale)
+      }
+      deps.closeBookmarkPickerColumn()
+      return tBookmark("bookmark.picker.closed", deps.locale)
+    }
+    case "history": {
+      if (!deps.isHistoryPickerOpen) {
+        return tHistory("history.picker.notOpen", deps.locale)
+      }
+      deps.closeHistoryPickerColumn()
+      return tHistory("history.picker.closed", deps.locale)
     }
   }
 }

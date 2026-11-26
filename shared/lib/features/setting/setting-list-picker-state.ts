@@ -13,6 +13,7 @@ export type SettingListPickerView =
   | "language"
   | "editPicker"
   | "imeCandidateHelp"
+  | "promptFire"
   | "searchLegend"
   | "hostUi"
   | "fontSize"
@@ -38,7 +39,10 @@ export type SettingListPickerState = {
   /** EN: Inline edit active on fg / bgColor / font detail screens. */
   editing: boolean
   editDraft: string
-  /** EN: Pending settings shown in preview; committed only on save. */
+  /**
+   * EN: Mirror of committed UI settings while the picker column is open.
+   *     Edits commit immediately; this field stays in sync after each write.
+   */
   draft: UiSettings
 }
 
@@ -51,13 +55,21 @@ export const DEFAULT_SETTING_LIST_PICKER_NAV: Pick<
   editDraft: ""
 }
 
+export type SettingAppearancePatch = Partial<UiAppearanceLayer> & {
+  searchHitHighlightBg?: string | null
+  searchJumpHighlightBg?: string | null
+}
+
 export type SettingDraftPatch = {
   locale?: UiLocale
   editPicker?: boolean
   imeCandidateHelp?: boolean
+  promptFire?: boolean
   searchLegendMode?: SearchLegendMode
   hostUiMode?: HostUiMode
-  appearance?: Partial<UiAppearanceLayer>
+  syncHoldIntervalMs?: number
+  cliDoorRetryMs?: number
+  appearance?: SettingAppearancePatch
   picker?: Partial<UiAppearanceLayer>
 }
 
@@ -68,9 +80,12 @@ export function createSettingListPickerState(committed: UiSettings): SettingList
       locale: committed.locale,
       hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: committed.imeCandidateHelp !== false,
+      promptFire: committed.promptFire === true,
       searchLegendMode: normalizeSearchLegendMode(
         committed.searchLegendMode ?? DEFAULT_SEARCH_LEGEND_MODE
       ),
+      syncHoldIntervalMs: committed.syncHoldIntervalMs,
+      cliDoorRetryMs: committed.cliDoorRetryMs,
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }
@@ -90,37 +105,57 @@ export function settingPickerGoToView(
   return { ...prev, view, editing: false, editDraft: "" }
 }
 
-function applyDraftPatch(
-  prev: SettingListPickerState,
+/** EN: Apply a closed setting patch onto a `UiSettings` value (pure). */
+export function applySettingDraftPatchToSettings(
+  prev: UiSettings,
   patch: SettingDraftPatch
-): SettingListPickerState["draft"] {
-  let draft = prev.draft
+): UiSettings {
+  let next = prev
   if (patch.locale !== undefined) {
-    draft = { ...draft, locale: patch.locale }
+    next = { ...next, locale: patch.locale }
   }
   if (patch.hostUiMode !== undefined) {
-    draft = { ...draft, hostUiMode: patch.hostUiMode }
+    next = { ...next, hostUiMode: patch.hostUiMode }
   }
   if (patch.imeCandidateHelp !== undefined) {
-    draft = { ...draft, imeCandidateHelp: patch.imeCandidateHelp }
+    next = { ...next, imeCandidateHelp: patch.imeCandidateHelp }
+  }
+  if (patch.promptFire !== undefined) {
+    next = { ...next, promptFire: patch.promptFire }
   }
   if (patch.searchLegendMode !== undefined) {
-    draft = {
-      ...draft,
+    next = {
+      ...next,
       searchLegendMode: normalizeSearchLegendMode(patch.searchLegendMode)
     }
   }
-  const nextAppearance = { ...draft.appearance, picker: { ...draft.appearance.picker } }
+  if (patch.syncHoldIntervalMs !== undefined) {
+    next = { ...next, syncHoldIntervalMs: patch.syncHoldIntervalMs }
+  }
+  if (patch.cliDoorRetryMs !== undefined) {
+    next = { ...next, cliDoorRetryMs: patch.cliDoorRetryMs }
+  }
+  const nextAppearance: UiAppearance = {
+    ...next.appearance,
+    picker: { ...next.appearance.picker }
+  }
   if (patch.editPicker !== undefined) {
     nextAppearance.editPicker = patch.editPicker
   }
   if (patch.appearance) {
-    Object.assign(nextAppearance, patch.appearance)
+    const { searchHitHighlightBg, searchJumpHighlightBg, ...layer } = patch.appearance
+    Object.assign(nextAppearance, layer)
+    if (searchHitHighlightBg !== undefined) {
+      nextAppearance.searchHitHighlightBg = searchHitHighlightBg
+    }
+    if (searchJumpHighlightBg !== undefined) {
+      nextAppearance.searchJumpHighlightBg = searchJumpHighlightBg
+    }
   }
   if (patch.picker) {
     nextAppearance.picker = { ...nextAppearance.picker, ...patch.picker }
   }
-  return { ...draft, appearance: nextAppearance }
+  return { ...next, appearance: nextAppearance }
 }
 
 export function settingPickerUpdateDraft(
@@ -129,7 +164,7 @@ export function settingPickerUpdateDraft(
 ): SettingListPickerState {
   return {
     ...prev,
-    draft: applyDraftPatch(prev, patch)
+    draft: applySettingDraftPatchToSettings(prev.draft, patch)
   }
 }
 
@@ -152,9 +187,12 @@ export function settingPickerRevertDraft(
       locale: committed.locale,
       hostUiMode: committed.hostUiMode ?? DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: committed.imeCandidateHelp !== false,
+      promptFire: committed.promptFire === true,
       searchLegendMode: normalizeSearchLegendMode(
         committed.searchLegendMode ?? DEFAULT_SEARCH_LEGEND_MODE
       ),
+      syncHoldIntervalMs: committed.syncHoldIntervalMs,
+      cliDoorRetryMs: committed.cliDoorRetryMs,
       appearance: { ...committed.appearance, picker: { ...committed.appearance.picker } }
     }
   }

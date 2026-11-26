@@ -74,8 +74,6 @@ export function tryHandleNavConfirmClose(
       : "close --confirmed"
   void (async () => {
     await Promise.resolve(deps.appendLogLines([`> ${trimmed}`], "stdout"))
-    // EN: Float host dies with the closed tab — persist logs before RUN_CMD removes it.
-    await deps.flushFloatPersist()
     try {
       const response = await runCommandFromUiAsync(
         confirmedLine,
@@ -95,7 +93,6 @@ export function tryHandleNavConfirmClose(
         )
         return
       }
-      // EN: Popup keeps the result log here; float may already be gone (handoff owns it).
       deps.applyRunCmdPatches(patchesWithoutPromptEcho(response.patches))
     } catch (e) {
       void deps.appendLogLines(

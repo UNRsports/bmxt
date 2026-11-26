@@ -78,10 +78,22 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     setCommandBuffer,
     commandListingHint,
     isHostPaneFocused,
-    inputRef
+    inputRef,
+    peerNoticeLines
   } = props
 
-  const extraFooter =
+  const peerNoticeFooter =
+    peerNoticeLines.length > 0 ? (
+      <div className="bmxt-picker-peer-footer" role="status">
+        {peerNoticeLines.map((line, i) => (
+          <div key={`peer-notice-${i}`} className="bmxt-picker-peer-footer-line">
+            {line}
+          </div>
+        ))}
+      </div>
+    ) : null
+
+  const panelFooter =
     actionMenuPanel !== null
       ? null
       : bookmarkPanel !== null ? (
@@ -131,6 +143,14 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
       />
     ) : editPanel?.kind === "groupMenu" ? (
       <TabPickerEditGroupMenuPanel panelRef={editPanelRef} pickIndex={editPanel.pickIndex} />
+    ) : null
+
+  const extraFooter =
+    peerNoticeFooter !== null || panelFooter !== null ? (
+      <>
+        {peerNoticeFooter}
+        {panelFooter}
+      </>
     ) : null
 
   return (

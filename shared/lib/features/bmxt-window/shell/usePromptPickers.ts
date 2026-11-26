@@ -24,6 +24,8 @@ import { useUiSettings } from "../../setting/use-ui-settings"
 import type { TokenPickerModel } from "../token-picker-panel"
 import { useCspDynamicStyle } from "../csp-dynamic-stylesheet"
 import { shouldKeepSessionSwitchPickerOpen, measureFloatingPickerHostPosition } from "./bmxt-shell-prompt-helpers"
+import { isHollowTokenPickerModel } from "./token-picker-hollow"
+import { isSameImeTokenPickerSlot } from "./token-picker-same-slot"
 import {
   navReloadTabChipMetaFromCandidate,
   type NavReloadTabChipMeta
@@ -127,8 +129,10 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
     width?: number
     height?: number
   } | null>(null)
+  // EN: Require at least one candidate — [] === [] must not enable near-fullscreen help host.
   const fillViewportForHelp =
     subCmdPicker !== null &&
+    subCmdPicker.candidates.length > 0 &&
     subCmdPicker.showCandidateHelp !== false &&
     Array.isArray(subCmdPicker.candidateHelps) &&
     subCmdPicker.candidateHelps.length === subCmdPicker.candidates.length
@@ -148,19 +152,22 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
       : null
   )
 
-  const subCmdPickerAnchorEpisode = useMemo(
+  /**
+   * EN: Layout-only episode for picker host measure — slot + list length, not every
+   *     candidate string (avoids force-remasure on each filter keystroke).
+   * JA: ホスト測位用。スロット＋件数のみ（候補文字列ごとの強制 remasure を避ける）。
+   */
+  const subCmdPickerLayoutEpisode = useMemo(
     () =>
       subCmdPicker === null
         ? null
-        : `${subCmdPicker.tier}\0${subCmdPicker.tokenStart}\0${subCmdPicker.candidates.join("\0")}`,
+        : `${subCmdPicker.tier}\0${subCmdPicker.tokenStart}\0${subCmdPicker.candidates.length}`,
     [subCmdPicker]
   )
 
-  const sessionListMenuAnchorEpisode = useMemo(
+  const sessionListLayoutEpisode = useMemo(
     () =>
-      sessionListPickerHi === null
-        ? null
-        : sessionListPickerRows.map((r) => r.sessionId).join("\0"),
+      sessionListPickerHi === null ? null : String(sessionListPickerRows.length),
     [sessionListPickerHi, sessionListPickerRows]
   )
 
@@ -321,6 +328,25 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
               prev.candidates.length === candidates.length &&
               prev.candidates.every((c, i) => c === candidates[i])
             if (sameSlot && prev) {
+              const labelsSame =
+                Array.isArray(prev.candidateLabels) &&
+                prev.candidateLabels.length === candidateLabels.length &&
+                prev.candidateLabels.every((l, i) => l === candidateLabels[i])
+              const rowsSame =
+                Array.isArray(prev.candidateRows) &&
+                prev.candidateRows.length === candidateRows.length &&
+                prev.candidateRows.every((r, i) => {
+                  const next = candidateRows[i]
+                  return (
+                    next !== undefined &&
+                    r.title === next.title &&
+                    r.detail === next.detail &&
+                    r.faviconSrc === next.faviconSrc
+                  )
+                })
+              if (labelsSame && rowsSame) {
+                return prev
+              }
               return {
                 ...prev,
                 candidateLabels,
@@ -373,6 +399,13 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
               prev.candidates.length === candidates.length &&
               prev.candidates.every((c, i) => c === candidates[i])
             if (sameSlot && prev) {
+              const labelsSame =
+                Array.isArray(prev.candidateLabels) &&
+                prev.candidateLabels.length === candidateLabels.length &&
+                prev.candidateLabels.every((l, i) => l === candidateLabels[i])
+              if (labelsSame) {
+                return prev
+              }
               return {
                 ...prev,
                 candidateLabels,
@@ -437,6 +470,10 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
             if (!prev) {
               return null
             }
+            // EN: Already hollow — keep identity so Firefox FX + empty hint bar do not re-render.
+            if (isHollowTokenPickerModel(prev)) {
+              return prev
+            }
             return {
               ...prev,
               candidates: [],
@@ -455,22 +492,25 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
         setSubCmdPicker(null)
         return
       }
-      const candidateHelps = listImeCandidateHelpsFromUsage(
-        resolved.candidates,
-        ln,
-        resolved.tokenStart,
-        locale
-      )
       setSubCmdPicker((prev) => {
-        const sameSlot =
-          prev !== null &&
-          prev.tokenStart === resolved.tokenStart &&
-          prev.tokenEnd === resolved.tokenEnd &&
-          prev.tier === resolved.tier &&
-          prev.candidates.length === resolved.candidates.length &&
-          prev.candidates.every((c, i) => c === resolved.candidates[i])
-        const hi = sameSlot
-          ? Math.min(prev!.hi, resolved.candidates.length - 1)
+        const sameSlot = isSameImeTokenPickerSlot(prev, resolved)
+        if (
+          sameSlot &&
+          prev &&
+          prev.showCandidateHelp === showCandidateHelp &&
+          prev.pipeAvailable === resolved.pipeAvailable
+        ) {
+          // EN: Keep identity — avoids TokenPickerPanel re-render on every keystroke.
+          return prev
+        }
+        const candidateHelps = listImeCandidateHelpsFromUsage(
+          resolved.candidates,
+          ln,
+          resolved.tokenStart,
+          locale
+        )
+        const hi = sameSlot && prev
+          ? Math.min(prev.hi, resolved.candidates.length - 1)
           : 0
         return {
           tokenStart: resolved.tokenStart,
@@ -511,54 +551,112 @@ export function usePromptPickers(options: UsePromptPickersOptions) {
     options.localCompletion
   ])
 
+  const lastPickerCaretGeomKeyRef = useRef("")
+
+  const applyMeasuredPickerPos = useCallback((): void => {
+    if (!promptPickerOpen) {
+      return
+    }
+    const cell = options.cursorMirrorCellRef.current
+    if (!cell) {
+      return
+    }
+    const cr = cell.getBoundingClientRect()
+    const geomKey = [
+      Math.round(cr.left),
+      Math.round(cr.top),
+      Math.round(cr.width),
+      Math.round(cr.height),
+      fillViewportForHelp ? 1 : 0,
+      window.innerWidth,
+      window.innerHeight
+    ].join("|")
+    // EN: Skip layout + stylesheet work when caret/stage geometry is unchanged.
+    //     List-length / fill-mode changes still force a measure via dedicated effect.
+    if (geomKey === lastPickerCaretGeomKeyRef.current) {
+      return
+    }
+    lastPickerCaretGeomKeyRef.current = geomKey
+    const next = measureFloatingPickerHostPosition(cell, options.subCmdPickerHostRef.current, {
+      fillRemainingViewport: fillViewportForHelp
+    })
+    if (!next) {
+      return
+    }
+    setSubCmdPickerPos((prev) => {
+      if (
+        prev &&
+        prev.left === next.left &&
+        prev.top === next.top &&
+        prev.width === next.width &&
+        prev.height === next.height
+      ) {
+        return prev
+      }
+      return next
+    })
+  }, [
+    fillViewportForHelp,
+    options.cursorMirrorCellRef,
+    options.subCmdPickerHostRef,
+    promptPickerOpen
+  ])
+
+  const forceMeasurePickerPos = useCallback((): void => {
+    lastPickerCaretGeomKeyRef.current = ""
+    applyMeasuredPickerPos()
+  }, [applyMeasuredPickerPos])
+
+  // EN: Scroll/resize listeners stay mounted for the whole open episode (no per-key churn).
   useLayoutEffect(() => {
     if (!promptPickerOpen) {
       setSubCmdPickerPos(null)
+      lastPickerCaretGeomKeyRef.current = ""
       return
     }
-    const measure = () => {
-      const next = measureFloatingPickerHostPosition(
-        options.cursorMirrorCellRef.current,
-        options.subCmdPickerHostRef.current,
-        { fillRemainingViewport: fillViewportForHelp }
-      )
-      if (!next) {
-        return
-      }
-      setSubCmdPickerPos((prev) => {
-        if (
-          prev &&
-          prev.left === next.left &&
-          prev.top === next.top &&
-          prev.width === next.width &&
-          prev.height === next.height
-        ) {
-          return prev
-        }
-        return next
-      })
+    forceMeasurePickerPos()
+    const onScrollOrResize = (): void => {
+      forceMeasurePickerPos()
     }
-    measure()
-    const raf = requestAnimationFrame(measure)
     const sc = options.scrollRef.current
-    sc?.addEventListener("scroll", measure, { passive: true })
-    window.addEventListener("resize", measure)
+    sc?.addEventListener("scroll", onScrollOrResize, { passive: true })
+    window.addEventListener("resize", onScrollOrResize)
+    return () => {
+      sc?.removeEventListener("scroll", onScrollOrResize)
+      window.removeEventListener("resize", onScrollOrResize)
+    }
+  }, [forceMeasurePickerPos, options.scrollRef, promptPickerOpen])
+
+  // EN: Caret may have moved — geom-gated (no stylesheet rewrite if rect unchanged).
+  //     Do not depend on `line`; cursorPos covers typing caret motion.
+  useLayoutEffect(() => {
+    if (!promptPickerOpen) {
+      return
+    }
+    applyMeasuredPickerPos()
+  }, [applyMeasuredPickerPos, options.cursorPos, options.mode, promptPickerOpen])
+
+  // EN: Host content size / fill mode changed — force measure (+ rAF for non-help offsetWidth).
+  useLayoutEffect(() => {
+    if (!promptPickerOpen) {
+      return
+    }
+    forceMeasurePickerPos()
+    if (fillViewportForHelp) {
+      return
+    }
+    const raf = requestAnimationFrame(() => {
+      forceMeasurePickerPos()
+    })
     return () => {
       cancelAnimationFrame(raf)
-      sc?.removeEventListener("scroll", measure)
-      window.removeEventListener("resize", measure)
     }
   }, [
     fillViewportForHelp,
-    subCmdPickerAnchorEpisode,
-    sessionListMenuAnchorEpisode,
-    options.line,
-    options.cursorPos,
-    options.mode,
+    forceMeasurePickerPos,
     promptPickerOpen,
-    options.scrollRef,
-    options.cursorMirrorCellRef,
-    options.subCmdPickerHostRef
+    sessionListLayoutEpisode,
+    subCmdPickerLayoutEpisode
   ])
 
   const closeSessionListPicker = useCallback(() => {

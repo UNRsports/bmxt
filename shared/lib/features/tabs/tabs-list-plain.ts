@@ -2,8 +2,8 @@ import { appendListPlainSummary } from "../command-line/list-output/format-plain
 import { formatListPlainLines } from "../command-line/list-output/format-plain-lines.ts"
 import type { UiLocale } from "../setting/locale.ts"
 import { tTabs } from "../setting/i18n/ns/tabs.ts"
-import { expandSyncLogLines } from "../sync/facade/expand-sync-log.ts"
 import type { DeviceListScope } from "../sync/bus/device-list-scope.ts"
+import { formatPeerFailureFooterLinesPreferMeta } from "../sync/bus/peer-failure-footer.ts"
 import { fetchCrossDeviceTabsList } from "../sync/bus/fetch-cross-device-tabs.ts"
 import { buildTabPickerRowsBundle } from "./picker-rows.ts"
 import { tabPickerRowsToListResult } from "./tabs-list-result.ts"
@@ -33,26 +33,17 @@ export async function fetchTabsListResultWithNotices(
   options: TabsListFetchOptions
 ): Promise<{ result: ListResult; noticeLines: string[] }> {
   const result = await fetchTabsListResult(options)
-  const noticeLines = syncNoticeLinesFromResult(result, options.locale)
+  const noticeLines = formatPeerFailureFooterLinesPreferMeta(result, options.locale)
   return { result, noticeLines }
 }
 
-function syncNoticeLinesFromResult(result: ListResult, locale: UiLocale): string[] {
-  const raw = result.meta?.syncNotices
-  if (raw === undefined || raw.trim().length === 0) {
-    return []
-  }
-  const tokens = raw.split("\n").filter((token) => token.length > 0)
-  return expandSyncLogLines(tokens, locale)
-}
-
 export function formatTabsListPlainLines(result: ListResult, locale: UiLocale, showUrl: boolean): string[] {
-  const notices = syncNoticeLinesFromResult(result, locale)
+  const footer = formatPeerFailureFooterLinesPreferMeta(result, locale)
   if (result.records.length === 0) {
-    return [...notices, tTabs("tabs.picker.empty", locale)]
+    return [tTabs("tabs.picker.empty", locale), ...footer]
   }
   const body = formatListPlainLines(result, { showUrl })
-  return [...notices, ...appendListPlainSummary(body, result.records.length, locale)]
+  return [...appendListPlainSummary(body, result.records.length, locale), ...footer]
 }
 
 export async function runTabsListPlain(options: TabsListFetchOptions): Promise<string[]> {

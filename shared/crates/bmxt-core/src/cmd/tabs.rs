@@ -11,6 +11,7 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.tabs.usage.line4",
     "cmd.tabs.usage.line5",
     "cmd.tabs.usage.line6",
+    "cmd.tabs.usage.line7",
 ];
 
 /** EN: Host fills this param from live UI state before expand-msgs. */
@@ -24,6 +25,7 @@ fn norm_tabs_flag(arg: &str) -> Option<&'static str> {
         "-list" => Some("-list"),
         "-exit" => Some("-exit"),
         "-setting" => Some("-setting"),
+        "-activate" => Some("-activate"),
         "-moveurl" => Some("-moveurl"),
         "-nowurl" => Some("-nowurl"),
         "-send" => Some("-send"),
@@ -77,16 +79,17 @@ fn parse_tabs_list_args(args: &[String]) -> Result<TabsListPlan, ()> {
             if device_scope != "local" {
                 return Err(());
             }
-            let Some(id) = args.get(i + 1) else {
-                return Err(());
-            };
-            let trimmed = id.trim();
-            if trimmed.is_empty() || trimmed.starts_with('-') {
-                return Err(());
-            }
+            // EN: Bare `--device` (no id) is a valid plan; host picks via `| browse` or misuse on plain.
+            // JA: ID なし `--device` は合法 plan。plain はホストが misuse、`| browse` で番号選択。
             device_scope = "device".to_string();
-            device_id = trimmed.to_string();
-            i += 2;
+            let next = args.get(i + 1).map(|s| s.trim()).unwrap_or("");
+            if !next.is_empty() && !next.starts_with('-') {
+                device_id = next.to_string();
+                i += 2;
+            } else {
+                device_id = String::new();
+                i += 1;
+            }
             continue;
         }
         return Err(());
@@ -95,6 +98,51 @@ fn parse_tabs_list_args(args: &[String]) -> Result<TabsListPlan, ()> {
         show_url,
         device_scope,
         device_id,
+    })
+}
+
+/// EN: Parsed `tab -activate <tabId> [--device <id>] [--focus]`.
+struct TabsActivatePlan {
+    tab_id: i64,
+    device_id: String,
+    focus: bool,
+}
+
+fn parse_tabs_activate_args(args: &[String]) -> Result<TabsActivatePlan, ()> {
+    if args.len() < 3 {
+        return Err(());
+    }
+    let tab_id = match args[2].parse::<i64>() {
+        Ok(id) if id >= 0 => id,
+        _ => return Err(()),
+    };
+    let mut device_id = String::new();
+    let mut focus = false;
+    let mut i = 3usize;
+    while i < args.len() {
+        let token = normalize_token(&args[i]);
+        if token == "--focus" {
+            focus = true;
+            i += 1;
+            continue;
+        }
+        if token == "--device" {
+            let Some(raw) = args.get(i + 1) else {
+                return Err(());
+            };
+            let Some(id) = sanitize_device_id(raw) else {
+                return Err(());
+            };
+            device_id = id;
+            i += 2;
+            continue;
+        }
+        return Err(());
+    }
+    Ok(TabsActivatePlan {
+        tab_id,
+        device_id,
+        focus,
     })
 }
 
@@ -192,6 +240,18 @@ pub fn run(args: &[String]) -> DispatchBundle {
             })
         }
         "-setting" => run_tabs_setting(args),
+        "-activate" => match parse_tabs_activate_args(args) {
+            Ok(plan) => effects(vec![HostEffect::TabsActivate {
+                tab_id: plan.tab_id,
+                device_id: plan.device_id,
+                focus: if plan.focus {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                },
+            }]),
+            Err(()) => usage_msgs(msg_key("cmd.tabs.error.activateUsage")),
+        }
         "-nowurl" => {
             if args.len() > 2 {
                 return usage_msgs(msg_key("cmd.tabs.error.tooManyArgs"));
@@ -286,12 +346,26 @@ mod tests {
     }
 
     #[test]
-    fn list_rejects_incomplete_device_and_conflicts() {
-        assert!(is_usage_msgs(&run(&[
-            "tab".into(),
-            "-list".into(),
-            "--device".into()
-        ])));
+    fn list_bare_device_emits_open_plain_list_with_empty_id() {
+        match run(&["tab".into(), "-list".into(), "--device".into()]) {
+            DispatchBundle::Ui {
+                action:
+                    UiAction::OpenPlainList {
+                        device_scope,
+                        device_id,
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(device_scope, "device");
+                assert!(device_id.is_empty());
+            }
+            other => panic!("expected OpenPlainList, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_rejects_device_peer_conflicts() {
         assert!(is_usage_msgs(&run(&[
             "tab".into(),
             "-list".into(),

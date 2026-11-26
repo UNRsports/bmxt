@@ -10,11 +10,16 @@ import {
   parseSettingListLine
 } from "../../../../shared/lib/features/setting/setting-list-picker-input.ts"
 import {
+  applySettingDraftPatchToSettings,
   createSettingListPickerState,
   settingPickerApplyDraftToMain,
   settingPickerUpdateDraft
 } from "../../../../shared/lib/features/setting/setting-list-picker-state.ts"
-import { settingSetPatchFromArgs } from "../../../../shared/lib/features/setting/setting-set-args.ts"
+import {
+  SETTING_SET_KEY_TOKENS,
+  settingSetPatchFromArgs,
+  settingSetValueCandidates
+} from "../../../../shared/lib/features/setting/setting-set-args.ts"
 import { settingMainRowTargetView } from "../../../../shared/lib/features/setting/setting-picker-nav.ts"
 import { buildZipArchive, parseZipArchive } from "../../../../shared/lib/features/setting/zip-store.ts"
 import {
@@ -165,6 +170,7 @@ describe("setting list picker draft", () => {
       locale: "en",
       hostUiMode: "auto",
       imeCandidateHelp: true,
+      promptFire: false,
       searchLegendMode: "text",
       appearance: testAppearance({
         fg: "#ffffff",
@@ -174,6 +180,7 @@ describe("setting list picker draft", () => {
     assert.equal(state.draft.locale, "en")
     assert.equal(state.draft.hostUiMode, "auto")
     assert.equal(state.draft.imeCandidateHelp, true)
+    assert.equal(state.draft.promptFire, false)
     assert.equal(state.draft.searchLegendMode, "text")
     assert.equal(state.draft.appearance.fg, "#ffffff")
     assert.equal(state.draft.appearance.fontSize, "14px")
@@ -184,6 +191,7 @@ describe("setting list picker draft", () => {
       locale: "ja",
       hostUiMode: "auto",
       imeCandidateHelp: true,
+      promptFire: false,
       searchLegendMode: "text",
       appearance: testAppearance(null)
     })
@@ -201,6 +209,7 @@ describe("setting list picker draft", () => {
       locale: "en",
       hostUiMode: "desktop",
       imeCandidateHelp: true,
+      promptFire: false,
       searchLegendMode: "text",
       appearance: testAppearance(null)
     })
@@ -210,6 +219,7 @@ describe("setting list picker draft", () => {
         locale: "ja",
         hostUiMode: "mobile",
         imeCandidateHelp: false,
+        promptFire: true,
         searchLegendMode: "text_emoji",
         appearance: { fg: "#aabbcc" }
       }
@@ -220,6 +230,7 @@ describe("setting list picker draft", () => {
     assert.equal(next.draft.locale, "ja")
     assert.equal(next.draft.hostUiMode, "mobile")
     assert.equal(next.draft.imeCandidateHelp, false)
+    assert.equal(next.draft.promptFire, true)
     assert.equal(next.draft.searchLegendMode, "text_emoji")
     assert.equal(next.draft.appearance.fg, "#aabbcc")
   })
@@ -238,6 +249,64 @@ describe("setting list picker draft", () => {
   })
   it("maps ime-candidate-help to imeCandidateHelp view", () => {
     assert.equal(settingMainRowTargetView("ime-candidate-help"), "imeCandidateHelp")
+  })
+  it("maps prompt-fire to promptFire view", () => {
+    assert.equal(settingMainRowTargetView("prompt-fire"), "promptFire")
+  })
+  it("setting -set prompt-fire accepts on/off", () => {
+    assert.deepEqual(settingSetPatchFromArgs("prompt-fire", "on"), { promptFire: true })
+    assert.deepEqual(settingSetPatchFromArgs("prompt-fire", "off"), { promptFire: false })
+    assert.equal(settingSetPatchFromArgs("prompt-fire", "maybe"), null)
+  })
+  it("lists closed setting -set key tokens and discrete value candidates", () => {
+    assert.ok(SETTING_SET_KEY_TOKENS.includes("locale"))
+    assert.ok(SETTING_SET_KEY_TOKENS.includes("prompt-fire"))
+    assert.deepEqual(settingSetValueCandidates("locale"), ["ja", "en"])
+    assert.deepEqual(settingSetValueCandidates("prompt-fire"), ["on", "off"])
+    assert.deepEqual(settingSetValueCandidates("search-legend"), [
+      "text",
+      "emoji",
+      "text_emoji"
+    ])
+    assert.deepEqual(settingSetValueCandidates("host-ui"), [
+      "auto",
+      "desktop",
+      "mobile",
+      "default"
+    ])
+    assert.deepEqual(settingSetValueCandidates("fg"), ["default", "reset"])
+    assert.deepEqual(settingSetValueCandidates("sync-hold-ms"), ["default"])
+    assert.equal(settingSetValueCandidates("unknown-key"), null)
+  })
+  it("setting -set appearance scalars validate and clear", () => {
+    assert.deepEqual(settingSetPatchFromArgs("fg", "#abc"), { appearance: { fg: "#aabbcc" } })
+    assert.deepEqual(settingSetPatchFromArgs("bg-color", "default"), {
+      appearance: { bgColor: null }
+    })
+    assert.deepEqual(settingSetPatchFromArgs("size", "14"), {
+      appearance: { fontSize: "14px" }
+    })
+    assert.deepEqual(settingSetPatchFromArgs("picker-fg", "#112233"), {
+      picker: { fg: "#112233" }
+    })
+    assert.equal(settingSetPatchFromArgs("fg", "red"), null)
+    assert.equal(settingSetPatchFromArgs("size", "99"), null)
+  })
+  it("applySettingDraftPatchToSettings merges appearance without mutating input", () => {
+    const committed = {
+      locale: "ja" as const,
+      hostUiMode: "auto" as const,
+      imeCandidateHelp: true,
+      promptFire: false,
+      searchLegendMode: "text" as const,
+      appearance: testAppearance({ fg: "#111111" })
+    }
+    const next = applySettingDraftPatchToSettings(committed, {
+      appearance: { fg: "#abcdef", searchHitHighlightBg: "#ffc9dd" }
+    })
+    assert.equal(committed.appearance.fg, "#111111")
+    assert.equal(next.appearance.fg, "#abcdef")
+    assert.equal(next.appearance.searchHitHighlightBg, "#ffc9dd")
   })
   it("maps search-legend to searchLegend view", () => {
     assert.equal(settingMainRowTargetView("search-legend"), "searchLegend")

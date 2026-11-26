@@ -19,7 +19,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "close",
     aliases: ["c"] as const,
-    usagePrimary: "close | close <tabId> | … | close"
+    usagePrimary: "close | close <tabId> | close --window <id…> | close --group <id> | … | close"
   },
   {
     name: "dom",
@@ -39,7 +39,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "group",
     aliases: [] as const,
-    usagePrimary: "group new [tabId…] | group add <groupId> <tabId…>"
+    usagePrimary: "group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>"
   },
   {
     name: "help",
@@ -59,7 +59,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "tab",
     aliases: [] as const,
-    usagePrimary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help"
+    usagePrimary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -activate <tabId> [--device <id>] [--focus] | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help"
   },
   {
     name: "nav",
@@ -74,7 +74,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "aboutbmxt",
     aliases: [] as const,
-    usagePrimary: "aboutbmxt"
+    usagePrimary: "aboutbmxt | aboutbmxt -system"
   },
   {
     name: "session",
@@ -94,7 +94,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "setting",
     aliases: [] as const,
-    usagePrimary: "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help"
+    usagePrimary: "setting -list | setting -set <key> <value> | setting -export | setting -import | setting -bg-import [--picker] | setting -reset-default | setting -storage internal|external | setting -pick-dir | setting -reload | setting -snapshot-storage bundled|vault | setting -snapshot-pick-dir | setting -sync-guide | setting -save | setting -cancel | setting -exit -list | setting help"
   },
   {
     name: "tutorial",
@@ -104,7 +104,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "sync",
     aliases: [] as const,
-    usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help"
+    usagePrimary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -setname <name> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help"
   },
   {
     name: "bookmark",
@@ -129,12 +129,17 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "move",
     aliases: [] as const,
-    usagePrimary: "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>"
+    usagePrimary: "move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>"
   },
   {
     name: "new-window",
     aliases: [] as const,
     usagePrimary: "new-window <tabId…> | … | new-window"
+  },
+  {
+    name: "window",
+    aliases: [] as const,
+    usagePrimary: "window rename <windowId> <name>"
   }
 ]
 

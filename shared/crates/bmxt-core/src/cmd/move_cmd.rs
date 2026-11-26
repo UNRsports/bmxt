@@ -22,16 +22,20 @@ fn parse_i64_flag(args: &[String], name: &str) -> Option<i64> {
     None
 }
 
+fn is_flag_with_value(token: &str) -> bool {
+    token == "--window" || token == "--group" || token == "--before-tab"
+}
+
 fn parse_tab_ids(args: &[String]) -> Vec<i64> {
     let mut out = Vec::new();
     let mut i = 1;
     while i < args.len() {
         let token = args[i].as_str();
-        if token == "--window" || token == "--group" || token == "--ungroup" {
-            if token == "--ungroup" {
-                i += 1;
-                continue;
-            }
+        if token == "--ungroup" {
+            i += 1;
+            continue;
+        }
+        if is_flag_with_value(token) {
             i += 2;
             continue;
         }
@@ -49,14 +53,17 @@ fn parse_tab_ids(args: &[String]) -> Vec<i64> {
     out
 }
 
-/// EN: `move --window <id> [tabId…]` / `move --group <gid> --window <wid> [tabId…]`
+/// EN: `move --window <id> [--before-tab <tabId>] [tabId…]`
+///     / `move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…]`
 ///     / `move --ungroup --window <id> [tabId…]`. Batch via pipe `| move …`.
+/// JA: `--before-tab` は挿入位置（そのタブの直前）。省略時はウィンドウ／グループ末尾。
 pub fn run(args: &[String]) -> DispatchBundle {
     if args.len() <= 1 {
         return usage();
     }
     let window_id = parse_i64_flag(args, "--window");
     let group_id = parse_i64_flag(args, "--group");
+    let before_tab_id = parse_i64_flag(args, "--before-tab").unwrap_or(-1);
     let ungroup = args.iter().any(|a| a == "--ungroup");
     let tab_ids = parse_tab_ids(args);
 
@@ -83,6 +90,7 @@ pub fn run(args: &[String]) -> DispatchBundle {
         tab_ids,
         window_id: wid,
         group_id: gid,
+        before_tab_id,
     }])
 }
 
@@ -105,10 +113,40 @@ mod tests {
                     tab_ids,
                     window_id,
                     group_id,
+                    before_tab_id,
                 } => {
                     assert_eq!(tab_ids, &vec![10, 11]);
                     assert_eq!(*window_id, 4);
                     assert_eq!(*group_id, -1);
+                    assert_eq!(*before_tab_id, -1);
+                }
+                other => panic!("unexpected: {other:?}"),
+            },
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn move_before_tab_emits_effect() {
+        let bundle = run(&[
+            "move".into(),
+            "--window".into(),
+            "4".into(),
+            "--before-tab".into(),
+            "99".into(),
+            "10".into(),
+        ]);
+        match bundle {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
+                HostEffect::TabsMove {
+                    tab_ids,
+                    window_id,
+                    before_tab_id,
+                    ..
+                } => {
+                    assert_eq!(tab_ids, &vec![10]);
+                    assert_eq!(*window_id, 4);
+                    assert_eq!(*before_tab_id, 99);
                 }
                 other => panic!("unexpected: {other:?}"),
             },

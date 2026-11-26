@@ -35,5 +35,6 @@ export {
   bmxtRuleStreamFromTabIds,
   bmxtRuleStreamFromResolvedTabs,
   filterResolvedChipTabsWithUrl,
-  type ResolvedChipTab
+  type ResolvedChipTab,
+  type BmxtRuleStreamFromTabsOptions
 } from "./adapters/from-tab-ids.ts"

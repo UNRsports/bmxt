@@ -28,6 +28,8 @@ export function usePickerManager(deps: PickerManagerDeps) {
   const searchListPicker = deps.sessionPickers.search
   const domListPicker = deps.sessionPickers.dom
   const settingListPicker = deps.sessionPickers.setting
+  const bookmarkPicker = deps.sessionPickers.bookmark
+  const historyPicker = deps.sessionPickers.history
 
   const setTabPicker = useCallback(
     (forSessionId: string, v: any) => {
@@ -54,11 +56,26 @@ export function usePickerManager(deps: PickerManagerDeps) {
     [deps]
   )
 
+  const setBookmarkListPicker = useCallback(
+    (forSessionId: string, v: any) => {
+      deps.setSessionPickerSlot(forSessionId, "bookmark", v)
+    },
+    [deps]
+  )
+  const setHistoryListPicker = useCallback(
+    (forSessionId: string, v: any) => {
+      deps.setSessionPickerSlot(forSessionId, "history", v)
+    },
+    [deps]
+  )
+
   const sidePickerOpen =
     tabPicker !== null ||
     searchListPicker !== null ||
     domListPicker !== null ||
-    settingListPicker !== null
+    settingListPicker !== null ||
+    bookmarkPicker !== null ||
+    historyPicker !== null
 
   useEffect(() => {
     if (deps.paneFocus === "detailBar" && deps.detailBarId === null) {
@@ -82,6 +99,12 @@ export function usePickerManager(deps: PickerManagerDeps) {
     } else if (deps.paneFocus === "setting" && settingListPicker === null) {
       deps.onPaneFocusChange("terminal")
       deps.onDetailBarIdChange(null)
+    } else if (deps.paneFocus === "bookmark" && bookmarkPicker === null) {
+      deps.onPaneFocusChange("terminal")
+      deps.onDetailBarIdChange(null)
+    } else if (deps.paneFocus === "history" && historyPicker === null) {
+      deps.onPaneFocusChange("terminal")
+      deps.onDetailBarIdChange(null)
     } else if (deps.paneFocus === "detailBar" && deps.detailBarId !== null) {
       if (deps.detailBarId === "tabs" && tabPicker === null) {
         deps.onPaneFocusChange("terminal")
@@ -93,6 +116,12 @@ export function usePickerManager(deps: PickerManagerDeps) {
         deps.onPaneFocusChange("terminal")
         deps.onDetailBarIdChange(null)
       } else if (deps.detailBarId === "setting" && settingListPicker === null) {
+        deps.onPaneFocusChange("terminal")
+        deps.onDetailBarIdChange(null)
+      } else if (deps.detailBarId === "bookmark" && bookmarkPicker === null) {
+        deps.onPaneFocusChange("terminal")
+        deps.onDetailBarIdChange(null)
+      } else if (deps.detailBarId === "history" && historyPicker === null) {
         deps.onPaneFocusChange("terminal")
         deps.onDetailBarIdChange(null)
       } else if (deps.detailBarId === "nav" && !deps.navArmed) {
@@ -113,6 +142,8 @@ export function usePickerManager(deps: PickerManagerDeps) {
     searchListPicker,
     deps.onDetailBarIdChange,
     settingListPicker,
+    bookmarkPicker,
+    historyPicker,
     tabPicker,
     deps.translateEnabled
   ])
@@ -122,10 +153,14 @@ export function usePickerManager(deps: PickerManagerDeps) {
     searchListPicker,
     domListPicker,
     settingListPicker,
+    bookmarkPicker,
+    historyPicker,
     setTabPicker,
     setSearchListPicker,
     setDomListPicker,
     setSettingListPicker,
+    setBookmarkListPicker,
+    setHistoryListPicker,
     sidePickerOpen
   }
 }

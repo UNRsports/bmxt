@@ -1,4 +1,5 @@
 import type { SyncTabsOp } from "../types.ts"
+import { moveTabsContiguous } from "../../tabs/controller/move-tabs-contiguous.ts"
 
 const MAX_IDS = 200
 
@@ -28,6 +29,7 @@ export async function applyRemoteTabsOps(op: SyncTabsOp): Promise<{ ok: boolean;
         return { ok: false, detail: "bad_move_args" }
       }
       let index = Number.isInteger(op.index) ? op.index : -1
+      let destWindowId = op.windowId
       if (
         op.beforeTabId !== null &&
         Number.isInteger(op.beforeTabId) &&
@@ -39,29 +41,49 @@ export async function applyRemoteTabsOps(op: SyncTabsOp): Promise<{ ok: boolean;
             index = dest.index
           }
           if (typeof dest.windowId === "number") {
-            await chrome.tabs.move(tabIds, { windowId: dest.windowId, index })
-          } else {
-            await chrome.tabs.move(tabIds, { windowId: op.windowId, index })
+            destWindowId = dest.windowId
           }
         } catch {
-          await chrome.tabs.move(tabIds, { windowId: op.windowId, index: -1 })
+          index = -1
         }
-      } else {
-        await chrome.tabs.move(tabIds, { windowId: op.windowId, index })
+      }
+      const moved = await moveTabsContiguous(
+        tabIds,
+        destWindowId,
+        index,
+        op.beforeTabId !== null &&
+          Number.isInteger(op.beforeTabId) &&
+          op.beforeTabId >= 0
+          ? { beforeTabId: op.beforeTabId }
+          : undefined
+      )
+      if (moved.length === 0) {
+        return { ok: false, detail: "no_tabs_moved" }
       }
       if (op.groupAfter && op.groupId !== null && Number.isInteger(op.groupId) && op.groupId >= 0) {
-        await chrome.tabs.group({ groupId: op.groupId, tabIds })
+        await chrome.tabs.group({ groupId: op.groupId, tabIds: moved })
       } else if (op.ungroup) {
-        await chrome.tabs.ungroup(tabIds)
+        await chrome.tabs.ungroup(moved)
       }
       return { ok: true, detail: null }
     }
     if (op.kind === "activate") {
-      if (!Number.isInteger(op.tabId) || op.tabId < 0 || !Number.isInteger(op.windowId) || op.windowId < 0) {
+      if (!Number.isInteger(op.tabId) || op.tabId < 0) {
         return { ok: false, detail: "bad_activate_args" }
       }
+      const tab = await chrome.tabs.get(op.tabId)
       await chrome.tabs.update(op.tabId, { active: true })
-      await chrome.windows.update(op.windowId, { focused: true })
+      // EN: focusWindow defaults true when omitted (legacy wire). False keeps OS focus on CLI TTY.
+      const focusWindow = op.focusWindow !== false
+      if (focusWindow) {
+        const windowId =
+          typeof tab.windowId === "number" && tab.windowId >= 0
+            ? tab.windowId
+            : op.windowId
+        if (Number.isInteger(windowId) && windowId >= 0) {
+          await chrome.windows.update(windowId, { focused: true })
+        }
+      }
       return { ok: true, detail: null }
     }
     if (op.kind === "close_tabs") {

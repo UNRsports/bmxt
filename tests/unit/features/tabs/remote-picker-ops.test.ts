@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import type { TabPickerRow } from "../../../../shared/lib/features/tabs/picker-rows.ts"
 import {
   buildRemoteMoveOp,
+  buildRemoteMoveOpFromSlot,
   classifyPickerSelection
 } from "../../../../shared/lib/features/tabs/remote-picker-ops.ts"
 
@@ -60,8 +61,24 @@ describe("classifyPickerSelection", () => {
   })
 })
 
-describe("buildRemoteMoveOp", () => {
-  it("builds beforeTabId move for tab targets", () => {
+describe("buildRemoteMoveOpFromSlot", () => {
+  it("builds beforeTabId move for an insert slot before a remote tab", () => {
+    const op = buildRemoteMoveOpFromSlot(rows, [42], {
+      windowId: -3,
+      beforeTabId: -2,
+      groupId: null,
+      ungroup: false
+    })
+    assert.ok(op)
+    assert.equal(op!.kind, "move")
+    if (op!.kind === "move") {
+      assert.equal(op.beforeTabId, 42)
+      assert.equal(op.windowId, 7)
+      assert.deepEqual(op.tabIds, [42])
+    }
+  })
+
+  it("keeps legacy buildRemoteMoveOp tab-target shim", () => {
     const op = buildRemoteMoveOp(rows, [42], {
       targetKind: "tab",
       targetTabId: -2,
@@ -75,7 +92,6 @@ describe("buildRemoteMoveOp", () => {
     if (op!.kind === "move") {
       assert.equal(op.beforeTabId, 42)
       assert.equal(op.windowId, 7)
-      assert.deepEqual(op.tabIds, [42])
     }
   })
 })

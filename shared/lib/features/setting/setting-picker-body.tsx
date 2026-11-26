@@ -33,6 +33,7 @@ import {
   useSettingPickerKeyboard,
   type SettingPickerKeyboardCallbacks
 } from "./use-setting-picker-keyboard"
+import type { SettingEditField } from "./setting-picker-edit"
 
 const ROW_ID_PREFIX = "bmxt-setting-row"
 
@@ -128,6 +129,7 @@ export function SettingPickerBody({
         snapshotStorageConfig,
         state.draft.hostUiMode,
         state.draft.imeCandidateHelp,
+        state.draft.promptFire,
         state.draft.searchLegendMode,
         syncSummary
       ),
@@ -137,6 +139,7 @@ export function SettingPickerBody({
       state.draft.appearance,
       state.draft.hostUiMode,
       state.draft.imeCandidateHelp,
+      state.draft.promptFire,
       state.draft.searchLegendMode,
       storageConfig,
       snapshotStorageConfig,
@@ -224,6 +227,38 @@ export function SettingPickerBody({
     )
   }, [displayLines.length, effectiveRowHeight, hi, useVirtual])
 
+  /** EN: Keep DOM focus on the picker IME after async apply (immediate commit). */
+  const retainPickerDomFocus = useCallback(() => {
+    requestAnimationFrame(() => {
+      const el = inputRef.current
+      if (!el || !keyboardActive) {
+        return
+      }
+      if (document.activeElement !== el) {
+        el.focus({ preventScroll: true })
+      }
+    })
+  }, [keyboardActive])
+
+  const callbacksWithRetainFocus = useMemo((): SettingPickerKeyboardCallbacks => {
+    return {
+      ...keyboardCallbacks,
+      onReturnToPrompt,
+      onImmediateMainAction: async (row: SettingPickerRow) => {
+        await keyboardCallbacks.onImmediateMainAction(row)
+        retainPickerDomFocus()
+      },
+      onApplyListChoice: async (row: SettingPickerRow, index: number) => {
+        await keyboardCallbacks.onApplyListChoice(row, index)
+        retainPickerDomFocus()
+      },
+      onApplyEdit: async (field: SettingEditField, value: string) => {
+        await keyboardCallbacks.onApplyEdit(field, value)
+        retainPickerDomFocus()
+      }
+    }
+  }, [keyboardCallbacks, onReturnToPrompt, retainPickerDomFocus])
+
   const { onInputKeyDown } = useSettingPickerKeyboard({
     state,
     onStateChange,
@@ -232,22 +267,25 @@ export function SettingPickerBody({
     setHi,
     keyboardActive,
     sessionId,
-    callbacks: {
-      ...keyboardCallbacks,
-      onReturnToPrompt
-    },
+    callbacks: callbacksWithRetainFocus,
     storageConfig,
     snapshotStorageConfig,
     syncSummary
   })
 
   useLayoutEffect(() => {
-    if (keyboardActive) {
-      inputRef.current?.focus({ preventScroll: true })
-    } else {
+    if (!keyboardActive) {
       inputRef.current?.blur()
+      return
     }
-  }, [keyboardActive])
+    const el = inputRef.current
+    if (!el) {
+      return
+    }
+    if (document.activeElement !== el) {
+      el.focus({ preventScroll: true })
+    }
+  }, [keyboardActive, state.view, state.editing, state.draft])
 
   useLayoutEffect(() => {
     if (!keyboardActive || !state.editing) {

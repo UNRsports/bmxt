@@ -83,7 +83,7 @@ pub fn run_line(line: &str) -> DispatchBundle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::DispatchBundle;
+    use crate::ir::{DispatchBundle, UiAction};
 
     #[test]
     fn empty_line_returns_empty_lines() {
@@ -127,12 +127,21 @@ mod tests {
     }
 
     #[test]
-    fn invalid_tab_list_device_stamps_misuse() {
+    fn bare_tab_list_device_emits_open_plain_list() {
         match run_line("tab -list --device") {
-            DispatchBundle::Msgs { exit_status, .. } => {
-                assert_eq!(exit_status, crate::ir::EXIT_MISUSE);
+            DispatchBundle::Ui {
+                action:
+                    UiAction::OpenPlainList {
+                        device_scope,
+                        device_id,
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(device_scope, "device");
+                assert!(device_id.is_empty());
             }
-            other => panic!("expected msgs, got {other:?}"),
+            other => panic!("expected OpenPlainList with empty device_id, got {other:?}"),
         }
     }
 }

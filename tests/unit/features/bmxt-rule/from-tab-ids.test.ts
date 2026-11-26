@@ -38,7 +38,7 @@ describe("bmxtRuleStreamFromResolvedTabs", () => {
     ])
   })
 
-  it("never emits page.open with an empty url", () => {
+  it("never emits page.open with an empty url when requireUrl is true (default)", () => {
     const stream = bmxtRuleStreamFromResolvedTabs([
       {
         tabId: 1,
@@ -61,6 +61,36 @@ describe("bmxtRuleStreamFromResolvedTabs", () => {
     assert.equal(stream.records[0]?.kind, "page.open")
     const batches = urlBatchesFromBmxtRuleStream(stream)
     assert.deepEqual(batches[0]?.urls, ["https://ok.example/"])
+  })
+
+  it("keeps empty-URL page.open rows when requireUrl is false (move/close chips)", () => {
+    const stream = bmxtRuleStreamFromResolvedTabs(
+      [
+        {
+          tabId: 1,
+          url: "",
+          pageTitle: "Empty",
+          groupId: -1,
+          groupTitle: null,
+          groupColor: null
+        },
+        {
+          tabId: 2,
+          url: "https://ok.example/",
+          pageTitle: "OK",
+          groupId: -1,
+          groupTitle: null,
+          groupColor: null
+        }
+      ],
+      { requireUrl: false }
+    )
+    assert.equal(stream.records.length, 2)
+    const opens = stream.records.filter((r) => r.kind === "page.open")
+    assert.equal(opens.length, 2)
+    const batches = urlBatchesFromBmxtRuleStream(stream)
+    assert.deepEqual(batches[0]?.urls, ["https://ok.example/"])
+    assert.deepEqual(batches[0]?.tabIds, [2])
   })
 
   it("preserves group batches and clears group for following ungrouped tabs", () => {

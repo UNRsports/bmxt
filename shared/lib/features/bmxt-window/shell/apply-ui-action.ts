@@ -6,15 +6,20 @@ import {
   type ListCommandFetchContext,
   type ListCommandId
 } from "../../command-line/list-commands"
-import { listPlanFromOpenPlainList } from "../../command-line/list-commands/list-plan-from-ir"
+import {
+  isBareDeviceScope,
+  listPlanFromOpenPlainList
+} from "../../command-line/list-commands/list-plan-from-ir"
 import { segmentFailure, segmentSuccess } from "../../command-line/compound/classify-outcome"
 import type { SegmentOutcome } from "../../command-line/compound/types"
 import {
   saveDomPageActiveMode,
   settingTokenForDomPageActiveMode
 } from "../../dom/page-active-setting"
+import { parseBookmarkListLine } from "../../bookmark/bookmark-list-parse"
 import { parseDomListLine } from "../../dom/dom-list-parse"
 import { canScriptHttpHostPages } from "../../extension-permissions/http-host-access"
+import { parseHistoryListLine } from "../../history/history-list-parse"
 import { openPickerFromListResult } from "../../picker/open-from-list-result"
 import { saveSnapshotFromTab } from "../../snapshot/snapshot-save-tab"
 import { snapshotSaveLogLinesForResult } from "../../snapshot/snapshot-save-log-lines"
@@ -29,10 +34,14 @@ import { tGroup } from "../../setting/i18n/ns/group"
 import { tNav } from "../../setting/i18n/ns/nav"
 import { tSearch } from "../../setting/i18n/ns/search"
 import { tSession } from "../../setting/i18n/ns/session"
+import { tBookmark } from "../../setting/i18n/ns/bookmark"
+import { tHistory } from "../../setting/i18n/ns/history"
 import { tSetting } from "../../setting/i18n/ns/setting"
 import { tShell } from "../../setting/i18n/ns/shell"
 import { tTabs } from "../../setting/i18n/ns/tabs"
 import { tTranslate } from "../../setting/i18n/ns/translate"
+import { tWindows } from "../../setting/i18n/ns/windows"
+import { setWindowDisplayName } from "../../extension-storage/window-display-names"
 import { translateOnLogLine } from "../../setting/i18n/resolvers"
 import { closeTabPickerEngineForSession, openTabPickerEngineForSession } from "../../tabs/engine"
 import { buildTabPickerRowsBundle, resolveInitialTabPickerHighlightIndex } from "../../tabs/picker-rows"
@@ -76,9 +85,21 @@ import { runJumpTargetAction } from "../../command-line/pipe/consumers/jump-from
 import {
   applySettingCancelCui,
   applySettingSaveCui,
-  applySettingSetCui,
-  ensureSettingDraftState
+  applySettingSetCui
 } from "../../setting/setting-cui-apply"
+import {
+  runSettingBgImportCui,
+  runSettingExportCui,
+  runSettingImportCui,
+  runSettingPickDirCui,
+  runSettingReloadCui,
+  runSettingResetDefaultCui,
+  runSettingSnapshotPickDirCui,
+  runSettingSnapshotStorageCui,
+  runSettingStorageCui,
+  type SettingCuiOpResult
+} from "../../setting/setting-cui-ops.ts"
+import { expandSyncLogLines } from "../../sync/facade/expand-sync-log.ts"
 import {
   exportBookmarkBackup,
   restoreBookmarksFromFile
@@ -111,7 +132,9 @@ function parseListCommandId(raw: string): ListCommandId | null {
     raw === "dom" ||
     raw === "search" ||
     raw === "session" ||
-    raw === "setting"
+    raw === "setting" ||
+    raw === "bookmark" ||
+    raw === "history"
   ) {
     return raw
   }
@@ -170,6 +193,20 @@ function buildPlainListMatch(listId: ListCommandId, line: string): ListMatchResu
         }
       }
     }
+    case "bookmark": {
+      const parsed = parseBookmarkListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { folderId: parsed.folderId, scope: parsed.scope } }
+    }
+    case "history": {
+      const parsed = parseHistoryListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { pattern: parsed.pattern, scope: parsed.scope } }
+    }
     default: {
       const _exhaustive: never = listId
       return { ok: false, errorLine: String(_exhaustive) }
@@ -227,6 +264,20 @@ function buildPickerListMatch(
           scope: parsed.scope
         }
       }
+    }
+    case "bookmark": {
+      const parsed = parseBookmarkListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { folderId: parsed.folderId, scope: parsed.scope } }
+    }
+    case "history": {
+      const parsed = parseHistoryListLine(line)
+      if (parsed === null) {
+        return { ok: false, errorLine: line }
+      }
+      return { ok: true, match: { pattern: parsed.pattern, scope: parsed.scope } }
     }
     default: {
       const _exhaustive: never = listId
@@ -294,6 +345,26 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applySettingCancel(ctx)
     case "setting_set":
       return applySettingSet(ctx, action.key, action.value)
+    case "setting_export":
+      return applySettingExport(ctx)
+    case "setting_import":
+      return applySettingImport(ctx)
+    case "setting_bg_import":
+      return applySettingBgImport(ctx, action.layer)
+    case "setting_reset_default":
+      return applySettingResetDefault(ctx)
+    case "setting_storage":
+      return applySettingStorage(ctx, action.mode)
+    case "setting_pick_dir":
+      return applySettingPickDir(ctx)
+    case "setting_reload":
+      return applySettingReload(ctx)
+    case "setting_snapshot_storage":
+      return applySettingSnapshotStorage(ctx, action.mode)
+    case "setting_snapshot_pick_dir":
+      return applySettingSnapshotPickDir(ctx)
+    case "sync_setname":
+      return applySyncSetname(ctx, action.name)
     case "sync_bookmark_send":
       return applySyncBookmarkSend(ctx, action.device_id, action.mode, action.payload)
     case "bookmark_backup":
@@ -304,6 +375,8 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return applyHistoryBackup(ctx)
     case "history_restore":
       return applyHistoryRestore(ctx, action.as_bookmarks)
+    case "window_rename":
+      return applyWindowRename(ctx, action.window_id, action.name)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -386,6 +459,26 @@ export async function applyUiActionForSegment(
       return applySettingCancelSegment(ctx)
     case "setting_set":
       return applySettingSetSegment(ctx, action.key, action.value)
+    case "setting_export":
+      return applySettingExportSegment(ctx)
+    case "setting_import":
+      return applySettingImportSegment(ctx)
+    case "setting_bg_import":
+      return applySettingBgImportSegment(ctx, action.layer)
+    case "setting_reset_default":
+      return applySettingResetDefaultSegment(ctx)
+    case "setting_storage":
+      return applySettingStorageSegment(ctx, action.mode)
+    case "setting_pick_dir":
+      return applySettingPickDirSegment(ctx)
+    case "setting_reload":
+      return applySettingReloadSegment(ctx)
+    case "setting_snapshot_storage":
+      return applySettingSnapshotStorageSegment(ctx, action.mode)
+    case "setting_snapshot_pick_dir":
+      return applySettingSnapshotPickDirSegment(ctx)
+    case "sync_setname":
+      return applySyncSetnameSegment(ctx, action.name)
     case "sync_bookmark_send":
       return applySyncBookmarkSendSegment(ctx, action.device_id, action.mode, action.payload)
     case "bookmark_backup":
@@ -396,6 +489,8 @@ export async function applyUiActionForSegment(
       return applyHistoryBackupSegment(ctx)
     case "history_restore":
       return applyHistoryRestoreSegment(ctx, action.as_bookmarks)
+    case "window_rename":
+      return applyWindowRenameSegment(ctx, action.window_id, action.name)
     default: {
       const _exhaustive: never = action
       return _exhaustive
@@ -433,12 +528,10 @@ function applySettingSave(ctx: CommandDispatchContext): boolean {
       ctx.deps.settingListPickerRef.current,
       ctx.locale,
       ctx.deps.replaceUiSettingsState,
-      (locale) => tSetting("setting.picker.saved", locale),
+      (locale) => tSetting("setting.picker.closed", locale),
       (locale) => tSetting("setting.storage.externalWriteFailed", locale)
     )
-    if (result.ok) {
-      ctx.deps.closeSettingPickerColumn()
-    }
+    ctx.deps.closeSettingPickerColumn()
     await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
     ctx.deps.focusPrompt()
   })()
@@ -450,15 +543,9 @@ async function applySettingSaveSegment(ctx: CommandDispatchContext): Promise<Seg
     ctx.deps.settingListPickerRef.current,
     ctx.locale,
     ctx.deps.replaceUiSettingsState,
-    (locale) => tSetting("setting.picker.saved", locale),
+    (locale) => tSetting("setting.picker.closed", locale),
     (locale) => tSetting("setting.storage.externalWriteFailed", locale)
   )
-  if (!result.ok) {
-    return segmentFailure("runtime", [
-      tSetting("setting.cui.pickerRequired", ctx.locale),
-      ...result.lines
-    ])
-  }
   ctx.deps.closeSettingPickerColumn()
   return segmentSuccess(result.lines)
 }
@@ -467,7 +554,7 @@ function applySettingCancel(ctx: CommandDispatchContext): boolean {
   finishCommand(ctx)
   const result = applySettingCancelCui(
     ctx.deps.settingListPickerRef.current,
-    tSetting("setting.picker.cancelled", ctx.locale)
+    tSetting("setting.picker.closed", ctx.locale)
   )
   ctx.deps.closeSettingPickerColumn()
   void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
@@ -478,7 +565,7 @@ function applySettingCancel(ctx: CommandDispatchContext): boolean {
 async function applySettingCancelSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
   const result = applySettingCancelCui(
     ctx.deps.settingListPickerRef.current,
-    tSetting("setting.picker.cancelled", ctx.locale)
+    tSetting("setting.picker.closed", ctx.locale)
   )
   ctx.deps.closeSettingPickerColumn()
   return segmentSuccess(result.lines)
@@ -490,22 +577,23 @@ function applySettingSet(
   value: string
 ): boolean {
   finishCommand(ctx)
-  const base = ensureSettingDraftState(
-    ctx.deps.settingListPickerRef.current,
-    ctx.deps.uiSettings
-  )
-  const result = applySettingSetCui(
-    base,
-    key,
-    value,
-    tSetting("setting.cui.setUnknown", ctx.locale, { key }),
-    tSetting("setting.cui.setApplied", ctx.locale, { key, value })
-  )
-  if (result.ok && result.nextDraft) {
-    ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
-  }
-  void ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
-  ctx.deps.focusPrompt()
+  void (async () => {
+    const result = await applySettingSetCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.uiSettings,
+      key,
+      value,
+      ctx.deps.replaceUiSettingsState,
+      tSetting("setting.cui.setUnknown", ctx.locale, { key }),
+      tSetting("setting.cui.setApplied", ctx.locale, { key, value }),
+      tSetting("setting.storage.externalWriteFailed", ctx.locale)
+    )
+    if (result.ok && result.nextDraft) {
+      ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+    }
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
   return true
 }
 
@@ -514,22 +602,266 @@ async function applySettingSetSegment(
   key: string,
   value: string
 ): Promise<SegmentOutcome> {
-  const base = ensureSettingDraftState(
+  const result = await applySettingSetCui(
     ctx.deps.settingListPickerRef.current,
-    ctx.deps.uiSettings
-  )
-  const result = applySettingSetCui(
-    base,
+    ctx.deps.uiSettings,
     key,
     value,
+    ctx.deps.replaceUiSettingsState,
     tSetting("setting.cui.setUnknown", ctx.locale, { key }),
-    tSetting("setting.cui.setApplied", ctx.locale, { key, value })
+    tSetting("setting.cui.setApplied", ctx.locale, { key, value }),
+    tSetting("setting.storage.externalWriteFailed", ctx.locale)
   )
-  if (!result.ok || result.nextDraft === undefined) {
+  if (!result.ok) {
     return segmentFailure("usage", result.lines)
   }
-  ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  if (result.nextDraft) {
+    ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  }
   return segmentSuccess(result.lines)
+}
+
+function applySettingOpDraft(ctx: CommandDispatchContext, result: SettingCuiOpResult): void {
+  if (result.nextDraft) {
+    ctx.deps.setSettingListPicker(ctx.deps.sessionId, result.nextDraft)
+  }
+}
+
+function applySettingExport(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingExportCui(ctx.deps.uiSettings, ctx.locale)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingExportSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await runSettingExportCui(ctx.deps.uiSettings, ctx.locale)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingImport(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingImportCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingImportSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await runSettingImportCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingBgImport(ctx: CommandDispatchContext, layer: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingBgImportCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.uiSettings,
+      layer,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingBgImportSegment(
+  ctx: CommandDispatchContext,
+  layer: string
+): Promise<SegmentOutcome> {
+  const result = await runSettingBgImportCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.uiSettings,
+    layer,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingResetDefault(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingResetDefaultCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.uiSettings,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingResetDefaultSegment(
+  ctx: CommandDispatchContext
+): Promise<SegmentOutcome> {
+  const result = await runSettingResetDefaultCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.uiSettings,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingStorage(ctx: CommandDispatchContext, mode: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingStorageCui(
+      ctx.deps.settingListPickerRef.current,
+      mode,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingStorageSegment(
+  ctx: CommandDispatchContext,
+  mode: string
+): Promise<SegmentOutcome> {
+  const result = await runSettingStorageCui(
+    ctx.deps.settingListPickerRef.current,
+    mode,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingPickDir(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingPickDirCui(ctx.locale)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingPickDirSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await runSettingPickDirCui(ctx.locale)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingReload(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingReloadCui(
+      ctx.deps.settingListPickerRef.current,
+      ctx.deps.replaceUiSettingsState,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingReloadSegment(ctx: CommandDispatchContext): Promise<SegmentOutcome> {
+  const result = await runSettingReloadCui(
+    ctx.deps.settingListPickerRef.current,
+    ctx.deps.replaceUiSettingsState,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingSnapshotStorage(ctx: CommandDispatchContext, mode: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingSnapshotStorageCui(
+      ctx.deps.settingListPickerRef.current,
+      mode,
+      ctx.locale
+    )
+    applySettingOpDraft(ctx, result)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingSnapshotStorageSegment(
+  ctx: CommandDispatchContext,
+  mode: string
+): Promise<SegmentOutcome> {
+  const result = await runSettingSnapshotStorageCui(
+    ctx.deps.settingListPickerRef.current,
+    mode,
+    ctx.locale
+  )
+  applySettingOpDraft(ctx, result)
+  return segmentSuccess(result.lines)
+}
+
+function applySettingSnapshotPickDir(ctx: CommandDispatchContext): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await runSettingSnapshotPickDirCui(ctx.locale)
+    await ctx.deps.appendLogLines([`> ${ctx.trimmed}`, ...result.lines])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySettingSnapshotPickDirSegment(
+  ctx: CommandDispatchContext
+): Promise<SegmentOutcome> {
+  const result = await runSettingSnapshotPickDirCui(ctx.locale)
+  return segmentSuccess(result.lines)
+}
+
+function applySyncSetname(ctx: CommandDispatchContext, name: string): boolean {
+  finishCommand(ctx)
+  void (async () => {
+    const result = await getSyncService().setDisplayName(name)
+    await ctx.deps.appendLogLines([
+      `> ${ctx.trimmed}`,
+      ...expandSyncLogLines(result.lines, ctx.locale)
+    ])
+    ctx.deps.focusPrompt()
+  })()
+  return true
+}
+
+async function applySyncSetnameSegment(
+  ctx: CommandDispatchContext,
+  name: string
+): Promise<SegmentOutcome> {
+  const result = await getSyncService().setDisplayName(name)
+  return segmentSuccess(expandSyncLogLines(result.lines, ctx.locale))
 }
 
 function syncSink(ctx: CommandDispatchContext) {
@@ -880,6 +1212,65 @@ function applySessionSettingName(ctx: CommandDispatchContext, name: string): boo
   return true
 }
 
+function applyWindowRename(
+  ctx: CommandDispatchContext,
+  windowId: number,
+  name: string
+): boolean {
+  if (!Number.isInteger(windowId) || windowId < 0) {
+    void ctx.deps.appendLogLines([
+      `> ${ctx.trimmed}`,
+      tWindows("windows.rename.invalid", ctx.locale)
+    ])
+    finishCommand(ctx)
+    return true
+  }
+  const trimmed = name.trim()
+  void (async () => {
+    try {
+      await setWindowDisplayName(windowId, trimmed)
+      await ctx.deps.appendLogLines([
+        `> ${ctx.trimmed}`,
+        tWindows("windows.rename.done", ctx.locale, {
+          windowId: String(windowId),
+          name: trimmed.length > 0 ? trimmed : "(cleared)"
+        })
+      ])
+    } catch {
+      await ctx.deps.appendLogLines([
+        `> ${ctx.trimmed}`,
+        tWindows("windows.rename.failed", ctx.locale, { windowId: String(windowId) })
+      ])
+    }
+  })()
+  finishCommand(ctx)
+  return true
+}
+
+async function applyWindowRenameSegment(
+  ctx: CommandDispatchContext,
+  windowId: number,
+  name: string
+): Promise<SegmentOutcome> {
+  if (!Number.isInteger(windowId) || windowId < 0) {
+    return segmentFailure("usage", [tWindows("windows.rename.invalid", ctx.locale)])
+  }
+  const trimmed = name.trim()
+  try {
+    await setWindowDisplayName(windowId, trimmed)
+    return segmentSuccess([
+      tWindows("windows.rename.done", ctx.locale, {
+        windowId: String(windowId),
+        name: trimmed.length > 0 ? trimmed : "(cleared)"
+      })
+    ])
+  } catch {
+    return segmentFailure("runtime", [
+      tWindows("windows.rename.failed", ctx.locale, { windowId: String(windowId) })
+    ])
+  }
+}
+
 async function applySessionSettingNameSegment(
   ctx: CommandDispatchContext,
   name: string
@@ -1121,6 +1512,12 @@ function applyOpenPlainList(
   ctx: CommandDispatchContext,
   action: Extract<UiActionIR, { kind: "open_plain_list" }>
 ): boolean {
+  if (isBareDeviceScope(action.device_scope, action.device_id)) {
+    finishCommand(ctx)
+    void ctx.deps.appendLogLines([tCmd("cmd.cli.device.needIdOrBrowse", ctx.locale)])
+    ctx.deps.focusPrompt()
+    return true
+  }
   const resolved = resolveOpenPlainListPlan(action)
   if (resolved === null) {
     return false
@@ -1158,6 +1555,9 @@ async function applyOpenPlainListSegment(
   ctx: CommandDispatchContext,
   action: Extract<UiActionIR, { kind: "open_plain_list" }>
 ): Promise<SegmentOutcome> {
+  if (isBareDeviceScope(action.device_scope, action.device_id)) {
+    return segmentFailure("usage", [tCmd("cmd.cli.device.needIdOrBrowse", ctx.locale)])
+  }
   const resolved = resolveOpenPlainListPlan(action)
   if (resolved === null) {
     return segmentFailure("unknown", [`error: unknown list: ${action.list_id}`])
@@ -1180,6 +1580,7 @@ function resolveOpenPickerPlan(
 ): { listId: ListCommandId; match: unknown; showUrl: boolean } | null {
   const fromIr = listPlanFromOpenPlainList({
     list_id: action.list_id,
+    line: action.line,
     show_url: action.show_url,
     device_scope: action.device_scope,
     device_id: action.device_id
@@ -1210,6 +1611,12 @@ function applyOpenPicker(
   ctx: CommandDispatchContext,
   action: Extract<UiActionIR, { kind: "open_picker" }>
 ): boolean {
+  if (isBareDeviceScope(action.device_scope, action.device_id)) {
+    finishCommand(ctx)
+    void ctx.deps.appendLogLines([tCmd("cmd.cli.device.needIdOrBrowse", ctx.locale)])
+    ctx.deps.focusPrompt()
+    return true
+  }
   const resolved = resolveOpenPickerPlan(action)
   if (resolved === null) {
     return false
@@ -1265,6 +1672,9 @@ async function applyOpenPickerSegment(
   ctx: CommandDispatchContext,
   action: Extract<UiActionIR, { kind: "open_picker" }>
 ): Promise<SegmentOutcome> {
+  if (isBareDeviceScope(action.device_scope, action.device_id)) {
+    return segmentFailure("usage", [tCmd("cmd.cli.device.needIdOrBrowse", ctx.locale)])
+  }
   const resolved = resolveOpenPickerPlan(action)
   if (resolved === null) {
     return segmentFailure("unknown", [`error: unknown list: ${action.list_id}`])
@@ -1313,6 +1723,18 @@ function closePickerLines(ctx: CommandDispatchContext, slot: string): string[] {
         return [tSetting("setting.picker.closed", ctx.locale)]
       }
       return [tSetting("setting.picker.notOpen", ctx.locale)]
+    case "bookmark":
+      if (ctx.deps.bookmarkPickerRef.current !== null) {
+        ctx.deps.closeBookmarkPickerColumn()
+        return [tBookmark("bookmark.picker.closed", ctx.locale)]
+      }
+      return [tBookmark("bookmark.picker.notOpen", ctx.locale)]
+    case "history":
+      if (ctx.deps.historyPickerRef.current !== null) {
+        ctx.deps.closeHistoryPickerColumn()
+        return [tHistory("history.picker.closed", ctx.locale)]
+      }
+      return [tHistory("history.picker.notOpen", ctx.locale)]
     case "tabs":
       if (ctx.deps.tabPickerRef.current !== null) {
         closeTabPickerEngineForSession(ctx.deps.sessionId)

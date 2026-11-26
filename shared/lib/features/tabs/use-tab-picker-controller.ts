@@ -62,7 +62,8 @@ const INACTIVE_ENGINE_STATE: TabPickerEngineState = {
   editPanel: null,
   editTitle: "",
   actionMenuPanel: null,
-  bookmarkPanel: null
+  bookmarkPanel: null,
+  peerNoticeLines: []
 }
 
 function bookmarkPanelHeadline(panel: BookmarkPanel, locale: UiLocale): string {
@@ -93,7 +94,7 @@ type Props = {
   pickerInputRef?: MutableRefObject<HTMLTextAreaElement | null>
   sessionId: string
   onFocusTabIdChange?: (tabId: number | null) => void
-  submitConstructedLine?: (line: string) => void
+  submitConstructedLine: (line: string) => void
 }
 
 export type TabPickerOverlayProps = Props
@@ -460,7 +461,7 @@ export function useTabPickerController({
     applyReducedState,
     clearMarkedViaReducer,
     onAppendLog,
-    onRefreshRows
+    submitConstructedLine
   })
 
   const onPickerHighlightCreatedTab = useCallback(
@@ -754,6 +755,7 @@ export function useTabPickerController({
     commandListingHint,
     moveCloseAfter,
     isHostPaneFocused,
-    inputRef
+    inputRef,
+    peerNoticeLines: state.peerNoticeLines
   }
 }

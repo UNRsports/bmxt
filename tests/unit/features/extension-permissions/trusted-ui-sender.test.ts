@@ -40,14 +40,14 @@ describe("isTrustedBmxtUiSender", () => {
     assert.equal(ok, true)
   })
 
-  it("accepts bmxt-float.html iframe (query + sender.tab of host page)", () => {
+  it("rejects bmxt-float.html (float page removed)", () => {
     const ok = isTrustedBmxtUiSender({
       id: EXT_ID,
-      url: `${extensionPageUrl({ extensionId: EXT_ID, path: "float" })}?tabId=7`,
+      url: `chrome-extension://${EXT_ID}/bmxt-float.html?tabId=7`,
       tab: { id: 7 } as chrome.tabs.Tab,
       frameId: 1
     })
-    assert.equal(ok, true)
+    assert.equal(ok, false)
   })
 
   it("accepts moz-extension UI pages (Firefox same-extension origin)", () => {
@@ -63,18 +63,14 @@ describe("isTrustedBmxtUiSender", () => {
     assert.equal(ok, true)
   })
 
-  it("accepts moz-extension float page with query", () => {
+  it("rejects moz-extension float page (float page removed)", () => {
     const ok = isTrustedBmxtUiSender({
       id: EXT_ID,
-      url: `${extensionPageUrl({
-        extensionId: EXT_ID,
-        path: "float",
-        protocol: "moz-extension:"
-      })}?tabId=7`,
+      url: `moz-extension://${EXT_ID}/bmxt-float.html?tabId=7`,
       tab: { id: 7 } as chrome.tabs.Tab,
       frameId: 1
     })
-    assert.equal(ok, true)
+    assert.equal(ok, false)
   })
 
   it("rejects content-script senders (https page url)", () => {

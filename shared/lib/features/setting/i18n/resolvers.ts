@@ -189,7 +189,16 @@ export function dispatchFailedLine(locale: UiLocale, message: string): string {
 }
 
 export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSettings): string[] {
-  const { locale: uiLoc, appearance, hostUiMode, imeCandidateHelp, searchLegendMode } = settings
+  const {
+    locale: uiLoc,
+    appearance,
+    hostUiMode,
+    imeCandidateHelp,
+    promptFire,
+    searchLegendMode,
+    syncHoldIntervalMs,
+    cliDoorRetryMs
+  } = settings
   const defaultLabel = tSetting("setting.summary.default", locale)
   const token = settingTokenForUiLocale(uiLoc)
   const hostUiLabel =
@@ -201,6 +210,9 @@ export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSetti
   const imeHelpLabel = imeCandidateHelp
     ? tSetting("setting.picker.imeCandidateHelpStateOn", locale)
     : tSetting("setting.picker.imeCandidateHelpStateOff", locale)
+  const promptFireLabel = promptFire
+    ? tSetting("setting.picker.promptFireStateOn", locale)
+    : tSetting("setting.picker.promptFireStateOff", locale)
   const searchLegendLabel =
     searchLegendMode === "emoji"
       ? tSetting("setting.picker.searchLegendStateEmoji", locale)
@@ -211,7 +223,12 @@ export function formatUiSettingsSummaryLines(locale: UiLocale, settings: UiSetti
     tSetting("setting.summary.locale", locale, { token }),
     tSetting("setting.summary.hostUi", locale, { value: hostUiLabel }),
     tSetting("setting.summary.imeCandidateHelp", locale, { value: imeHelpLabel }),
+    tSetting("setting.summary.promptFire", locale, { value: promptFireLabel }),
     tSetting("setting.summary.searchLegend", locale, { value: searchLegendLabel }),
+    tSetting("setting.summary.syncHoldIntervalMs", locale, {
+      value: String(syncHoldIntervalMs)
+    }),
+    tSetting("setting.summary.cliDoorRetryMs", locale, { value: String(cliDoorRetryMs) }),
     tSetting("setting.summary.fg", locale, { value: appearance.fg ?? defaultLabel }),
     tSetting("setting.summary.bgColor", locale, { value: appearance.bgColor ?? defaultLabel }),
     tSetting("setting.summary.size", locale, { value: appearance.fontSize ?? defaultLabel }),

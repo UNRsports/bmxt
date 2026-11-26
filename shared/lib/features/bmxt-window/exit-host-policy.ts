@@ -3,36 +3,31 @@ import { isBmxtHostKind } from "./bmxt-host-kind.ts"
 
 export type ExitHostAction =
   | { kind: "closePopupWindow" }
-  | { kind: "hideFloat"; tabId: number | undefined }
   | { kind: "exitSession" }
 
 /**
- * EN: Infer host from the RUN_CMD sender when the UI omits `hostKind`.
- * JA: UI が `hostKind` を付けない場合の sender 推定（フロート iframe）。
+ * EN: Infer host from the RUN_CMD sender (always popup; kept for backward compatibility).
+ * JA: sender からホスト種別を推定（常にポップアップ）。後方互換のため関数は維持。
  */
 export function inferHostKindFromSender(
-  sender?: chrome.runtime.MessageSender
+  _sender?: chrome.runtime.MessageSender
 ): BmxtHostKind {
-  const url = typeof sender?.url === "string" ? sender.url : ""
-  if (url.includes("bmxt-float.html")) {
-    return "float"
-  }
   return "popup"
 }
 
 export function resolveHostKindForExit(
   hostKindRaw: unknown,
-  sender?: chrome.runtime.MessageSender
+  _sender?: chrome.runtime.MessageSender
 ): BmxtHostKind {
   if (isBmxtHostKind(hostKindRaw)) {
     return hostKindRaw
   }
-  return inferHostKindFromSender(sender)
+  return "popup"
 }
 
 /**
- * EN: Popup last-session exit closes the BMXt window; float only hides the in-page prompt.
- * JA: ポップアップは窓を閉じる。サイト上フロートはプロンプト非表示のみ（ブラウザ窓は閉じない）。
+ * EN: Last session always closes the BMXt popup window.
+ * JA: 最終セッションは常にポップアップ窓を閉じる。
  */
 export function resolveExitHostAction(args: {
   hostKind: BmxtHostKind
@@ -41,9 +36,6 @@ export function resolveExitHostAction(args: {
 }): ExitHostAction {
   if (args.sessionOrderLength > 1) {
     return { kind: "exitSession" }
-  }
-  if (args.hostKind === "float") {
-    return { kind: "hideFloat", tabId: args.senderTabId }
   }
   return { kind: "closePopupWindow" }
 }

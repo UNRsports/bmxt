@@ -1,6 +1,18 @@
 {
   "windows.none": {
-    "ja": "(ウィンドウなし)",
+    "ja": "（ウィンドウなし）",
     "en": "(no windows)"
+  },
+  "windows.rename.done": {
+    "ja": "ウィンドウ {windowId} の表示名を「{name}」にしました",
+    "en": "set window {windowId} display name to \"{name}\""
+  },
+  "windows.rename.failed": {
+    "ja": "ウィンドウ {windowId} の表示名を保存できませんでした",
+    "en": "failed to save display name for window {windowId}"
+  },
+  "windows.rename.invalid": {
+    "ja": "usage: window rename <windowId> <name>",
+    "en": "usage: window rename <windowId> <name>"
   }
 }

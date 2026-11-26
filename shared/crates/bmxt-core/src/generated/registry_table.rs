@@ -28,7 +28,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "close",
         aliases: &["c"],
-        usage_primary: "close | close <tabId> | … | close",
+        usage_primary: "close | close <tabId> | close --window <id…> | close --group <id> | … | close",
     },
     CmdMeta {
         name: "dom",
@@ -48,7 +48,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "group",
         aliases: &[],
-        usage_primary: "group new [tabId…] | group add <groupId> <tabId…>",
+        usage_primary: "group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>",
     },
     CmdMeta {
         name: "help",
@@ -68,7 +68,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "tab",
         aliases: &[],
-        usage_primary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
+        usage_primary: "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -activate <tabId> [--device <id>] [--focus] | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
     },
     CmdMeta {
         name: "nav",
@@ -83,7 +83,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "aboutbmxt",
         aliases: &[],
-        usage_primary: "aboutbmxt",
+        usage_primary: "aboutbmxt | aboutbmxt -system",
     },
     CmdMeta {
         name: "session",
@@ -103,7 +103,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "setting",
         aliases: &[],
-        usage_primary: "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help",
+        usage_primary: "setting -list | setting -set <key> <value> | setting -export | setting -import | setting -bg-import [--picker] | setting -reset-default | setting -storage internal|external | setting -pick-dir | setting -reload | setting -snapshot-storage bundled|vault | setting -snapshot-pick-dir | setting -sync-guide | setting -save | setting -cancel | setting -exit -list | setting help",
     },
     CmdMeta {
         name: "tutorial",
@@ -113,7 +113,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "sync",
         aliases: &[],
-        usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
+        usage_primary: "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -setname <name> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
     },
     CmdMeta {
         name: "bookmark",
@@ -138,12 +138,17 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "move",
         aliases: &[],
-        usage_primary: "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>",
+        usage_primary: "move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>",
     },
     CmdMeta {
         name: "new-window",
         aliases: &[],
         usage_primary: "new-window <tabId…> | … | new-window",
+    },
+    CmdMeta {
+        name: "window",
+        aliases: &[],
+        usage_primary: "window rename <windowId> <name>",
     },
 ];
 
@@ -184,10 +189,18 @@ static BRANCHES_SEARCH: &[SubcommandBranch] = &[
 static BRANCHES_GROUP: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "new",
-        trailing_tokens: &[],
+        trailing_tokens: &["--title", "--color"],
     },
     SubcommandBranch {
         head: "add",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "rename",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "ungroup",
         trailing_tokens: &[],
     },
 ];
@@ -204,6 +217,10 @@ static BRANCHES_TAB: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-setting",
         trailing_tokens: &["-page-active"],
+    },
+    SubcommandBranch {
+        head: "-activate",
+        trailing_tokens: &["--device", "--focus"],
     },
     SubcommandBranch {
         head: "-moveurl",
@@ -257,6 +274,13 @@ static BRANCHES_TRANSLATE: &[SubcommandBranch] = &[
     },
 ];
 
+static BRANCHES_ABOUTBMXT: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "-system",
+        trailing_tokens: &[],
+    },
+];
+
 static BRANCHES_SESSION: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-new",
@@ -302,6 +326,46 @@ static BRANCHES_SETTING: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-set",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-export",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-import",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-bg-import",
+        trailing_tokens: &["--picker"],
+    },
+    SubcommandBranch {
+        head: "-reset-default",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-storage",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-pick-dir",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-reload",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-snapshot-storage",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-snapshot-pick-dir",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-sync-guide",
         trailing_tokens: &[],
     },
     SubcommandBranch {
@@ -356,6 +420,10 @@ static BRANCHES_SYNC: &[SubcommandBranch] = &[
     },
     SubcommandBranch {
         head: "-connect",
+        trailing_tokens: &[],
+    },
+    SubcommandBranch {
+        head: "-setname",
         trailing_tokens: &[],
     },
     SubcommandBranch {
@@ -446,6 +514,13 @@ static BRANCHES_HISTORY: &[SubcommandBranch] = &[
     },
 ];
 
+static BRANCHES_WINDOW: &[SubcommandBranch] = &[
+    SubcommandBranch {
+        head: "rename",
+        trailing_tokens: &[],
+    },
+];
+
 pub fn all_command_metas() -> &'static [CmdMeta] {
     COMMANDS
 }
@@ -474,26 +549,27 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "help"),
         "exit" => false,
         "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
-        "group" => matches!(lower.as_str(), "new" | "add"),
+        "group" => matches!(lower.as_str(), "new" | "add" | "rename" | "ungroup"),
         "help" => false,
         "forward" => false,
         "reload" => false,
-        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-moveurl" | "-nowurl" | "-send" | "help"),
+        "tab" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "-activate" | "-moveurl" | "-nowurl" | "-send" | "help"),
         "nav" => matches!(lower.as_str(), "-enter" | "-exit" | "-windowclose"),
         "translate" => matches!(lower.as_str(), "-on" | "-off" | "-setting" | "help"),
-        "aboutbmxt" => false,
+        "aboutbmxt" => matches!(lower.as_str(), "-system"),
         "session" => matches!(lower.as_str(), "-new" | "-list" | "-switch" | "-next" | "-prev" | "-setting-name" | "help"),
         "snapshot" => matches!(lower.as_str(), "-save"),
         "browse" => false,
-        "setting" => matches!(lower.as_str(), "-list" | "-set" | "-save" | "-cancel" | "-exit" | "help"),
+        "setting" => matches!(lower.as_str(), "-list" | "-set" | "-export" | "-import" | "-bg-import" | "-reset-default" | "-storage" | "-pick-dir" | "-reload" | "-snapshot-storage" | "-snapshot-pick-dir" | "-sync-guide" | "-save" | "-cancel" | "-exit" | "help"),
         "tutorial" => matches!(lower.as_str(), "-start" | "-skip" | "help"),
-        "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-offer" | "-answer" | "-accept" | "-ping" | "help"),
+        "sync" => matches!(lower.as_str(), "-setup" | "-status" | "-pair" | "-members" | "-connect" | "-setname" | "-offer" | "-answer" | "-accept" | "-ping" | "help"),
         "bookmark" => matches!(lower.as_str(), "-list" | "-add" | "-folder" | "-remove" | "-move" | "-send" | "-backup" | "-restore" | "help"),
         "history" => matches!(lower.as_str(), "-list" | "-delete" | "-delete-range" | "-backup" | "-restore" | "help"),
         "open" => false,
         "jump" => false,
         "move" => false,
         "new-window" => false,
+        "window" => matches!(lower.as_str(), "rename"),
         _ => false,
     }
 }
@@ -514,7 +590,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "tab" => BRANCHES_TAB,
         "nav" => BRANCHES_NAV,
         "translate" => BRANCHES_TRANSLATE,
-        "aboutbmxt" => &[],
+        "aboutbmxt" => BRANCHES_ABOUTBMXT,
         "session" => BRANCHES_SESSION,
         "snapshot" => BRANCHES_SNAPSHOT,
         "browse" => &[],
@@ -527,6 +603,7 @@ pub fn subcommand_branches(canonical: &str) -> &'static [SubcommandBranch] {
         "jump" => &[],
         "move" => &[],
         "new-window" => &[],
+        "window" => BRANCHES_WINDOW,
         _ => &[],
     }
 }

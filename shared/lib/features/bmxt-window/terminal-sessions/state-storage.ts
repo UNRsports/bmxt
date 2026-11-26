@@ -509,7 +509,9 @@ function pickersFromStoredLeaf(
       : null,
     search: p.search,
     dom: p.dom,
-    setting: null
+    setting: null,
+    bookmark: null,
+    history: null
   }
 }
 

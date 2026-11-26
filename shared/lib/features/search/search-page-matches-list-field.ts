@@ -29,6 +29,20 @@ function parseOnePageMatch(raw: unknown): SearchPageMatch | null {
   if (isFiniteNumber(o.globalOccurrence) && o.globalOccurrence >= 0) {
     match.globalOccurrence = Math.floor(o.globalOccurrence)
   }
+  if (typeof o.cellRef === "string") {
+    const cellRef = o.cellRef.trim().toUpperCase()
+    if (/^[A-Z]{1,3}\d{1,7}$/.test(cellRef)) {
+      match.cellRef = cellRef
+    }
+  }
+  if (typeof o.cellValue === "string" && o.cellValue.trim()) {
+    match.cellValue = o.cellValue.trim().slice(0, 500)
+  }
+  if (o.sheetsRowTrusted === true || o.sheetsRowTrusted === 1) {
+    match.sheetsRowTrusted = true
+  } else if (o.sheetsRowTrusted === false || o.sheetsRowTrusted === 0) {
+    match.sheetsRowTrusted = false
+  }
   return match
 }
 
@@ -55,6 +69,20 @@ export function serializeSearchPageMatchesField(
       m.globalOccurrence >= 0
     ) {
       row.globalOccurrence = m.globalOccurrence
+    }
+    if (typeof m.cellRef === "string") {
+      const cellRef = m.cellRef.trim().toUpperCase()
+      if (/^[A-Z]{1,3}\d{1,7}$/.test(cellRef)) {
+        row.cellRef = cellRef
+      }
+    }
+    if (typeof m.cellValue === "string" && m.cellValue.trim()) {
+      row.cellValue = m.cellValue.trim().slice(0, 500)
+    }
+    if (m.sheetsRowTrusted === true) {
+      row.sheetsRowTrusted = 1
+    } else if (m.sheetsRowTrusted === false) {
+      row.sheetsRowTrusted = 0
     }
     return row
   })

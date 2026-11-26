@@ -31,8 +31,10 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
   "group": [
-    { head: "new", trailingTokens: [] as const, tail: "rest" },
-    { head: "add", trailingTokens: [] as const, tail: "rest" }
+    { head: "new", trailingTokens: ["--title","--color"] as const, tail: "rest" },
+    { head: "add", trailingTokens: [] as const, tail: "rest" },
+    { head: "rename", trailingTokens: [] as const, tail: "rest" },
+    { head: "ungroup", trailingTokens: [] as const, tail: "rest" }
   ] as const,
   "help": [] as const,
   "forward": [] as const,
@@ -41,6 +43,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-list", trailingTokens: ["-url","--device","--peers"] as const, tail: "rest" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
     { head: "-setting", trailingTokens: ["-page-active"] as const, tail: "none" },
+    { head: "-activate", trailingTokens: ["--device","--focus"] as const, tail: "rest" },
     { head: "-moveurl", trailingTokens: [] as const, tail: "rest_http_url" },
     { head: "-nowurl", trailingTokens: [] as const, tail: "none" },
     { head: "-send", trailingTokens: [] as const, tail: "rest" },
@@ -57,7 +60,9 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-setting", trailingTokens: ["--ja-en","--en-ja"] as const, tail: "none" },
     { head: "help", trailingTokens: [] as const, tail: "none" }
   ] as const,
-  "aboutbmxt": [] as const,
+  "aboutbmxt": [
+    { head: "-system", trailingTokens: [] as const, tail: "none" }
+  ] as const,
   "session": [
     { head: "-new", trailingTokens: [] as const, tail: "rest" },
     { head: "-list", trailingTokens: [] as const, tail: "none" },
@@ -74,6 +79,16 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "setting": [
     { head: "-list", trailingTokens: [] as const, tail: "none" },
     { head: "-set", trailingTokens: [] as const, tail: "rest" },
+    { head: "-export", trailingTokens: [] as const, tail: "none" },
+    { head: "-import", trailingTokens: [] as const, tail: "none" },
+    { head: "-bg-import", trailingTokens: ["--picker"] as const, tail: "none" },
+    { head: "-reset-default", trailingTokens: [] as const, tail: "none" },
+    { head: "-storage", trailingTokens: [] as const, tail: "rest" },
+    { head: "-pick-dir", trailingTokens: [] as const, tail: "none" },
+    { head: "-reload", trailingTokens: [] as const, tail: "none" },
+    { head: "-snapshot-storage", trailingTokens: [] as const, tail: "rest" },
+    { head: "-snapshot-pick-dir", trailingTokens: [] as const, tail: "none" },
+    { head: "-sync-guide", trailingTokens: [] as const, tail: "none" },
     { head: "-save", trailingTokens: [] as const, tail: "none" },
     { head: "-cancel", trailingTokens: [] as const, tail: "none" },
     { head: "-exit", trailingTokens: ["-list"] as const, tail: "none" },
@@ -90,6 +105,7 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
     { head: "-pair", trailingTokens: [] as const, tail: "rest" },
     { head: "-members", trailingTokens: [] as const, tail: "none" },
     { head: "-connect", trailingTokens: [] as const, tail: "rest" },
+    { head: "-setname", trailingTokens: [] as const, tail: "rest" },
     { head: "-offer", trailingTokens: [] as const, tail: "none" },
     { head: "-answer", trailingTokens: [] as const, tail: "rest" },
     { head: "-accept", trailingTokens: [] as const, tail: "rest" },
@@ -118,7 +134,10 @@ export const COMMAND_SUBCOMMAND_BRANCHES: Record<string, readonly CommandSubcomm
   "open": [] as const,
   "jump": [] as const,
   "move": [] as const,
-  "new-window": [] as const
+  "new-window": [] as const,
+  "window": [
+    { head: "rename", trailingTokens: [] as const, tail: "rest" }
+  ] as const
 }
 
 export function getSubcommandBranches(canonicalName: string): readonly CommandSubcommandBranch[] {
@@ -185,7 +204,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "group": {
       const lower = token.toLowerCase()
-      return lower === "new" || lower === "add"
+      return lower === "new" || lower === "add" || lower === "rename" || lower === "ungroup"
     }
     case "help":
       return false
@@ -195,7 +214,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "tab": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-moveurl" || lower === "-nowurl" || lower === "-send" || lower === "help"
+      return lower === "-list" || lower === "-exit" || lower === "-setting" || lower === "-activate" || lower === "-moveurl" || lower === "-nowurl" || lower === "-send" || lower === "help"
     }
     case "nav": {
       const lower = token.toLowerCase()
@@ -205,8 +224,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       const lower = token.toLowerCase()
       return lower === "-on" || lower === "-off" || lower === "-setting" || lower === "help"
     }
-    case "aboutbmxt":
-      return false
+    case "aboutbmxt": {
+      const lower = token.toLowerCase()
+      return lower === "-system"
+    }
     case "session": {
       const lower = token.toLowerCase()
       return lower === "-new" || lower === "-list" || lower === "-switch" || lower === "-next" || lower === "-prev" || lower === "-setting-name" || lower === "help"
@@ -219,7 +240,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "setting": {
       const lower = token.toLowerCase()
-      return lower === "-list" || lower === "-set" || lower === "-save" || lower === "-cancel" || lower === "-exit" || lower === "help"
+      return lower === "-list" || lower === "-set" || lower === "-export" || lower === "-import" || lower === "-bg-import" || lower === "-reset-default" || lower === "-storage" || lower === "-pick-dir" || lower === "-reload" || lower === "-snapshot-storage" || lower === "-snapshot-pick-dir" || lower === "-sync-guide" || lower === "-save" || lower === "-cancel" || lower === "-exit" || lower === "help"
     }
     case "tutorial": {
       const lower = token.toLowerCase()
@@ -227,7 +248,7 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
     }
     case "sync": {
       const lower = token.toLowerCase()
-      return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-connect" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-ping" || lower === "help"
+      return lower === "-setup" || lower === "-status" || lower === "-pair" || lower === "-members" || lower === "-connect" || lower === "-setname" || lower === "-offer" || lower === "-answer" || lower === "-accept" || lower === "-ping" || lower === "help"
     }
     case "bookmark": {
       const lower = token.toLowerCase()
@@ -245,6 +266,10 @@ export function isSecondToken(canonicalCmd: string, token: string): boolean {
       return false
     case "new-window":
       return false
+    case "window": {
+      const lower = token.toLowerCase()
+      return lower === "rename"
+    }
     default:
       return false
   }

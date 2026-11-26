@@ -1,4 +1,6 @@
 import type { CommandDispatchDeps } from "../../bmxt-window/shell/command-dispatch/types.ts"
+import type { DispatchHostContext } from "../../dispatch/dispatch-context.ts"
+import { applyHostEffects } from "../../dispatch/apply-effects.ts"
 import type { UiLocale } from "../../setting/locale.ts"
 import { segmentFailure, segmentSuccess } from "../compound/classify-outcome.ts"
 import { dispatchSegmentUiOutcome } from "../compound/apply-segment-bundle.ts"
@@ -10,6 +12,23 @@ import { fetchAndFormatPlainListById } from "../list-commands/run-plain.ts"
 import { applyRedirectsToOutcome } from "./apply-redirect.ts"
 import { isNullRedirectTarget, parseRedirects } from "./parse-redirect.ts"
 import { BACKGROUND_COMMAND_ENTRY } from "./registry.ts"
+
+/** EN: Minimal host ctx for page-local effects (FSA / WebRTC live on the prompt window). */
+function stubUiEffectDispatchCtx(
+  deps: CommandDispatchDeps,
+  locale: UiLocale
+): DispatchHostContext {
+  return {
+    enqueueSessionPatch: () => {},
+    clearLog: async () => {},
+    exitPane: async () => [],
+    listWindows: async () => [],
+    focusInfo: async () => [],
+    resolveTabArg: async () => undefined,
+    commandSessionId: deps.sessionId,
+    uiLocale: locale
+  }
+}
 
 export type RunCommandOptions = {
   /**
@@ -126,6 +145,18 @@ async function dispatchSegment(
       if (lines !== null) {
         return segmentSuccess(lines)
       }
+    }
+    // EN: Capability probe must run in the prompt window — FSA / WebRTC are absent in the SW.
+    // JA: 能力検査はプロンプト窓で実行する（FSA / WebRTC は SW に存在しない）。
+    const effects = bundle.effects ?? []
+    const probeOnly =
+      effects.length === 1 && effects[0] !== undefined && effects[0].kind === "probe_capabilities"
+    if (probeOnly) {
+      if (options?.suppressLogPatches === true) {
+        return segmentSuccess([])
+      }
+      const lines = await applyHostEffects(stubUiEffectDispatchCtx(deps, locale), effects)
+      return segmentSuccess(lines)
     }
     const background = await BACKGROUND_COMMAND_ENTRY.tryRun(commandText, deps, locale, options)
     if (background !== null) {

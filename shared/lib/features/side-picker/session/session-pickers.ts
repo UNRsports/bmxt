@@ -1,22 +1,28 @@
 import type { DomListPickerState } from "../../dom/dom-list-picker-input"
 import type { SearchListPickerState } from "../../search/search-list-picker-input"
 import type { SettingListPickerState } from "../../setting/setting-list-picker-state"
+import type { BookmarkPickerState } from "../../bookmark/bookmark-picker-state"
+import type { HistoryPickerState } from "../../history/history-picker-state"
 import type { TabPickerState } from "./tab-picker-state"
 
-export type PickerSlotId = "tabs" | "search" | "dom" | "setting"
+export type PickerSlotId = "tabs" | "search" | "dom" | "setting" | "bookmark" | "history"
 
 export type SessionPickerState = {
   tabs: TabPickerState | null
   search: SearchListPickerState | null
   dom: DomListPickerState | null
   setting: SettingListPickerState | null
+  bookmark: BookmarkPickerState | null
+  history: HistoryPickerState | null
 }
 
 export const EMPTY_SESSION_PICKERS: SessionPickerState = {
   tabs: null,
   search: null,
   dom: null,
-  setting: null
+  setting: null,
+  bookmark: null,
+  history: null
 }
 
 export type SessionPickersByLeaf = Record<string, SessionPickerState>
@@ -33,7 +39,9 @@ export function anySessionPickerOpen(pickers: SessionPickerState): boolean {
     pickers.tabs !== null ||
     pickers.search !== null ||
     pickers.dom !== null ||
-    pickers.setting !== null
+    pickers.setting !== null ||
+    pickers.bookmark !== null ||
+    pickers.history !== null
   )
 }
 
@@ -58,6 +66,12 @@ export function openPickerSlots(pickers: SessionPickerState): PickerSlotId[] {
   }
   if (pickers.setting !== null) {
     open.push("setting")
+  }
+  if (pickers.bookmark !== null) {
+    open.push("bookmark")
+  }
+  if (pickers.history !== null) {
+    open.push("history")
   }
   return open
 }
@@ -94,7 +108,9 @@ export function setSessionPickerSlot<K extends PickerSlotId>(
       nextSlot.tabs === null &&
       nextSlot.search === null &&
       nextSlot.dom === null &&
-      nextSlot.setting === null
+      nextSlot.setting === null &&
+      nextSlot.bookmark === null &&
+      nextSlot.history === null
     if (allClosed) {
       if (!(sessionId in prev)) {
         return prev

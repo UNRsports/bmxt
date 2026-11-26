@@ -24,7 +24,7 @@ export type PipeConsumerClass =
       windowId?: number
       groupId?: number
     }
-  | { id: "move"; windowId: number; groupId: number; ungroup: boolean }
+  | { id: "move"; windowId: number; groupId: number; ungroup: boolean; beforeTabId: number }
   | { id: "bookmark-remove" }
   | { id: "bookmark-add"; parentId: string | null; dupMode: string }
   | { id: "bookmark-move"; parentId: string; index: number | null }
@@ -101,11 +101,16 @@ function parseClass(raw: unknown): PipeConsumerClass | null {
       ) {
         return null
       }
+      const beforeTabId =
+        typeof o.beforeTabId === "number" && Number.isFinite(o.beforeTabId)
+          ? o.beforeTabId
+          : -1
       return {
         id: "move",
         windowId: o.windowId,
         groupId: o.groupId,
-        ungroup: o.ungroup
+        ungroup: o.ungroup,
+        beforeTabId
       }
     }
     case "bookmark-remove":

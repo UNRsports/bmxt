@@ -8,6 +8,7 @@ use crate::types::{
 pub const DEFAULT_UI_LOCALE: &str = "ja";
 pub const DEFAULT_HOST_UI_MODE: &str = "auto";
 pub const DEFAULT_IME_CANDIDATE_HELP: bool = true;
+pub const DEFAULT_PROMPT_FIRE: bool = false;
 pub const DEFAULT_SEARCH_LEGEND_MODE: &str = "text";
 
 pub fn parse_ui_locale(raw: Option<&str>) -> UiLocale {
@@ -66,6 +67,7 @@ pub fn default_ui_settings() -> UiSettings {
         appearance: UiAppearanceFile::default(),
         host_ui_mode: DEFAULT_HOST_UI_MODE.to_string(),
         ime_candidate_help: DEFAULT_IME_CANDIDATE_HELP,
+        prompt_fire: DEFAULT_PROMPT_FIRE,
         search_legend_mode: DEFAULT_SEARCH_LEGEND_MODE.to_string(),
     }
 }
@@ -76,6 +78,7 @@ pub fn normalize_ui_settings(
     host_ui_mode: Option<&str>,
     extra_keys_mode: Option<&str>,
     ime_candidate_help: Option<bool>,
+    prompt_fire: Option<bool>,
     search_legend_mode: Option<&str>,
     appearance: Option<&UiAppearanceFile>,
 ) -> UiSettings {
@@ -91,6 +94,7 @@ pub fn normalize_ui_settings(
         appearance: normalize_appearance(appearance),
         host_ui_mode: host,
         ime_candidate_help: ime_candidate_help.unwrap_or(DEFAULT_IME_CANDIDATE_HELP),
+        prompt_fire: prompt_fire.unwrap_or(DEFAULT_PROMPT_FIRE),
         search_legend_mode: normalize_search_legend_mode(search_legend_mode),
     }
 }
@@ -98,6 +102,14 @@ pub fn normalize_ui_settings(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn prompt_fire_defaults_off() {
+        assert!(!DEFAULT_PROMPT_FIRE);
+        assert!(!default_ui_settings().prompt_fire);
+        let normalized = normalize_ui_settings(None, None, None, None, None, None, None);
+        assert!(!normalized.prompt_fire);
+    }
 
     #[test]
     fn locale_defaults_to_ja() {

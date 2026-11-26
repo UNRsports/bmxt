@@ -10,6 +10,8 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
       return "editPicker"
     case "ime-candidate-help":
       return "imeCandidateHelp"
+    case "prompt-fire":
+      return "promptFire"
     case "search-legend":
       return "searchLegend"
     case "host-ui":
@@ -54,8 +56,6 @@ export function settingMainRowTargetView(rowId: SettingPickerRowId): SettingList
     case "sync-setup-guide":
     case "export":
     case "import":
-    case "save":
-    case "cancel":
       return null
     default:
       return null
@@ -75,6 +75,7 @@ export function isSettingListSubView(view: SettingListPickerView): boolean {
     view === "language" ||
     view === "editPicker" ||
     view === "imeCandidateHelp" ||
+    view === "promptFire" ||
     view === "searchLegend" ||
     view === "hostUi" ||
     view === "storageMode" ||
@@ -105,12 +106,4 @@ export function isSettingPickerDetailView(view: SettingListPickerView): boolean 
 
 export function isSettingDetailView(view: SettingListPickerView): boolean {
   return isSettingGlobalDetailView(view) || isSettingPickerDetailView(view)
-}
-
-export function isArrowRight(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">): boolean {
-  return e.key === "ArrowRight" && !e.ctrlKey && !e.metaKey && !e.altKey
-}
-
-export function isArrowLeft(e: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey">): boolean {
-  return e.key === "ArrowLeft" && !e.ctrlKey && !e.metaKey && !e.altKey
 }

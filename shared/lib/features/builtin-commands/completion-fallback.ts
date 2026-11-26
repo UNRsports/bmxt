@@ -28,5 +28,6 @@ export const FALLBACK_COMPLETION_CANDIDATES: string[] = [
   "sync",
   "tab",
   "translate",
-  "tutorial"
+  "tutorial",
+  "window"
 ]

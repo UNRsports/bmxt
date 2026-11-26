@@ -1,0 +1,54 @@
+{
+  "history.picker.action.delete": {
+    "ja": "削除",
+    "en": "Delete"
+  },
+  "history.picker.action.deleteRange": {
+    "ja": "期間を削除",
+    "en": "Delete range"
+  },
+  "history.picker.action.open": {
+    "ja": "開く",
+    "en": "Open"
+  },
+  "history.picker.actionMenu.hint": {
+    "ja": "↑↓ 選択 · Enter 実行 · ← / Esc 取消",
+    "en": "↑↓ choose · Enter run · ← / Esc cancel"
+  },
+  "history.picker.actionMenu.title": {
+    "ja": "履歴操作（{count} 件）",
+    "en": "History actions ({count})"
+  },
+  "history.picker.closed": {
+    "ja": "history: ピッカーを閉じました",
+    "en": "history: picker closed"
+  },
+  "history.picker.empty": {
+    "ja": "履歴がありません。",
+    "en": "No history entries."
+  },
+  "history.picker.hint": {
+    "ja": "history -list: ↑↓ 移動 · ←→ 折りたたみ · Space マーク · Enter / → 操作 · / ハイライト · n/N · :nohlsearch · Esc プロンプトへ",
+    "en": "history -list: ↑↓ move · ←→ fold · Space mark · Enter / → actions · / highlight · n/N · :nohlsearch · Esc prompt"
+  },
+  "history.picker.inputAria": {
+    "ja": "履歴ピッカー入力",
+    "en": "History picker input"
+  },
+  "history.picker.listAria": {
+    "ja": "履歴ツリー",
+    "en": "History tree"
+  },
+  "history.picker.markKindMismatch": {
+    "ja": "history: 月・日・訪問は同時にマークできません",
+    "en": "history: cannot mark months, days, and visits together"
+  },
+  "history.picker.noUrl": {
+    "ja": "history: 開ける URL がありません",
+    "en": "history: this visit has no URL to open"
+  },
+  "history.picker.notOpen": {
+    "ja": "history: ピッカーは開いていません",
+    "en": "history: picker is not open"
+  }
+}

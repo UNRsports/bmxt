@@ -4,9 +4,11 @@ import type { CommandBusStabilizer } from "../stabilizers/command-bus"
 import type { CommandQueueStabilizer } from "../stabilizers/command-queue"
 import type { PeerHostStabilizer } from "../stabilizers/peer-host"
 import type {
+  SyncBookmarksOp,
   SyncBusCommand,
   SyncConnectionState,
   SyncDeviceId,
+  SyncNavControlOp,
   SyncRemoteSearchHit,
   SyncRemoteTabRow,
   SyncTabsOp,
@@ -17,6 +19,10 @@ import { applyRemoteOpenTabs } from "../bus/remote-open"
 import { applyRemoteTabsList } from "../bus/apply-remote-tabs-list"
 import { applyRemoteSearchQuery } from "../bus/apply-remote-search-query"
 import { applyRemoteTabsOps } from "../bus/apply-remote-tabs-ops.ts"
+import { applyRemoteBookmarksOps } from "../bus/apply-remote-bookmarks-ops.ts"
+import { applyRemoteProbeCapabilities } from "../bus/apply-remote-probe-capabilities.ts"
+import { applyRemoteDomList } from "../bus/apply-remote-dom-list.ts"
+import { applyRemoteNavControl } from "../bus/apply-remote-nav-control.ts"
 import { applyRemoteBookmarksImport } from "../bus/remote-bookmarks-import.ts"
 import {
   FAMILY_SIGNAL_FIRST_DEFAULT_TAB,
@@ -29,6 +35,11 @@ import {
   WIRE_SOFT_CAP_BYTES
 } from "../bus/remote-query-limits"
 import {
+  DOM_REMOTE_SINGLE_RESULT_MAX_LINES,
+  packRemoteDomLinesIntoChunks,
+  shrinkLinesForDomWire
+} from "../../dom/remote-dom-list-wire.ts"
+import {
   packRemoteSearchHitsIntoChunks,
   shrinkHitsForSearchWire,
   utf8ByteLength
@@ -36,8 +47,11 @@ import {
 import { SEARCH_REMOTE_MAX_HITS_PER_PEER } from "../../search/peer/remote-search-wire-limits.ts"
 import { getRunLocale } from "../../setting/i18n/run-locale"
 
-/** EN: Allow multi-chunk search streams longer than a single RPC round-trip. */
+/** EN: Allow multi-chunk search/dom streams longer than a single RPC round-trip. */
 const SEARCH_STREAM_TIMEOUT_MS = 60_000
+const DOM_STREAM_TIMEOUT_MS = SEARCH_STREAM_TIMEOUT_MS
+/** EN: Soft line cap when accumulating inbound dom chunks (defense). */
+const DOM_REMOTE_MAX_LINES = 4_000
 
 function mapPeerState(raw: string): SyncConnectionState {
   if (raw === "connected") {
@@ -112,6 +126,43 @@ type PendingBookmarksImport = {
   resolve: (value: { ok: boolean; detail: string | null; created: number; rttMs: number | null }) => void
 }
 
+type PendingBookmarksOps = {
+  kind: "bookmarks_ops"
+  at: number
+  resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
+}
+
+type PendingProbeCapabilities = {
+  kind: "probe_capabilities"
+  at: number
+  resolve: (value: {
+    ok: boolean
+    detail: string | null
+    lines: string[]
+    rttMs: number | null
+  }) => void
+}
+
+type PendingDomList = {
+  kind: "dom_list"
+  at: number
+  lines: string[]
+  nextSeq: number
+  timeoutId: ReturnType<typeof setTimeout> | null
+  resolve: (value: {
+    ok: boolean
+    detail: string | null
+    lines: string[]
+    rttMs: number | null
+  }) => void
+}
+
+type PendingNavControl = {
+  kind: "nav_control"
+  at: number
+  resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
+}
+
 type PendingWaiter =
   | PendingOpen
   | PendingAck
@@ -119,6 +170,10 @@ type PendingWaiter =
   | PendingSearch
   | PendingTabsOps
   | PendingBookmarksImport
+  | PendingBookmarksOps
+  | PendingProbeCapabilities
+  | PendingDomList
+  | PendingNavControl
 
 export function createWebrtcCommandBusStabilizer(
   peerHost: PeerHostStabilizer,
@@ -188,7 +243,9 @@ export function createWebrtcCommandBusStabilizer(
       // JA: search ペイロードはキューしない（大きく、単発再送が危険なため）。
       if (
         command.type === "search_query_result" ||
-        command.type === "search_query_chunk"
+        command.type === "search_query_chunk" ||
+        command.type === "dom_list_result" ||
+        command.type === "dom_list_chunk"
       ) {
         return
       }
@@ -203,6 +260,20 @@ export function createWebrtcCommandBusStabilizer(
     const budgetOk = await peerHost.waitForSendBudget(
       remoteDeviceId,
       SEARCH_STREAM_TIMEOUT_MS
+    )
+    if (!budgetOk) {
+      return false
+    }
+    return peerHost.sendCommand(remoteDeviceId, command)
+  }
+
+  async function replyDomChunk(
+    remoteDeviceId: SyncDeviceId,
+    command: SyncBusCommand
+  ): Promise<boolean> {
+    const budgetOk = await peerHost.waitForSendBudget(
+      remoteDeviceId,
+      DOM_STREAM_TIMEOUT_MS
     )
     if (!budgetOk) {
       return false
@@ -325,8 +396,9 @@ export function createWebrtcCommandBusStabilizer(
       })
       const device = await loadOrCreateDeviceIdentity()
       const chunks = packRemoteSearchHitsIntoChunks(result.hits)
-      // EN: Prefer chunk stream; fall back to a soft-capped single result for empty/tiny sets.
-      // JA: チャンクストリームを優先。空／極小は soft cap 済み単発結果でも可。
+      // EN: Tiny sets use one soft-capped result. Larger sets always stream chunks
+      //     (never one huge blob — that hangs CLI waiting on a single SCTP frame).
+      // JA: 極小は soft cap 単発。大きい結果は必ずチャンク分割（巨大1通は CLI が固まる）。
       if (chunks.length === 1 && chunks[0]!.hits.length <= 50) {
         const shrunk = shrinkHitsForSearchWire(chunks[0]!.hits)
         const detail =
@@ -344,15 +416,18 @@ export function createWebrtcCommandBusStabilizer(
         }
         await replyTo(command.from, reply)
       } else {
+        let sentChunks = 0
         let sendOk = true
+        const chunkTotal = chunks.length
         for (const chunk of chunks) {
+          const detailWithProgress = `${result.detail};chunk=${chunk.seq + 1}/${chunkTotal};hits=${result.hits.length}`
           const reply: SyncBusCommand = {
             type: "search_query_chunk",
             id: bytesToBase64Url(randomBytes(8)),
             replyTo: command.id,
             from: device.deviceId,
             ok: result.ok,
-            detail: result.detail,
+            detail: detailWithProgress,
             seq: chunk.seq,
             eof: chunk.eof,
             hits: chunk.hits
@@ -362,20 +437,43 @@ export function createWebrtcCommandBusStabilizer(
             sendOk = false
             break
           }
+          sentChunks += 1
         }
         if (!sendOk) {
-          const fail: SyncBusCommand = {
-            type: "search_query_chunk",
-            id: bytesToBase64Url(randomBytes(8)),
-            replyTo: command.id,
-            from: device.deviceId,
-            ok: false,
-            detail: "send_budget_exhausted",
-            seq: chunks.length,
-            eof: true,
-            hits: []
+          if (sentChunks === 0) {
+            // EN: Nothing delivered — fall back to soft-capped single result.
+            // JA: 1 通も送れなかったので soft cap 単発結果へフォールバック。
+            const shrunk = shrinkHitsForSearchWire(result.hits)
+            const detailParts = [result.detail, "truncated_send_budget"]
+            if (shrunk.detailSuffix !== null) {
+              detailParts.push(shrunk.detailSuffix)
+            }
+            const reply: SyncBusCommand = {
+              type: "search_query_result",
+              id: bytesToBase64Url(randomBytes(8)),
+              replyTo: command.id,
+              from: device.deviceId,
+              ok: result.ok,
+              detail: detailParts.filter((p) => p.length > 0).join(";"),
+              hits: shrunk.hits
+            }
+            await replyTo(command.from, reply)
+          } else {
+            // EN: Partial stream already delivered — close with truncated eof (ok stays true).
+            // JA: 一部は届いているので truncated eof で閉じる（ok は true のまま）。
+            const fail: SyncBusCommand = {
+              type: "search_query_chunk",
+              id: bytesToBase64Url(randomBytes(8)),
+              replyTo: command.id,
+              from: device.deviceId,
+              ok: true,
+              detail: `${result.detail};truncated_send_budget;chunk=${sentChunks}/${chunkTotal}`,
+              seq: sentChunks,
+              eof: true,
+              hits: []
+            }
+            await replySearchChunk(command.from, fail)
           }
-          await replySearchChunk(command.from, fail)
         }
       }
     } else if (command.type === "tabs_ops") {
@@ -483,6 +581,221 @@ export function createWebrtcCommandBusStabilizer(
           rttMs: Math.max(0, Date.now() - waiter.at)
         })
       }
+    } else if (command.type === "bookmarks_ops") {
+      const result = await applyRemoteBookmarksOps(command.op)
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "bookmarks_ops_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "bookmarks_ops_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "bookmarks_ops") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
+    } else if (command.type === "probe_capabilities") {
+      const result = await applyRemoteProbeCapabilities(command.locale)
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "probe_capabilities_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail,
+        lines: result.lines
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "probe_capabilities_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "probe_capabilities") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          lines: Array.isArray(command.lines) ? command.lines : [],
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
+    } else if (command.type === "dom_list") {
+      const result = await applyRemoteDomList({
+        tabId: command.tabId,
+        scope: command.scope,
+        flavor: command.flavor,
+        showTag: command.showTag === true,
+        pattern: command.pattern
+      })
+      const device = await loadOrCreateDeviceIdentity()
+      const chunks = packRemoteDomLinesIntoChunks(result.lines)
+      // EN: Tiny sets use one soft-capped result. Larger sets always stream chunks.
+      // JA: 極小は soft cap 単発。大きい結果は必ずチャンク分割。
+      if (
+        chunks.length === 1 &&
+        chunks[0]!.lines.length <= DOM_REMOTE_SINGLE_RESULT_MAX_LINES
+      ) {
+        const shrunk = shrinkLinesForDomWire(chunks[0]!.lines)
+        const detail =
+          shrunk.detailSuffix !== null
+            ? `${result.detail ?? ""};${shrunk.detailSuffix}`.replace(/^;/, "")
+            : result.detail
+        const reply: SyncBusCommand = {
+          type: "dom_list_result",
+          id: bytesToBase64Url(randomBytes(8)),
+          replyTo: command.id,
+          from: device.deviceId,
+          ok: result.ok,
+          detail: detail && detail.length > 0 ? detail : null,
+          lines: shrunk.lines
+        }
+        await replyTo(command.from, reply)
+      } else {
+        let sentChunks = 0
+        let sendOk = true
+        const chunkTotal = chunks.length
+        for (const chunk of chunks) {
+          const detailWithProgress = `${result.detail ?? ""};chunk=${chunk.seq + 1}/${chunkTotal};lines=${result.lines.length}`.replace(
+            /^;/,
+            ""
+          )
+          const reply: SyncBusCommand = {
+            type: "dom_list_chunk",
+            id: bytesToBase64Url(randomBytes(8)),
+            replyTo: command.id,
+            from: device.deviceId,
+            ok: result.ok,
+            detail: detailWithProgress.length > 0 ? detailWithProgress : null,
+            seq: chunk.seq,
+            eof: chunk.eof,
+            lines: chunk.lines
+          }
+          const ok = await replyDomChunk(command.from, reply)
+          if (!ok) {
+            sendOk = false
+            break
+          }
+          sentChunks += 1
+        }
+        if (!sendOk) {
+          if (sentChunks === 0) {
+            const shrunk = shrinkLinesForDomWire(result.lines)
+            const detailParts = [result.detail, "truncated_send_budget"]
+            if (shrunk.detailSuffix !== null) {
+              detailParts.push(shrunk.detailSuffix)
+            }
+            const reply: SyncBusCommand = {
+              type: "dom_list_result",
+              id: bytesToBase64Url(randomBytes(8)),
+              replyTo: command.id,
+              from: device.deviceId,
+              ok: result.ok,
+              detail: detailParts.filter((p) => p !== null && p.length > 0).join(";"),
+              lines: shrunk.lines
+            }
+            await replyTo(command.from, reply)
+          } else {
+            const fail: SyncBusCommand = {
+              type: "dom_list_chunk",
+              id: bytesToBase64Url(randomBytes(8)),
+              replyTo: command.id,
+              from: device.deviceId,
+              ok: true,
+              detail: `${result.detail ?? ""};truncated_send_budget;chunk=${sentChunks}/${chunkTotal}`.replace(
+                /^;/,
+                ""
+              ),
+              seq: sentChunks,
+              eof: true,
+              lines: []
+            }
+            await replyDomChunk(command.from, fail)
+          }
+        }
+      }
+    } else if (command.type === "dom_list_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "dom_list") {
+        if (waiter.timeoutId !== null) {
+          clearTimeout(waiter.timeoutId)
+        }
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          lines: Array.isArray(command.lines) ? command.lines : [],
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
+    } else if (command.type === "dom_list_chunk") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "dom_list") {
+        if (command.seq === waiter.nextSeq) {
+          for (const line of command.lines) {
+            if (waiter.lines.length >= DOM_REMOTE_MAX_LINES) {
+              break
+            }
+            waiter.lines.push(line)
+          }
+          waiter.nextSeq += 1
+        }
+        if (waiter.timeoutId !== null) {
+          clearTimeout(waiter.timeoutId)
+        }
+        if (command.eof || !command.ok) {
+          pending.delete(command.replyTo)
+          waiter.resolve({
+            ok: command.ok,
+            detail: command.detail,
+            lines: waiter.lines,
+            rttMs: Math.max(0, Date.now() - waiter.at)
+          })
+        } else {
+          waiter.timeoutId = setTimeout(() => {
+            const still = pending.get(command.replyTo)
+            if (!still || still.kind !== "dom_list") {
+              return
+            }
+            pending.delete(command.replyTo)
+            still.resolve({
+              ok: false,
+              detail: "timeout",
+              lines: still.lines,
+              rttMs: null
+            })
+          }, DOM_STREAM_TIMEOUT_MS)
+        }
+      }
+    } else if (command.type === "nav_control") {
+      const result = await applyRemoteNavControl(command.tabId, command.op)
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "nav_control_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "nav_control_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "nav_control") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
     } else if (command.type === "tabs_changed") {
       const signal = buildTabsChangedSignal({
         reason: command.reason,
@@ -539,10 +852,26 @@ export function createWebrtcCommandBusStabilizer(
         waiter.resolve({ ok: false, detail: "timeout", created: 0, rttMs: null })
         return
       }
+      if (waiter.kind === "probe_capabilities") {
+        waiter.resolve({ ok: false, detail: "timeout", lines: [], rttMs: null })
+        return
+      }
+      if (waiter.kind === "dom_list") {
+        waiter.resolve({
+          ok: false,
+          detail: "timeout",
+          lines: waiter.lines,
+          rttMs: null
+        })
+        return
+      }
       waiter.resolve({ ok: false, detail: "timeout", rttMs: null })
     }, timeoutMs)
     const waiter = pending.get(id)
-    if (waiter && waiter.kind === "search_query") {
+    if (
+      waiter &&
+      (waiter.kind === "search_query" || waiter.kind === "dom_list")
+    ) {
       waiter.timeoutId = timeoutId
     }
   }
@@ -741,6 +1070,124 @@ export function createWebrtcCommandBusStabilizer(
       }
       const result = await resultPromise
       return { ok: result.ok, detail: result.detail, created: result.created }
+    },
+
+    async bookmarksOps(remoteDeviceId, op: SyncBookmarksOp) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "bookmarks_ops",
+        id,
+        from: device.deviceId,
+        op
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "bookmarks_ops", resolve, at: Date.now() })
+        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected" }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail }
+    },
+
+    async probeCapabilities(remoteDeviceId, locale: string) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "probe_capabilities",
+        id,
+        from: device.deviceId,
+        locale
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        lines: string[]
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "probe_capabilities", resolve, at: Date.now() })
+        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected", lines: [] }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail, lines: result.lines }
+    },
+
+    async domList(remoteDeviceId, req) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "dom_list",
+        id,
+        from: device.deviceId,
+        tabId: req.tabId,
+        scope: req.scope,
+        flavor: req.flavor,
+        showTag: req.showTag,
+        pattern: req.pattern
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        lines: string[]
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, {
+          kind: "dom_list",
+          resolve,
+          at: Date.now(),
+          lines: [],
+          nextSeq: 0,
+          timeoutId: null
+        })
+        armTimeout(id, DOM_STREAM_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected", lines: [] }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail, lines: result.lines }
+    },
+
+    async navControl(remoteDeviceId, tabId: number, op: SyncNavControlOp) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "nav_control",
+        id,
+        from: device.deviceId,
+        tabId,
+        op
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "nav_control", resolve, at: Date.now() })
+        armTimeout(id, 15_000)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected" }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail }
     },
 
     announceTabsChanged,

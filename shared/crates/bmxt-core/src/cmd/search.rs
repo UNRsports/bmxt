@@ -53,16 +53,17 @@ fn parse_search_list_plan(args: &[String]) -> Option<SearchListPlan> {
             if device_scope != "local" {
                 return None;
             }
-            let Some(id) = args.get(i + 1) else {
-                return None;
-            };
-            let trimmed = id.trim();
-            if trimmed.is_empty() || trimmed.starts_with('-') {
-                return None;
-            }
+            // EN: Bare `--device` (no id) is a valid plan; host picks via `| browse` or misuse on plain.
+            // JA: ID なし `--device` は合法 plan。plain はホストが misuse、`| browse` で番号選択。
             device_scope = "device".to_string();
-            device_id = trimmed.to_string();
-            i += 2;
+            let next = args.get(i + 1).map(|s| s.trim()).unwrap_or("");
+            if !next.is_empty() && !next.starts_with('-') {
+                device_id = next.to_string();
+                i += 2;
+            } else {
+                device_id = String::new();
+                i += 1;
+            }
             continue;
         }
         rest.push(args[i].clone());
@@ -78,7 +79,9 @@ fn parse_search_list_plan(args: &[String]) -> Option<SearchListPlan> {
         dispatch_parts.push("--peers".to_string());
     } else if device_scope == "device" {
         dispatch_parts.push("--device".to_string());
-        dispatch_parts.push(device_id.clone());
+        if !device_id.is_empty() {
+            dispatch_parts.push(device_id.clone());
+        }
     }
     dispatch_parts.extend(rest);
     let dispatch_line = normalize_search_list_peer_line(&dispatch_parts);
@@ -136,15 +139,25 @@ pub fn run(args: &[String]) -> DispatchBundle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ir::{DispatchBundle, EXIT_MISUSE};
+    use crate::ir::DispatchBundle;
 
     #[test]
-    fn list_rejects_incomplete_device() {
+    fn list_bare_device_emits_search_list_with_empty_id() {
         match run(&["search".into(), "-list".into(), "--device".into()]) {
-            DispatchBundle::Msgs { exit_status, .. } => {
-                assert_eq!(exit_status, EXIT_MISUSE);
-            }
-            other => panic!("expected msgs, got {other:?}"),
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
+                HostEffect::SearchList {
+                    dispatch_line,
+                    device_scope,
+                    device_id,
+                    ..
+                } => {
+                    assert_eq!(device_scope, "device");
+                    assert!(device_id.is_empty());
+                    assert!(dispatch_line.ends_with("--device"));
+                }
+                other => panic!("unexpected effect: {other:?}"),
+            },
+            other => panic!("expected effects, got {other:?}"),
         }
     }
 

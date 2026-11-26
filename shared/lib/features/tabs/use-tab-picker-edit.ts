@@ -1,10 +1,4 @@
 import { useCallback } from "react"
-import {
-  applyTabGroupTitle,
-  applyWindowDisplayName,
-  removeTabGroup,
-  ungroupTabGroup
-} from "./controller/edit-actions"
 import { GROUP_EDIT_MENU_ITEMS } from "./tab-picker-overlay-constants"
 import { groupEditMenuActionAtPickIndex } from "./group-edit-menu"
 import { tTabs } from "../setting/i18n/ns/tabs"
@@ -21,6 +15,12 @@ import { groupRowKey } from "./tab-picker-keyboard"
 import type { SelectKind } from "./tab-picker-overlay-types"
 import type { PickerReducerEvent } from "./state-machine"
 import { pickerMarkedCount } from "./use-tab-picker-derived-state"
+import {
+  buildCloseGroupCommandLine,
+  buildGroupRenameCommandLine,
+  buildGroupUngroupCommandLine,
+  buildWindowRenameCommandLine
+} from "../picker/build-picker-command-line.ts"
 
 export type TabPickerEditParams = {
   rows: TabPickerRow[]
@@ -38,7 +38,8 @@ export type TabPickerEditParams = {
   applyReducedState: (ev: PickerReducerEvent) => void
   clearMarkedViaReducer: () => void
   onAppendLog?: (lines: string[]) => void | Promise<void>
-  onRefreshRows?: () => Promise<void>
+  /** EN: Typed command re-entry for rename / ungroup / delete. */
+  submitConstructedLine: (line: string) => void
 }
 
 export type EditPickerSnapshot = {
@@ -67,21 +68,15 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
     setBulkSubMode,
     applyReducedState,
     clearMarkedViaReducer,
-    onAppendLog,
-    onRefreshRows
+    onAppendLog
   } = p
+  const submitLine = p.submitConstructedLine
 
   const closeEdit = useCallback(() => {
     setEditPanel(null)
     setEditTitle("")
     setBulkSubMode(null)
   }, [setBulkSubMode, setEditPanel, setEditTitle])
-
-  const finishEdit = useCallback(async () => {
-    clearMarkedViaReducer()
-    closeEdit()
-    await onRefreshRows?.()
-  }, [clearMarkedViaReducer, closeEdit, onRefreshRows])
 
   const openEditFromPicker = useCallback(
     async (snapshot?: EditPickerSnapshot) => {
@@ -177,27 +172,45 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
     if (editPanel?.kind !== "windowRename") {
       return
     }
-    try {
-      await applyWindowDisplayName(editPanel.windowId, editTitle)
-    } catch {
+    const line = buildWindowRenameCommandLine(editPanel.windowId, editTitle)
+    if (line === null) {
       void onAppendLog?.([tTabs("tabs.picker.error.windowNameSaveFailed", locale)])
       return
     }
-    await finishEdit()
-  }, [editPanel, editTitle, finishEdit, onAppendLog, locale])
+    clearMarkedViaReducer()
+    closeEdit()
+    submitLine(line)
+  }, [
+    clearMarkedViaReducer,
+    closeEdit,
+    editPanel,
+    editTitle,
+    locale,
+    onAppendLog,
+    submitLine
+  ])
 
   const confirmGroupRename = useCallback(async () => {
     if (editPanel?.kind !== "groupRename") {
       return
     }
-    try {
-      await applyTabGroupTitle(editPanel.groupId, editTitle)
-    } catch {
+    const line = buildGroupRenameCommandLine(editPanel.groupId, editTitle)
+    if (line === null) {
       void onAppendLog?.([tTabs("tabs.picker.error.groupNameSaveFailed", locale)])
       return
     }
-    await finishEdit()
-  }, [editPanel, editTitle, finishEdit, onAppendLog, locale])
+    clearMarkedViaReducer()
+    closeEdit()
+    submitLine(line)
+  }, [
+    clearMarkedViaReducer,
+    closeEdit,
+    editPanel,
+    editTitle,
+    locale,
+    onAppendLog,
+    submitLine
+  ])
 
   const runGroupMenuAction = useCallback(
     async (actionId: ReturnType<typeof groupEditMenuActionAtPickIndex>) => {
@@ -220,19 +233,30 @@ export function useTabPickerEdit(p: TabPickerEditParams) {
         })
         return
       }
-      try {
-        if (actionId === "ungroup") {
-          await ungroupTabGroup(editPanel.groupId)
-        } else if (actionId === "deleteGroup") {
-          await removeTabGroup(editPanel.groupId)
-        }
-      } catch {
+      const line =
+        actionId === "ungroup"
+          ? buildGroupUngroupCommandLine(editPanel.groupId)
+          : actionId === "deleteGroup"
+            ? buildCloseGroupCommandLine(editPanel.groupId)
+            : null
+      if (line === null) {
         void onAppendLog?.([tTabs("tabs.picker.error.groupActionFailed", locale)])
         return
       }
-      await finishEdit()
+      clearMarkedViaReducer()
+      closeEdit()
+      submitLine(line)
     },
-    [editPanel, finishEdit, onAppendLog, setEditPanel, setEditTitle, locale]
+    [
+      clearMarkedViaReducer,
+      closeEdit,
+      editPanel,
+      locale,
+      onAppendLog,
+      setEditPanel,
+      setEditTitle,
+      submitLine
+    ]
   )
 
   const confirmGroupMenuPick = useCallback(async () => {

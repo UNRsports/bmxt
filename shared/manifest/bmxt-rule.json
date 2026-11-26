@@ -43,7 +43,21 @@
       "domain": "history",
       "description": "History visit entry",
       "coreKeys": ["url", "pageTitle"],
-      "optionalKeys": ["lastVisitTime", "visitCount"]
+      "optionalKeys": ["lastVisitTime", "visitCount", "dayKey", "monthKey"]
+    },
+    {
+      "id": "history.month",
+      "domain": "history",
+      "description": "History month container (list/picker only; not a pipe leaf)",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["monthKey", "url"]
+    },
+    {
+      "id": "history.day",
+      "domain": "history",
+      "description": "History day container (list/picker only; not a pipe leaf)",
+      "coreKeys": ["pageTitle"],
+      "optionalKeys": ["dayKey", "monthKey", "url"]
     },
     {
       "id": "markdown.file",

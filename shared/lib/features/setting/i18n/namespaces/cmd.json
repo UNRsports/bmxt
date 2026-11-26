@@ -24,8 +24,8 @@
     "en": "error: invalid reload argument (active tab: `reload`; multiple: `tab -list | reload`)"
   },
   "cmd.close.usage": {
-    "ja": "usage: close  — 操作先タブを閉じる（y/n）。複数タブは `tab -list | close`。明示 ID は `close <tabId>`",
-    "en": "usage: close  — close the target tab (y/n). For multiple tabs: `tab -list | close`. Explicit id: `close <tabId>`"
+    "ja": "usage: close | close <tabId> | close --window <id…> | close --group <id>  — 操作先タブを閉じる（y/n）。複数タブは `tab -list | close`",
+    "en": "usage: close | close <tabId> | close --window <id…> | close --group <id>  — close target tab (y/n). Multiple: `tab -list | close`"
   },
   "cmd.common.availableOptions": {
     "ja": "{command}: 利用可能なオプション",
@@ -104,28 +104,28 @@
     "en": "Interactive: in BMXt type  group new  and Enter (no tab ids)."
   },
   "cmd.group.usage.line": {
-    "ja": "usage: group new | group new <tabId>… | group add <groupId> <tabId>…",
-    "en": "usage: group new | group new <tabId>… | group add <groupId> <tabId>…"
+    "ja": "usage: group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>",
+    "en": "usage: group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>"
   },
   "cmd.group.usage.nonInteractive": {
-    "ja": "Non-interactive: group new <tabId>… | group add <groupId> <tabId>…",
-    "en": "Non-interactive: group new <tabId>… | group add <groupId> <tabId>…"
+    "ja": "Non-interactive: group new <tabId>… [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>",
+    "en": "Non-interactive: group new <tabId>… [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>"
   },
   "cmd.move.usage.line1": {
-    "ja": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]",
-    "en": "usage: move --window <windowId> [tabId…] | move --group <groupId> --window <windowId> [tabId…]"
+    "ja": "usage: move --window <windowId> [--before-tab <tabId>] [tabId…] | move --group <groupId> --window <windowId> [--before-tab <tabId>] [tabId…]",
+    "en": "usage: move --window <windowId> [--before-tab <tabId>] [tabId…] | move --group <groupId> --window <windowId> [--before-tab <tabId>] [tabId…]"
   },
   "cmd.move.usage.line2": {
-    "ja": "  または move --ungroup --window <windowId> [tabId…] · `#t:… | move --window …`",
-    "en": "  Or move --ungroup --window <windowId> [tabId…] · `#t:… | move --window …`"
+    "ja": "  または move --ungroup --window <windowId> [tabId…] · `#t:… | move --window … [--before-tab …]`",
+    "en": "  Or move --ungroup --window <windowId> [tabId…] · `#t:… | move --window … [--before-tab …]`"
   },
   "cmd.move.usage.line3": {
-    "ja": "  例: move --window 1 12 34 · #t:12 #t:34 | move --group 5 --window 1",
-    "en": "  Examples: move --window 1 12 34 · #t:12 #t:34 | move --group 5 --window 1"
+    "ja": "  例: move --window 1 --before-tab 50 12 34 · #t:12 #t:34 | move --group 5 --window 1",
+    "en": "  Examples: move --window 1 --before-tab 50 12 34 · #t:12 #t:34 | move --group 5 --window 1"
   },
   "cmd.move.usage.line4": {
-    "ja": "  パイプ右辺は page.open のタブ ID をまとめて移動します。",
-    "en": "  As a pipe consumer, moves every page.open tab id from stdin."
+    "ja": "  パイプ右辺は page.open のタブ ID をまとめて移動します。`--before-tab` はそのタブの直前へ挿入します。",
+    "en": "  As a pipe consumer, moves every page.open tab id from stdin. `--before-tab` inserts immediately before that tab."
   },
   "cmd.newWindow.usage.line1": {
     "ja": "usage: new-window <tabId> [tabId…] | … | new-window",
@@ -448,20 +448,68 @@
     "en": "       setting -list | browse     — open settings picker column"
   },
   "cmd.setting.usage.line3": {
-    "ja": "       setting -set <key> <value> — 下書きへ反映（locale / edit-picker / …）",
-    "en": "       setting -set <key> <value> — apply to draft (locale / edit-picker / …)"
+    "ja": "       setting -set <key> <value> — 即保存（locale / fg / size / prompt-fire / …）",
+    "en": "       setting -set <key> <value> — save immediately (locale / fg / size / prompt-fire / …)"
   },
   "cmd.setting.usage.line4": {
-    "ja": "       setting -save | setting -cancel — 下書きを保存 / 破棄して列を閉じる",
-    "en": "       setting -save | setting -cancel — save / discard draft and close column"
+    "ja": "       setting -export | setting -import — 設定 zip の書き出し／読み込み",
+    "en": "       setting -export | setting -import — export / import settings zip"
   },
   "cmd.setting.usage.line5": {
-    "ja": "       setting -exit -list — この BMXt ペインの設定ピッカーを閉じる",
-    "en": "       setting -exit -list — close settings picker in this BMXt pane"
+    "ja": "       setting -bg-import [--picker] | setting -reset-default — 背景画像／外観既定へ戻す",
+    "en": "       setting -bg-import [--picker] | setting -reset-default — background image / restore appearance defaults"
+  },
+  "cmd.setting.usage.line6": {
+    "ja": "       setting -storage internal|external | -pick-dir | -reload — UI 設定の保存先",
+    "en": "       setting -storage internal|external | -pick-dir | -reload — UI settings storage"
+  },
+  "cmd.setting.usage.line7": {
+    "ja": "       setting -snapshot-storage bundled|vault | -snapshot-pick-dir | -sync-guide",
+    "en": "       setting -snapshot-storage bundled|vault | -snapshot-pick-dir | -sync-guide"
+  },
+  "cmd.setting.usage.line8": {
+    "ja": "       setting -save | -cancel | -exit -list — 設定列を閉じる",
+    "en": "       setting -save | -cancel | -exit -list — close settings column"
   },
   "cmd.setting.error.setUsage": {
     "ja": "error: usage: setting -set <key> <value>",
     "en": "error: usage: setting -set <key> <value>"
+  },
+  "cmd.setting.error.extraArgs": {
+    "ja": "error: setting {option} に余分な引数があります",
+    "en": "error: setting {option} takes no extra arguments"
+  },
+  "cmd.setting.error.bgImportUsage": {
+    "ja": "error: usage: setting -bg-import [--picker]",
+    "en": "error: usage: setting -bg-import [--picker]"
+  },
+  "cmd.setting.error.storageUsage": {
+    "ja": "error: usage: setting -storage internal|external",
+    "en": "error: usage: setting -storage internal|external"
+  },
+  "cmd.setting.error.snapshotStorageUsage": {
+    "ja": "error: usage: setting -snapshot-storage bundled|vault",
+    "en": "error: usage: setting -snapshot-storage bundled|vault"
+  },
+  "cmd.setting.cui.exportDone": {
+    "ja": "setting: exported {filename}",
+    "en": "setting: exported {filename}"
+  },
+  "cmd.setting.cui.importDone": {
+    "ja": "setting: import complete",
+    "en": "setting: import complete"
+  },
+  "cmd.setting.cui.importCancelled": {
+    "ja": "setting: import cancelled",
+    "en": "setting: import cancelled"
+  },
+  "cmd.setting.cui.resetDone": {
+    "ja": "setting: appearance restored to defaults",
+    "en": "setting: appearance restored to defaults"
+  },
+  "cmd.sync.error.setnameUsage": {
+    "ja": "error: usage: sync -setname <name>",
+    "en": "error: usage: sync -setname <name>"
   },
   "cmd.snapshot.error.internal": {
     "ja": "error: 不明な snapshot オプション (internal): {option}",
@@ -686,6 +734,10 @@
   "cmd.sync.usage.line3b": {
     "ja": "  sync -connect <deviceId> — 名簿メンバーへ再握手（役割自動・ウィザード）",
     "en": "  sync -connect <deviceId> — reconnect to a roster member (auto role · wizard)"
+  },
+  "cmd.sync.usage.line3c": {
+    "ja": "  sync -setname <name> — Family 表示名を設定",
+    "en": "  sync -setname <name> — set Family display name"
   },
   "cmd.sync.usage.line4": {
     "ja": "  sync -offer — WebRTC オファーコードを作成（相手に渡す）",
@@ -1204,24 +1256,28 @@
     "en": "offline · quit"
   },
   "cmd.cli.setting.browseUnsupported": {
-    "ja": "error: CLI では `setting -list | browse` は未対応です。`setting -set` / `setting -save` を使うか、拡張の BMXt 窓で設定してください。",
-    "en": "error: `setting -list | browse` is not supported on CLI. Use `setting -set` / `setting -save`, or change settings in the BMXt browser window."
+    "ja": "error: CLI では `setting -list | browse` は未対応です。`setting -set` を使うか、拡張の BMXt 窓で設定してください。",
+    "en": "error: `setting -list | browse` is not supported on CLI. Use `setting -set`, or change settings in the BMXt browser window."
   },
   "cmd.cli.setting.useSetSave": {
-    "ja": "変更: setting -set <key> <value> → setting -save（破棄: setting -cancel）",
-    "en": "Change: setting -set <key> <value> → setting -save (discard: setting -cancel)"
+    "ja": "変更: setting -set <key> <value>（即保存）",
+    "en": "Change: setting -set <key> <value> (saves immediately)"
   },
   "cmd.cli.setting.noDraft": {
     "ja": "error: 保存する下書きがありません。先に `setting -set <key> <value>` を実行してください。",
     "en": "error: no draft to save. Run `setting -set <key> <value>` first."
   },
+  "cmd.cli.search.pickerCapped": {
+    "ja": "warn: ピッカーは先頭 {shown} 件のみ表示（取得 {total} 件）。絞り込みは `history -list <pattern> --peers` を使用",
+    "en": "warn: picker shows first {shown} of {total} hits — narrow with `history -list <pattern> --peers`"
+  },
   "cmd.cli.error.listLimited": {
-    "ja": "error: CLI の一覧 `{listId}` は tabs / setting のみ対応です",
-    "en": "error: list `{listId}` on CLI is limited to tabs / setting for now"
+    "ja": "error: CLI の一覧 `{listId}` は tabs / setting / bookmark / history のみ対応です",
+    "en": "error: list `{listId}` on CLI is limited to tabs / setting / bookmark / history for now"
   },
   "cmd.cli.error.pickerLimited": {
-    "ja": "error: CLI のピッカー `{listId}` は tabs のみ対応です",
-    "en": "error: picker `{listId}` on CLI is limited to tabs for now"
+    "ja": "error: CLI のピッカー `{listId}` は tabs / bookmark / history のみ対応です",
+    "en": "error: picker `{listId}` on CLI is limited to tabs / bookmark / history for now"
   },
   "cmd.cli.error.uiUnsupported": {
     "ja": "error: CLI 未対応の UI アクション: {kind}",
@@ -1238,6 +1294,54 @@
   "cmd.cli.picker.refreshed": {
     "ja": "一覧を更新しました · ↑↓ 移動 · / 絞り込み · Enter · q/Esc",
     "en": "list refreshed · ↑↓ move · / filter · Enter · q/Esc"
+  },
+  "cmd.cli.picker.oneshotHelp": {
+    "ja": "↑↓ 移動 · / 絞り込み · Enter で決定 · q/Esc でキャンセル",
+    "en": "↑↓ move · / filter · Enter confirm · q/Esc cancel"
+  },
+  "cmd.cli.picker.cancelled": {
+    "ja": "選択をキャンセルしました。",
+    "en": "Selection cancelled."
+  },
+  "cmd.cli.picker.peerTitle": {
+    "ja": "BMXt peer 選択",
+    "en": "BMXt peer picker"
+  },
+  "cmd.cli.picker.tabOneshotTitle": {
+    "ja": "BMXt タブ選択",
+    "en": "BMXt tab picker"
+  },
+  "cmd.cli.picker.tabNotSelectable": {
+    "ja": "タブ行を選んでください（Window/Group は選べません）",
+    "en": "Select a tab row (window/group rows are not selectable)"
+  },
+  "cmd.cli.urlPicker.help": {
+    "ja": "↑↓ 移動 · Space URLマーク · Enter で送信先へ · / 絞り込み · q/Esc 閉じる",
+    "en": "↑↓ move · Space mark URLs · Enter → destinations · / filter · q/Esc close"
+  },
+  "cmd.cli.urlPicker.marked": {
+    "ja": "URL マーク {count} 件 · Enter で送信先へ · Space で解除",
+    "en": "URL marked {count} · Enter → destinations · Space unmark"
+  },
+  "cmd.cli.urlPicker.noneSelected": {
+    "ja": "行を選ぶか Space でマークしてください",
+    "en": "highlight a row or Space-mark items first"
+  },
+  "cmd.cli.urlPicker.pickPeer": {
+    "ja": "{count} URL の送信先 · Tab でピア選択 · Enter で開く · Esc 戻る",
+    "en": "{count} URL(s) · Tab mark peers · Enter open · Esc back"
+  },
+  "cmd.cli.urlPicker.peersMarked": {
+    "ja": "送信先ピア {count} 台 · Tab で追加/解除 · Enter で開く",
+    "en": "{count} destination peer(s) · Tab toggle · Enter open"
+  },
+  "cmd.cli.urlPicker.noPeerSelected": {
+    "ja": "送信先ピアを Tab で選ぶか、ハイライトして Enter",
+    "en": "Tab-mark destination peers, or Enter on the highlighted peer"
+  },
+  "cmd.cli.urlPicker.opened": {
+    "ja": "{count} 件を {peer} で開きました · 続けて操作可 · q/Esc 閉じる",
+    "en": "opened {count} on {peer} · keep browsing · q/Esc close"
   },
   "cmd.cli.handshake.familyReady": {
     "ja": "Family 準備完了。",
@@ -1314,6 +1418,86 @@
   "cmd.cli.exec.handshakeForbidden": {
     "ja": "非対話 exec では握手・配送の対話（ask / zenity）は禁止です。事前に `setting` / REPL で済ませてください。",
     "en": "Interactive handshake / delivery (ask / zenity) is forbidden in non-interactive exec. Configure via `setting` / REPL first."
+  },
+  "cmd.cli.device.needIdOrBrowse": {
+    "ja": "`--device` には <id> が必要です。ワンショットは `--device <id>`、対話選択は `--device | browse` を使ってください。",
+    "en": "`--device` needs an <id>. For oneshot use `--device <id>`; for interactive pick use `--device | browse`."
+  },
+  "cmd.cli.device.noPeers": {
+    "ja": "接続中のピアがありません。先にブラウザを Family 接続してください。",
+    "en": "No connected peers. Connect a browser to the Family first."
+  },
+  "cmd.cli.device.autoSelected": {
+    "ja": "取得元ピア: {peer}（1台のため自動選択）",
+    "en": "Source peer: {peer} (auto-selected; only one connected)"
+  },
+  "cmd.cli.device.pickPrompt": {
+    "ja": "取得元ピアを番号で選んでください:",
+    "en": "Pick source peer by number:"
+  },
+  "cmd.cli.device.pickNumber": {
+    "ja": "番号 [1-{max}]: ",
+    "en": "Number [1-{max}]: "
+  },
+  "cmd.cli.device.invalidNumber": {
+    "ja": "無効な番号です。一覧の番号を入力してください。",
+    "en": "Invalid number. Enter a number from the list."
+  },
+  "cmd.cli.dom.needDeviceTabOrWizard": {
+    "ja": "`dom -list` には `--device <id> --tab <tabId>` が必要です。対話は `dom -wizard` を使ってください。",
+    "en": "`dom -list` needs `--device <id> --tab <tabId>`. For interactive pick use `dom -wizard`."
+  },
+  "cmd.cli.dom.noTabs": {
+    "ja": "そのピアにタブがありません。",
+    "en": "No tabs on that peer."
+  },
+  "cmd.cli.dom.pickTab": {
+    "ja": "タブを番号で選んでください:",
+    "en": "Pick a tab by number:"
+  },
+  "cmd.cli.dom.pickScope": {
+    "ja": "取得範囲を選んでください:",
+    "en": "Pick capture scope:"
+  },
+  "cmd.cli.dom.scopeDocument": {
+    "ja": "ページ全体 (document) — 推奨",
+    "en": "full page (document) — recommended"
+  },
+  "cmd.cli.dom.scopeViewport": {
+    "ja": "画面内のみ (viewport) — 空になりやすい",
+    "en": "viewport only — often empty"
+  },
+  "cmd.cli.dom.pickFlavor": {
+    "ja": "形式を選んでください:",
+    "en": "Pick format:"
+  },
+  "cmd.cli.dom.planSummary": {
+    "ja": "取得: scope={scope} · flavor={flavor} · tab={tabId}",
+    "en": "capture: scope={scope} · flavor={flavor} · tab={tabId}"
+  },
+  "cmd.cli.dom.viewportEmptyHint": {
+    "ja": "ヒント: ビューポート内に列挙要素がありませんでした。`dom -wizard` はページ全体 (document) を使います。画面内だけが必要なら `dom -list --device <id> --tab <n> --viewport` を使ってください。",
+    "en": "Hint: no viewport elements were listed. `dom -wizard` uses full page (document). For viewport-only use `dom -list --device <id> --tab <n> --viewport`."
+  },
+  "cmd.cli.nav.pickTab": {
+    "ja": "nav 対象タブを番号で選んでください:",
+    "en": "Pick nav target tab by number:"
+  },
+  "cmd.cli.nav.sessionHelp": {
+    "ja": "nav セッション中 · ↑↓←→ で移動（24px）· Alt+矢印で大きく移動 · Enter で click · q / Esc で終了（Shift+矢印は端末スクロールになるため使わない / ブラウザへフォーカスしません）",
+    "en": "nav session · ↑↓←→ move (24px) · Alt+arrows jump farther · Enter click · q / Esc end (avoid Shift+arrows — terminal scrollback; does not focus the browser)"
+  },
+  "cmd.cli.nav.sessionEnded": {
+    "ja": "nav セッションを終了しました。",
+    "en": "nav session ended."
+  },
+  "cmd.cli.nav.disarmNoop": {
+    "ja": "nav -exit: CLI 側セッションは既に終了しています（必要なら peer で overlay を閉じてください）。",
+    "en": "nav -exit: no CLI session to end (close overlay on the peer if needed)."
+  },
+  "cmd.cli.nav.windowCloseHint": {
+    "ja": "`nav -windowclose` は CLI では未対応です。`tab -list --device <id> | browse` から閉じるか `close --window <id>` を使ってください。",
+    "en": "`nav -windowclose` is not supported on CLI. Close via `tab -list --device <id> | browse` or `close --window <id>`."
   },
   "cmd.sync.open.notConnected": {
     "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",
@@ -1614,5 +1798,45 @@
   "cmd.history.usage.line4": {
     "ja": "  履歴 DB への書き戻しは不可。restore は一覧読み込みまたは BM 化。",
     "en": "  History DB rewrite is unsupported; restore loads a list or creates bookmarks."
+  },
+  "cmd.cli.setting.useSet": {
+    "ja": "変更: setting -set <key> <value>（即保存）",
+    "en": "Change: setting -set <key> <value> (saves immediately)"
+  },
+  "cmd.aboutbmxt.usage": {
+    "ja": "usage: aboutbmxt | aboutbmxt -system",
+    "en": "usage: aboutbmxt | aboutbmxt -system"
+  },
+  "cmd.sync.list.peerFailedFooterIntro": {
+    "ja": "反応しなかったブラウザ:",
+    "en": "Browsers that did not respond:"
+  },
+  "cmd.sync.list.peerFailedFooterItem": {
+    "ja": "  - {deviceId} ({detail})",
+    "en": "  - {deviceId} ({detail})"
+  },
+  "cmd.tabs.usage.line7": {
+    "ja": "        tab -activate <tabId> [--device <id>] [--focus] — 指定タブをアクティブにする（--focus でウィンドウ前面）",
+    "en": "        tab -activate <tabId> [--device <id>] [--focus] — activate tab (--focus brings the window forward)"
+  },
+  "cmd.tabs.error.activateUsage": {
+    "ja": "usage: tab -activate <tabId> [--device <id>] [--focus]",
+    "en": "usage: tab -activate <tabId> [--device <id>] [--focus]"
+  },
+  "cmd.cli.tabs.focusConfirm": {
+    "ja": "Enter でブラウザウィンドウへフォーカスしますか？ [y/N]: ",
+    "en": "Focus the browser window on Enter? [y/N]: "
+  },
+  "cmd.cli.tabs.activateNeedDevice": {
+    "ja": "`tab -activate` には CLI では `--device <id>` が必要です。",
+    "en": "`tab -activate` on CLI requires `--device <id>`."
+  },
+  "cmd.cli.tabs.activateOk": {
+    "ja": "activated tab {tabId} on {device}",
+    "en": "activated tab {tabId} on {device}"
+  },
+  "cmd.window.usage.line": {
+    "ja": "usage: window rename <windowId> <name>",
+    "en": "usage: window rename <windowId> <name>"
   }
 }

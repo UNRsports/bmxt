@@ -51,7 +51,9 @@ const PANE_FOCUS_VALUES = new Set<PaneFocusTarget>([
   "tabs",
   "search",
   "dom",
-  "setting"
+  "setting",
+  "bookmark",
+  "history"
 ])
 
 function isPaneFocusTarget(v: unknown): v is PaneFocusTarget {
@@ -96,7 +98,9 @@ function resolveRestoredDetailBarId(
     paneFocus === "tabs" ||
     paneFocus === "search" ||
     paneFocus === "dom" ||
-    paneFocus === "setting"
+    paneFocus === "setting" ||
+    paneFocus === "bookmark" ||
+    paneFocus === "history"
   ) {
     return pickerSlotToDetailBar(paneFocus)
   }
@@ -363,7 +367,9 @@ export async function rebuildSessionPickersFromStorage(
       tabs: null,
       search: null,
       dom: null,
-      setting: null
+      setting: null,
+      bookmark: null,
+      history: null
     }
 
     if (leaf.pickers.tabs) {

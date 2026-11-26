@@ -170,6 +170,9 @@ export type SyncRemoteSearchHit = {
   hitCount: number
   pattern: string
   windowId: number | null
+  /** EN: Present when source is bookmark (peer remove/move). */
+  bookmarkId?: string | null
+  parentId?: string | null
 }
 
 /** EN: Why a Family tabs_changed signal was emitted (refresh hint only). */
@@ -328,6 +331,94 @@ export type SyncBusCommand =
       created: number
     }
   | {
+      /**
+       * EN: Peer-local bookmark mutations (create / folder / remove / move).
+       * JA: ピア上のブックマーク操作（作成／フォルダ／削除／移動）。
+       */
+      type: "bookmarks_ops"
+      id: string
+      from: SyncDeviceId
+      op: SyncBookmarksOp
+    }
+  | {
+      type: "bookmarks_ops_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+    }
+  | {
+      /** EN: Ask peer to run browser capability probe (`aboutbmxt -system`). */
+      type: "probe_capabilities"
+      id: string
+      from: SyncDeviceId
+      /** EN: Locale hint (`en` / `ja`). */
+      locale: string
+    }
+  | {
+      type: "probe_capabilities_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      lines: string[]
+    }
+  | {
+      /** EN: Capture DOM lines for a peer tab (CLI oneshot / wizard). */
+      type: "dom_list"
+      id: string
+      from: SyncDeviceId
+      tabId: number
+      /** EN: `document` | `viewport` */
+      scope: string
+      /** EN: `--html` | `--react` */
+      flavor: string
+      showTag: boolean
+      pattern: string
+    }
+  | {
+      type: "dom_list_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      lines: string[]
+    }
+  | {
+      /**
+       * EN: Ordered DOM line fragment (eof closes the stream for replyTo).
+       * JA: 順序付き DOM 行断片（eof で replyTo のストリーム終了）。
+       */
+      type: "dom_list_chunk"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      seq: number
+      eof: boolean
+      lines: string[]
+    }
+  | {
+      /** EN: Drive peer nav overlay (CLI key loop / arm / disarm). */
+      type: "nav_control"
+      id: string
+      from: SyncDeviceId
+      tabId: number
+      op: SyncNavControlOp
+    }
+  | {
+      type: "nav_control_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+    }
+  | {
       /** EN: Announce other live DataChannel peers so the receiver can mesh. */
       type: "mesh_peers"
       id: string
@@ -354,6 +445,30 @@ export type SyncBusCommand =
       ice: string[]
     }
 
+/** EN: Peer-local bookmark mutations requested over the command bus. */
+export type SyncBookmarksOp =
+  | {
+      kind: "create"
+      url: string
+      title: string
+      parentId: string | null
+    }
+  | {
+      kind: "create_folder"
+      title: string
+      parentId: string | null
+    }
+  | {
+      kind: "remove"
+      bookmarkIds: string[]
+    }
+  | {
+      kind: "move"
+      bookmarkIds: string[]
+      parentId: string
+      index: number | null
+    }
+
 /** EN: Peer-local tab mutations requested over the command bus. */
 export type SyncTabsOp =
   | {
@@ -372,6 +487,8 @@ export type SyncTabsOp =
       kind: "activate"
       tabId: number
       windowId: number
+      /** EN: When true, also focus the browser window (OS foreground). Default true if omitted (wire compat). */
+      focusWindow?: boolean
     }
   | {
       kind: "close_tabs"
@@ -389,6 +506,25 @@ export type SyncTabsOp =
       kind: "focus_window"
       windowId: number
     }
+
+/** EN: Peer nav overlay control ops (CLI remote drive). */
+export type SyncNavControlOp =
+  | { kind: "start"; useCenter: boolean }
+  | { kind: "stop" }
+  | { kind: "move"; dx: number; dy: number; freeMove: boolean }
+  | { kind: "click" }
+  | {
+      kind: "key"
+      key: string
+      code: string
+      ctrlKey: boolean
+      shiftKey: boolean
+      altKey: boolean
+      metaKey: boolean
+    }
+  | { kind: "jump_query"; query: string; preview: boolean }
+  | { kind: "apply_typing"; text: string }
+  | { kind: "clear_typing" }
 
 export type SyncInviteV1 = {
   version: 1

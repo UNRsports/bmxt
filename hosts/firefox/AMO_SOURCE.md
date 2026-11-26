@@ -47,6 +47,17 @@ pnpm run package:firefox
 
 Load unpacked in Firefox: `about:debugging` → This Firefox → Load Temporary Add-on → select `.output/firefox-mv3/manifest.json`.
 
+### Temporary Reload and https host permissions
+
+Firefox MV3 treats `host_permissions` as Origin Controls (optional). A clean temporary load grants https hosts on **ADDON_INSTALL**; clicking **Reload** after a rebuild often drops that grant, so `scripting + https host` looks **NG** until hosts are restored.
+
+BMXt’s Firefox host adapter sets:
+
+- `granted_host_permissions: true` — auto-grant on temporary install (AMO permanent installs force this off at parse time)
+- `optional_host_permissions` — same https / localhost origins so `permissions.request` can run after Reload
+
+After Reload, open BMXt with the toolbar button or **Alt+Shift+C** (user gesture), or run **`aboutbmxt -system`**, so the extension can re-request https host access.
+
 ## Extension id
 
 `browser_specific_settings.gecko.id` is fixed as **`bmxt@unrsports`** (see `hosts/manifest-base.ts`). Confirm before AMO listing if a different id is required.

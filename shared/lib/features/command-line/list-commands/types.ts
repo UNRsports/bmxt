@@ -4,7 +4,14 @@ import type { UiLocale } from "../../setting/locale.ts"
 import type { ListResult } from "../list-output/types.ts"
 
 /** EN: Built-in `-list` command identifiers (POSIX list producer registry). */
-export type ListCommandId = "tabs" | "dom" | "search" | "session" | "setting"
+export type ListCommandId =
+  | "tabs"
+  | "dom"
+  | "search"
+  | "session"
+  | "setting"
+  | "bookmark"
+  | "history"
 
 /** EN: Where plain `-list` data is resolved (`service_worker` vs BMXt UI state). */
 export type ListCommandRuntime = "service_worker" | "ui"

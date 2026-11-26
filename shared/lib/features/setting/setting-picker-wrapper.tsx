@@ -68,6 +68,7 @@ export function SettingPickerWrapper({
         snapshotStorageConfig,
         draft.hostUiMode,
         draft.imeCandidateHelp,
+        draft.promptFire,
         draft.searchLegendMode,
         syncSummary
       ),
@@ -79,6 +80,7 @@ export function SettingPickerWrapper({
       snapshotStorageConfig,
       draft.hostUiMode,
       draft.imeCandidateHelp,
+      draft.promptFire,
       draft.searchLegendMode,
       syncSummary
     ]

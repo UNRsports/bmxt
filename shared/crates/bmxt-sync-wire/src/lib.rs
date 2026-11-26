@@ -130,6 +130,113 @@ pub enum SyncBusCommand {
         #[serde(default = "default_first_tab")]
         first: String,
     },
+    #[serde(rename = "bookmarks_import")]
+    BookmarksImport {
+        id: String,
+        from: String,
+        #[serde(rename = "parentId")]
+        parent_id: Option<String>,
+        items: Vec<BookmarkImportItem>,
+    },
+    #[serde(rename = "bookmarks_import_result")]
+    BookmarksImportResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+        created: u32,
+    },
+    #[serde(rename = "bookmarks_ops")]
+    BookmarksOps {
+        id: String,
+        from: String,
+        op: SyncBookmarksOp,
+    },
+    #[serde(rename = "bookmarks_ops_result")]
+    BookmarksOpsResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+    },
+    /** EN: Ask peer to run browser capability probe (aboutbmxt -system). */
+    #[serde(rename = "probe_capabilities")]
+    ProbeCapabilities {
+        id: String,
+        from: String,
+        /** EN: Locale hint (`en` / `ja`); peer may ignore. */
+        locale: String,
+    },
+    #[serde(rename = "probe_capabilities_result")]
+    ProbeCapabilitiesResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+        lines: Vec<String>,
+    },
+    /** EN: Capture DOM lines for a peer tab (CLI oneshot / wizard). */
+    #[serde(rename = "dom_list")]
+    DomList {
+        id: String,
+        from: String,
+        #[serde(rename = "tabId")]
+        tab_id: i64,
+        /** EN: `document` | `viewport` */
+        scope: String,
+        /** EN: `--html` | `--react` */
+        flavor: String,
+        #[serde(rename = "showTag")]
+        show_tag: bool,
+        pattern: String,
+    },
+    #[serde(rename = "dom_list_result")]
+    DomListResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+        lines: Vec<String>,
+    },
+    /** EN: Ordered DOM line fragment (eof closes the stream for replyTo). */
+    #[serde(rename = "dom_list_chunk")]
+    DomListChunk {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+        seq: u32,
+        eof: bool,
+        lines: Vec<String>,
+    },
+    /** EN: Drive peer nav overlay (CLI key loop / arm / disarm). */
+    #[serde(rename = "nav_control")]
+    NavControl {
+        id: String,
+        from: String,
+        #[serde(rename = "tabId")]
+        tab_id: i64,
+        op: SyncNavControlOp,
+    },
+    #[serde(rename = "nav_control_result")]
+    NavControlResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+    },
     #[serde(rename = "mesh_peers")]
     MeshPeers {
         id: String,
@@ -158,6 +265,10 @@ pub enum SyncBusCommand {
 
 fn default_first_tab() -> String {
     "tab".to_string()
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -206,6 +317,11 @@ pub struct SyncRemoteSearchHit {
     pub hit_count: i64,
     pub pattern: String,
     pub window_id: Option<i64>,
+    /** EN: Present when source is bookmark (peer remove/move). */
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bookmark_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -248,6 +364,9 @@ pub enum SyncTabsOp {
         tab_id: i64,
         #[serde(rename = "windowId")]
         window_id: i64,
+        /// EN: Focus OS window. Omitted/default true keeps legacy senders focusing.
+        #[serde(rename = "focusWindow", default = "default_true")]
+        focus_window: bool,
     },
     #[serde(rename = "close_tabs")]
     CloseTabs {
@@ -269,6 +388,97 @@ pub enum SyncTabsOp {
         #[serde(rename = "windowId")]
         window_id: i64,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BookmarkImportItem {
+    pub url: String,
+    pub title: String,
+}
+
+/**
+ * EN: Peer-local bookmark mutations (mirrors tabs_ops for bookmarks).
+ * JA: ピア上のブックマーク操作（tabs_ops の bookmark 版）。
+ */
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SyncBookmarksOp {
+    #[serde(rename = "create")]
+    Create {
+        url: String,
+        title: String,
+        #[serde(rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "create_folder")]
+    CreateFolder {
+        title: String,
+        #[serde(rename = "parentId")]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "remove")]
+    Remove {
+        #[serde(rename = "bookmarkIds")]
+        bookmark_ids: Vec<String>,
+    },
+    #[serde(rename = "move")]
+    Move {
+        #[serde(rename = "bookmarkIds")]
+        bookmark_ids: Vec<String>,
+        #[serde(rename = "parentId")]
+        parent_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        index: Option<i64>,
+    },
+}
+
+/**
+ * EN: Peer nav overlay control ops (mirrors nav-tab-bridge / run-nav-inject).
+ * JA: ピア nav overlay 制御（nav-tab-bridge / run-nav-inject 相当）。
+ */
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SyncNavControlOp {
+    #[serde(rename = "start")]
+    Start {
+        #[serde(rename = "useCenter", default)]
+        use_center: bool,
+    },
+    #[serde(rename = "stop")]
+    Stop,
+    #[serde(rename = "move")]
+    Move {
+        dx: i64,
+        dy: i64,
+        #[serde(rename = "freeMove", default)]
+        free_move: bool,
+    },
+    #[serde(rename = "click")]
+    Click,
+    #[serde(rename = "key")]
+    Key {
+        key: String,
+        code: String,
+        #[serde(rename = "ctrlKey", default)]
+        ctrl_key: bool,
+        #[serde(rename = "shiftKey", default)]
+        shift_key: bool,
+        #[serde(rename = "altKey", default)]
+        alt_key: bool,
+        #[serde(rename = "metaKey", default)]
+        meta_key: bool,
+    },
+    #[serde(rename = "jump_query")]
+    JumpQuery {
+        query: String,
+        #[serde(default)]
+        preview: bool,
+    },
+    #[serde(rename = "apply_typing")]
+    ApplyTyping { text: String },
+    #[serde(rename = "clear_typing")]
+    ClearTyping,
 }
 
 impl SyncBusCommand {
@@ -308,6 +518,17 @@ impl SyncBusCommand {
             | SyncBusCommand::TabsOps { id, from, .. }
             | SyncBusCommand::TabsOpsResult { id, from, .. }
             | SyncBusCommand::TabsChanged { id, from, .. }
+            | SyncBusCommand::BookmarksImport { id, from, .. }
+            | SyncBusCommand::BookmarksImportResult { id, from, .. }
+            | SyncBusCommand::BookmarksOps { id, from, .. }
+            | SyncBusCommand::BookmarksOpsResult { id, from, .. }
+            | SyncBusCommand::ProbeCapabilities { id, from, .. }
+            | SyncBusCommand::ProbeCapabilitiesResult { id, from, .. }
+            | SyncBusCommand::DomList { id, from, .. }
+            | SyncBusCommand::DomListResult { id, from, .. }
+            | SyncBusCommand::DomListChunk { id, from, .. }
+            | SyncBusCommand::NavControl { id, from, .. }
+            | SyncBusCommand::NavControlResult { id, from, .. }
             | SyncBusCommand::MeshPeers { id, from, .. }
             | SyncBusCommand::MeshSignal { id, from, .. } => {
                 if id.is_empty() || from.is_empty() {
@@ -332,6 +553,17 @@ impl SyncBusCommand {
             | SyncBusCommand::TabsOps { id, .. }
             | SyncBusCommand::TabsOpsResult { id, .. }
             | SyncBusCommand::TabsChanged { id, .. }
+            | SyncBusCommand::BookmarksImport { id, .. }
+            | SyncBusCommand::BookmarksImportResult { id, .. }
+            | SyncBusCommand::BookmarksOps { id, .. }
+            | SyncBusCommand::BookmarksOpsResult { id, .. }
+            | SyncBusCommand::ProbeCapabilities { id, .. }
+            | SyncBusCommand::ProbeCapabilitiesResult { id, .. }
+            | SyncBusCommand::DomList { id, .. }
+            | SyncBusCommand::DomListResult { id, .. }
+            | SyncBusCommand::DomListChunk { id, .. }
+            | SyncBusCommand::NavControl { id, .. }
+            | SyncBusCommand::NavControlResult { id, .. }
             | SyncBusCommand::MeshPeers { id, .. }
             | SyncBusCommand::MeshSignal { id, .. } => id,
         }

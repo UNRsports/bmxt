@@ -11,7 +11,7 @@ import type { CommandBusyProgress, CommandBusyToken } from "../command-busy"
 export type CommandDispatchDeps = {
   sessionId: string
   sessionOrderLength: number
-  /** EN: Which UI document is running the command (`exit` closes popup vs hides float). */
+  /** EN: Which UI document is running the command (`exit` policy). */
   hostKind: BmxtHostKind
   applyRunCmdPatches: (patches: readonly SessionPatch[]) => void
   mode: "normal" | "isearch"
@@ -36,14 +36,14 @@ export type CommandDispatchDeps = {
   searchListPickerRef: React.MutableRefObject<any>
   domListPickerRef: React.MutableRefObject<any>
   settingListPickerRef: React.MutableRefObject<any>
+  bookmarkPickerRef: React.MutableRefObject<any>
+  historyPickerRef: React.MutableRefObject<any>
   tabsPageActiveModeRef: React.MutableRefObject<any>
   domPageActiveModeRef: React.MutableRefObject<any>
   translatePairIdRef: React.MutableRefObject<any>
   promptLine: () => string
   /** EN: Keep the textarea DOM in sync with lineRef (confirm / clear). */
   syncPromptDom: (line: string, cursor: number) => void
-  /** EN: Float only — flush sessions/browse to session storage before tab close. */
-  flushFloatPersist: () => Promise<void>
   allowEmptyFirstPickerSyncRef: React.MutableRefObject<boolean>
   imeTokenPickerDismissedRef: React.MutableRefObject<boolean>
   tabPressSeqRef: React.MutableRefObject<number>
@@ -75,6 +75,8 @@ export type CommandDispatchDeps = {
   teardownNav: () => Promise<void>
   clearSearchLoadingProgress: () => void
   closeSettingPickerColumn: () => void
+  closeBookmarkPickerColumn: () => void
+  closeHistoryPickerColumn: () => void
   /** EN: Commit UI settings into React state after `setting -save` / CUI apply. */
   replaceUiSettingsState: (settings: import("../../../setting/settings").UiSettings) => void
   /** EN: Picker-built line → set prompt + re-enter dispatch (same as typed Enter). */
@@ -83,6 +85,8 @@ export type CommandDispatchDeps = {
   setSearchListPicker: (sessionId: string, state: any) => void
   setDomListPicker: (sessionId: string, state: any) => void
   setSettingListPicker: (sessionId: string, state: any) => void
+  setBookmarkListPicker: (sessionId: string, state: any) => void
+  setHistoryListPicker: (sessionId: string, state: any) => void
   /** EN: Open the floating session-list candidate panel (pipe `session -list | picker`). */
   openSessionListPicker: () => void
   setSubCmdPicker: (state: any) => void

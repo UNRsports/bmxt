@@ -88,38 +88,17 @@ export const MAX_INTERNAL_SNAPSHOT_FILES = 500
 /** Per-leaf picker columns + pane focus (cleared on last-pane `exit` or BMXt window close). */
 export const PROCESS_UI_STATE_KEY = "bmxt_process_ui_v1"
 
-/**
- * EN: Per-tab float terminal sessions in `chrome.storage.session` (same-tab nav survival).
- * JA: タブ別フロート・セッション（session ストレージ。同一タブ遷移で維持）。
- */
-export const FLOAT_TERMINAL_BY_TAB_KEY = "bmxt_float_terminal_by_tab_v1"
-
-/** EN: Tab ids that should re-show the float after navigation. */
-export const FLOAT_VISIBLE_TAB_IDS_KEY = "bmxt_float_visible_tab_ids_v1"
-
-/**
- * EN: Per-tab float WAR boot auth (`tabId` → `{ parentOrigin, exp }`) in `chrome.storage.session`.
- * JA: フロート WAR 起動認可（session ストレージ）。
- */
-export const FLOAT_LAUNCH_AUTH_KEY = "bmxt_float_launch_auth_v1"
-
-/**
- * EN: Per-tab float nav/process UI browse state in `chrome.storage.session`.
- * JA: タブ別フロートの nav／プロセス UI（session ストレージ）。
- */
-export const FLOAT_BROWSE_STATE_BY_TAB_KEY = "bmxt_float_browse_state_by_tab_v1"
-
-/**
- * EN: Float sessions/browse waiting for a scriptable tab after close onto a non-scriptable page.
- * JA: 非スクリプト可能ページへ閉じたあとに、利用可能タブまで待つフロート引き継ぎ。
- */
-export const FLOAT_PENDING_HANDOFF_KEY = "bmxt_float_pending_handoff_v1"
-
 /** @deprecated Legacy SQLite blob — removed; in-memory job audit only. */
 export const JOB_DB_KEY = "bmxt_job_db_v1"
 
 /** Interactive tutorial progress (completed / skipped / step index). */
 export const TUTORIAL_PROGRESS_KEY = "bmxt_tutorial_progress_v1"
+
+/**
+ * EN: When true, next BMXt prompt open should print the browser capability report.
+ * JA: true のとき次のプロンプト窓オープンでブラウザ能力レポートを表示する。
+ */
+export const CAPABILITY_REPORT_PENDING_KEY = "bmxt_capability_report_pending_v1"
 
 /** Family sync: per-browser device identity (`shared/lib/features/sync/`). */
 export const SYNC_DEVICE_IDENTITY_KEY = "bmxt_sync_device_v1"

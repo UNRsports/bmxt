@@ -1,4 +1,6 @@
 import type { KeyboardEvent, ReactNode, RefObject } from "react"
+import { BookmarkStatusBar } from "../bookmark/bookmark-status-bar"
+import { HistoryStatusBar } from "../history/history-status-bar"
 import { DomStatusBar } from "../dom/dom-status-bar"
 import { NavStatusBar } from "../nav"
 import { SearchStatusBar } from "../search/search-status-bar"
@@ -63,6 +65,14 @@ type SettingProps = {
   pickerOpen: boolean
 }
 
+type BookmarkProps = {
+  pickerOpen: boolean
+}
+
+type HistoryProps = {
+  pickerOpen: boolean
+}
+
 type Props = {
   order: readonly ModeToolbarId[]
   focusedDetailBarId: DetailBarId | null
@@ -73,6 +83,8 @@ type Props = {
   search: SearchProps
   dom: DomProps
   setting: SettingProps
+  bookmark: BookmarkProps
+  history: HistoryProps
 }
 
 function wrapDetailBar(
@@ -101,7 +113,9 @@ export function ModeStatusBarStack({
   tabs,
   search,
   dom,
-  setting
+  setting,
+  bookmark,
+  history
 }: Props) {
   const rows = order.flatMap((id) => {
     if (id === "tabs") {
@@ -157,6 +171,32 @@ export function ModeStatusBarStack({
           focusedDetailBarId,
           detailBarFocusActive,
           <SettingStatusBar />
+        )
+      ]
+    }
+    if (id === "bookmark") {
+      if (!bookmark.pickerOpen) {
+        return []
+      }
+      return [
+        wrapDetailBar(
+          "bookmark",
+          focusedDetailBarId,
+          detailBarFocusActive,
+          <BookmarkStatusBar />
+        )
+      ]
+    }
+    if (id === "history") {
+      if (!history.pickerOpen) {
+        return []
+      }
+      return [
+        wrapDetailBar(
+          "history",
+          focusedDetailBarId,
+          detailBarFocusActive,
+          <HistoryStatusBar />
         )
       ]
     }

@@ -1,4 +1,5 @@
 [
+  "bookmark",
   "cmd",
   "common",
   "dom",
@@ -6,10 +7,10 @@
   "domPrompt",
   "effect",
   "error",
-  "floatHost",
   "compound",
   "group",
   "help",
+  "history",
   "imeToken",
   "modeStatus",
   "nav",

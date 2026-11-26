@@ -16,6 +16,7 @@ import {
 import { domListLineHasFlavor } from "../dom/parse-dom-list-args.ts"
 import { TABS_PAGE_ACTIVE_MODE_TOKENS } from "../tabs/page-active-setting"
 import { DOM_PAGE_ACTIVE_MODE_TOKENS } from "../dom/page-active-setting"
+import { resolveSettingSetImeOverlay } from "../setting/setting-set-ime-overlay.ts"
 import { wordBounds } from "../format/word-bounds.ts"
 import { isSecondToken } from "../builtin-commands/command-subcommands.gen"
 import {
@@ -234,6 +235,18 @@ function resolveSearchListOverlayResult(
   return { type: "none" }
 }
 
+function resolveSettingSetOverlayResult(
+  line: string,
+  cursor: number,
+  opts?: ResolveImeTokenPickerOptions
+): ImeLiveOverlayResolveResult {
+  const model = resolveSettingSetImeOverlay(line, cursor, opts)
+  if (model === null) {
+    return { type: "none" }
+  }
+  return { type: "pick", model }
+}
+
 type ImeLiveOverlayProviderImpl = {
   id: string
   resolveResult: (
@@ -246,7 +259,8 @@ type ImeLiveOverlayProviderImpl = {
 const IME_LIVE_OVERLAY_PROVIDER_IMPLS: readonly ImeLiveOverlayProviderImpl[] = [
   { id: "page-active-mode", resolveResult: resolvePageActiveModeOverlayResult },
   { id: "dom-list-options", resolveResult: resolveDomListOverlayResult },
-  { id: "search-list-scope", resolveResult: resolveSearchListOverlayResult }
+  { id: "search-list-scope", resolveResult: resolveSearchListOverlayResult },
+  { id: "setting-set", resolveResult: resolveSettingSetOverlayResult }
 ]
 
 export const IME_LIVE_OVERLAY_PROVIDERS: readonly ImeLiveOverlayProvider[] =

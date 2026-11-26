@@ -69,6 +69,8 @@ pub struct UiSettings {
     pub appearance: UiAppearanceFile,
     pub host_ui_mode: HostUiMode,
     pub ime_candidate_help: bool,
+    #[serde(default)]
+    pub prompt_fire: bool,
     pub search_legend_mode: SearchLegendMode,
 }
 
@@ -85,6 +87,8 @@ pub struct SettingsFileV2 {
     pub extra_keys_mode: Option<serde_json::Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ime_candidate_help: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_fire: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub search_legend_mode: Option<SearchLegendMode>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

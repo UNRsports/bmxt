@@ -164,4 +164,36 @@ describe("bmxtRuleStreamFromTabIds (chrome.tabs.get)", () => {
     ])
     assert.deepEqual(batches[0]?.tabIds, [7, 8])
   })
+
+  it("keeps empty-URL tabs for move/close when requireUrl is false", async () => {
+    ;(globalThis as { chrome: unknown }).chrome = {
+      tabs: {
+        get: async (tabId: number) => {
+          if (tabId === 1) {
+            return { id: 1, url: "https://a.example/", title: "A", groupId: -1 }
+          }
+          if (tabId === 2) {
+            return { id: 2, url: "", title: "Blank", groupId: -1 }
+          }
+          if (tabId === 3) {
+            return { id: 3, url: "chrome://extensions/", title: "Ext", groupId: -1 }
+          }
+          throw new Error(`missing tab ${tabId}`)
+        }
+      },
+      tabGroups: {
+        get: async () => {
+          throw new Error("unused")
+        }
+      }
+    }
+
+    const stream = await bmxtRuleStreamFromTabIds([1, 2, 3], { requireUrl: false })
+    const opens = stream.records.filter((r) => r.kind === "page.open")
+    assert.equal(opens.length, 3)
+    const { tabIdsFromBmxtRuleStream } = await import(
+      "../../../../shared/lib/features/command-line/pipe/consumers/stream-accepts-kinds.ts"
+    )
+    assert.deepEqual(tabIdsFromBmxtRuleStream(stream), [1, 2, 3])
+  })
 })

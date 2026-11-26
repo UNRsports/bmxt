@@ -1,4 +1,6 @@
+import { parseBookmarkListLine } from "../../bookmark/bookmark-list-parse.ts"
 import { parseDomListLine } from "../../dom/dom-list-parse.ts"
+import { parseHistoryListLine } from "../../history/history-list-parse.ts"
 import { parseSearchListLine } from "../../search/search-list-parse.ts"
 import { parseSessionListLine } from "../../session/session-list-parse.ts"
 import { parseSettingListLine } from "../../setting/setting-list-parse.ts"
@@ -87,6 +89,30 @@ const LIST_COMMAND_MATCHERS: readonly ListCommandMatcherDef[] = [
         scope: parsed.scope
       }
     }
+  },
+  {
+    id: "bookmark",
+    command: "bookmark",
+    runtime: "ui",
+    matchPlain(segment) {
+      const parsed = parseBookmarkListLine(segment)
+      if (parsed === null) {
+        return null
+      }
+      return { folderId: parsed.folderId, scope: parsed.scope }
+    }
+  },
+  {
+    id: "history",
+    command: "history",
+    runtime: "ui",
+    matchPlain(segment) {
+      const parsed = parseHistoryListLine(segment)
+      if (parsed === null) {
+        return null
+      }
+      return { pattern: parsed.pattern, scope: parsed.scope }
+    }
   }
 ] as const
 
@@ -104,6 +130,10 @@ export async function loadListCommandEntry(id: ListCommandId): Promise<ListComma
       return (await import("../../session/session-list-command.ts")).sessionListCommand
     case "setting":
       return (await import("../../setting/setting-list-command.ts")).settingListCommand
+    case "bookmark":
+      return (await import("../../bookmark/bookmark-list-command.ts")).bookmarkListCommand
+    case "history":
+      return (await import("../../history/history-list-command.ts")).historyListCommand
     default: {
       const _exhaustive: never = id
       throw new Error(`unknown list command: ${String(_exhaustive)}`)

@@ -30,8 +30,8 @@ describe("extension-page-url", () => {
       `chrome-extension://${EXT_ID}/bmxt.html`
     )
     assert.equal(
-      extensionPageUrl({ extensionId: EXT_ID, path: "bmxt-float.html" }),
-      `chrome-extension://${EXT_ID}/bmxt-float.html`
+      extensionPageUrl({ extensionId: EXT_ID, path: "bmxt.html" }),
+      `chrome-extension://${EXT_ID}/bmxt.html`
     )
   })
 
@@ -53,11 +53,11 @@ describe("extension-page-url", () => {
       extensionId: EXT_ID,
       pathname: "/bmxt.html"
     })
-    const moz = parseExtensionPageUrl(`moz-extension://${EXT_ID}/bmxt-float.html?tabId=1`)
+    const moz = parseExtensionPageUrl(`moz-extension://${EXT_ID}/bmxt.html?foo=1`)
     assert.deepEqual(moz, {
       protocol: "moz-extension:",
       extensionId: EXT_ID,
-      pathname: "/bmxt-float.html"
+      pathname: "/bmxt.html"
     })
     assert.equal(parseExtensionPageUrl("https://example.com/"), null)
   })
@@ -66,6 +66,8 @@ describe("extension-page-url", () => {
     assert.equal(normalizeExtensionPagePath("bmxt.html"), "/bmxt.html")
     assert.equal(normalizeExtensionPagePath("/bmxt.html?x=1"), "/bmxt.html")
     assert.equal(BMXT_UI_PAGE_PATHS.shell, "/bmxt.html")
+    // EN: float page key is no longer in BMXT_UI_PAGE_PATHS
+    assert.equal("float" in BMXT_UI_PAGE_PATHS, false)
   })
 
   it("allowlists trusted UI paths for both protocols", () => {
@@ -79,11 +81,20 @@ describe("extension-page-url", () => {
     )
     assert.equal(
       isSameExtensionAllowedPageUrl(
-        `moz-extension://${EXT_ID}/bmxt-float.html?tabId=9`,
+        `moz-extension://${EXT_ID}/bmxt.html`,
         EXT_ID,
         TRUSTED_BMXT_UI_PATHS
       ),
       true
+    )
+    // EN: bmxt-float.html is no longer trusted
+    assert.equal(
+      isSameExtensionAllowedPageUrl(
+        `chrome-extension://${EXT_ID}/bmxt-float.html`,
+        EXT_ID,
+        TRUSTED_BMXT_UI_PATHS
+      ),
+      false
     )
     assert.equal(
       isSameExtensionAllowedPageUrl(

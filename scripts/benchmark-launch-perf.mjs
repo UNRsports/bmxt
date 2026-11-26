@@ -75,6 +75,17 @@ function verifyBuiltBackground() {
     console.error("background-services.js still bundles sql.js — remove SQLite from SW")
     process.exit(1)
   }
+  // EN: Distinctive React / UI-hook markers (avoid short substrings that false-positive minify).
+  // JA: React / UI hook の特徴的トークン（minify の誤検知を避ける）。
+  if (
+    services.includes("useSessionJobRunner") ||
+    services.includes("react.development.js") ||
+    services.includes("react.production.min.js") ||
+    services.includes("__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED")
+  ) {
+    console.error("background-services.js still bundles React / useSessionJobRunner")
+    process.exit(1)
+  }
   console.log("background.js size KB:", Math.round(bg.length / 1024))
   console.log(
     "background-services.js size KB:",

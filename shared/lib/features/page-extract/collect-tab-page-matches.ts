@@ -4,12 +4,14 @@
  */
 
 import type { SearchPageMatch } from "../side-picker/model/picker-entry"
+import { isGoogleSheetsUrl } from "../url/parse-google-sheets-url"
 import { clampPageExtractMaxChars } from "./page-extract-limits"
 import {
   bmxtCollectPageNeedleMatchesInPage,
   type InPageNeedleMatchCollectResult
 } from "./collect-page-needle-matches-in-page"
 import { PAGE_EXTRACT_CHANNEL, type PageExtractRequest } from "./page-extract-message"
+import { collectSheetsPageMatchesFromOpenTab } from "./sheets/collect-sheets-page-matches"
 
 /** EN: Longer than plain text extract — GitHub innerText + line scan needs headroom. */
 const TAB_MATCH_COLLECT_MS = 2800
@@ -100,6 +102,12 @@ function normalizeCollectResult(raw: unknown): CollectTabPageMatchesResult | nul
     ) {
       match.globalOccurrence = Math.floor(m.globalOccurrence)
     }
+    if (typeof m.cellRef === "string") {
+      const cellRef = m.cellRef.trim().toUpperCase()
+      if (/^[A-Z]{1,3}\d{1,7}$/.test(cellRef)) {
+        match.cellRef = cellRef
+      }
+    }
     matches.push(match)
   }
   return { title: o.title, bodyLength, truncated, matches }
@@ -166,6 +174,17 @@ export async function collectPageMatchesFromOpenTab(
   if (tabId === undefined || !trimmed) {
     return null
   }
+
+  // EN: Sheets cells are canvas-drawn — use CSV export via in-tab XHR, not innerText.
+  // JA: Sheets のセルは canvas 描画のため、innerText ではなくタブ内 XHR の CSV export を使う。
+  if (isGoogleSheetsUrl(tab.url)) {
+    const sheets = await collectSheetsPageMatchesFromOpenTab(tab, trimmed, options)
+    if (sheets.kind !== "ok") {
+      return null
+    }
+    return sheets.result
+  }
+
   const maxMatches = Math.max(
     1,
     Math.min(options?.maxMatches ?? DEFAULT_MAX_MATCHES, DEFAULT_MAX_MATCHES)

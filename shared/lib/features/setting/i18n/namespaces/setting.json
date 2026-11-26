@@ -132,12 +132,12 @@
     "en": "import background image (PNG/JPEG/WebP, 512 KiB max)"
   },
   "setting.picker.cancelled": {
-    "ja": "setting: 未保存の変更を破棄しました",
-    "en": "setting: discarded unsaved changes"
+    "ja": "setting: 設定列を閉じました",
+    "en": "setting: settings column closed"
   },
   "setting.picker.closed": {
-    "ja": "setting: 設定ピッカーを閉じました",
-    "en": "setting: settings picker closed"
+    "ja": "setting: 設定列を閉じました",
+    "en": "setting: settings column closed"
   },
   "setting.picker.detail.bgColor": {
     "ja": "背景色: {value}",
@@ -227,6 +227,10 @@
     "ja": "setting -list · ime-candidate-help（候補ヘルプ） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · ime-candidate-help · ↑↓ · Enter/→ select · ← list"
   },
+  "setting.picker.headline.promptFire": {
+    "ja": "setting -list · prompt-fire（入力炎／削除キラキラ） · ↑↓ · Enter/→ 選択 · ← 一覧",
+    "en": "setting -list · prompt-fire · ↑↓ · Enter/→ select · ← list"
+  },
   "setting.picker.headline.searchLegend": {
     "ja": "setting -list · search-legend（検索凡例） · ↑↓ · Enter/→ 選択 · ← 一覧",
     "en": "setting -list · search-legend · ↑↓ · Enter/→ select · ← list"
@@ -256,8 +260,8 @@
     "en": "mobile"
   },
   "setting.picker.editingHint": {
-    "ja": "Enter でプレビュー反映 · Esc でキャンセル",
-    "en": "Enter to preview · Esc to cancel"
+    "ja": "Enter で保存・反映 · Esc でキャンセル",
+    "en": "Enter to save · Esc to cancel"
   },
   "setting.picker.fontSizeRow": {
     "ja": "{size}",
@@ -272,8 +276,8 @@
     "en": "setting -list · bg-color (picker) · Enter/→ edit · ← list"
   },
   "setting.picker.headline.bgImage": {
-    "ja": "setting -list · bg-image（背景画像） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
-    "en": "setting -list · bg-image · ↑↓ · Enter/→ preview · ← list"
+    "ja": "setting -list · bg-image（背景画像） · ↑↓ · Enter/→ 保存・反映 · ← 一覧",
+    "en": "setting -list · bg-image · ↑↓ · Enter/→ save · ← list"
   },
   "setting.picker.headline.editPicker": {
     "ja": "setting -list · edit-picker（ピッカー個別編集） · ↑↓ · Enter/→ 選択 · ← 一覧",
@@ -284,8 +288,8 @@
     "en": "setting -list · host-ui (PC / phone layout) · ↑↓ · Enter/→ select · ← list"
   },
   "setting.picker.headline.editing": {
-    "ja": "setting -list · 編集中 — 入力欄に値を入力 · Enter でプレビュー反映 · Esc キャンセル",
-    "en": "setting -list · editing — type in the field · Enter to preview · Esc cancel"
+    "ja": "setting -list · 編集中 — 入力欄に値を入力 · Enter で保存・反映 · Esc キャンセル",
+    "en": "setting -list · editing — type in the field · Enter to save · Esc cancel"
   },
   "setting.picker.headline.fg": {
     "ja": "setting -list · fg（文字色） · Enter/→ 編集 · ← 一覧",
@@ -304,24 +308,24 @@
     "en": "setting -list · font (picker) · Enter/→ edit · ← list"
   },
   "setting.picker.headline.fontSize": {
-    "ja": "setting -list · size（サイズ） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
-    "en": "setting -list · size · ↑↓ · Enter/→ preview · ← list"
+    "ja": "setting -list · size（サイズ） · ↑↓ · Enter/→ 保存・反映 · ← 一覧",
+    "en": "setting -list · size · ↑↓ · Enter/→ save · ← list"
   },
   "setting.picker.headline.language": {
-    "ja": "setting -list · language（言語） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
-    "en": "setting -list · language · ↑↓ · Enter/→ preview · ← list"
+    "ja": "setting -list · language（言語） · ↑↓ · Enter/→ 保存・反映 · ← 一覧",
+    "en": "setting -list · language · ↑↓ · Enter/→ save · ← list"
   },
   "setting.picker.headline.main": {
-    "ja": "setting -list · ↑↓ · → 設定 · 下部プレビュー確認 · > 設定を保存して終了 で確定",
-    "en": "setting -list · ↑↓ · → configure · check preview below · save setting & exit to commit"
+    "ja": "setting -list · ↑↓ · → 設定 · ← 詳細バー · Esc → プロンプト",
+    "en": "setting -list · ↑↓ · → configure · ← detail bar · Esc → prompt"
   },
   "setting.picker.headline.pickerBgImage": {
-    "ja": "setting -list · bg-image（ピッカー） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
-    "en": "setting -list · bg-image (picker) · ↑↓ · Enter/→ preview · ← list"
+    "ja": "setting -list · bg-image（ピッカー） · ↑↓ · Enter/→ 保存・反映 · ← 一覧",
+    "en": "setting -list · bg-image (picker) · ↑↓ · Enter/→ save · ← list"
   },
   "setting.picker.headline.pickerFontSize": {
-    "ja": "setting -list · size（ピッカー） · ↑↓ · Enter/→ プレビュー反映 · ← 一覧",
-    "en": "setting -list · size (picker) · ↑↓ · Enter/→ preview · ← list"
+    "ja": "setting -list · size（ピッカー） · ↑↓ · Enter/→ 保存・反映 · ← 一覧",
+    "en": "setting -list · size (picker) · ↑↓ · Enter/→ save · ← list"
   },
   "setting.picker.headline.resetConfirm": {
     "ja": "setting -list · reset（リセット） · ↑↓ · → 確定 · ← 一覧",
@@ -336,8 +340,8 @@
     "en": "setting -list · search-jump-highlight · → edit · ← list"
   },
   "setting.picker.hint": {
-    "ja": "設定ピッカー — 変更は下部プレビューに反映 · > 設定を保存して終了 で確定 · ↑↓ · → · ← · Esc → プロンプト",
-    "en": "Setting picker — changes preview below · save setting & exit to commit · ↑↓ · → · ← · Esc → prompt"
+    "ja": "設定ピッカー — →/Enter で進む・確定 · ← で戻る · Esc → プロンプト",
+    "en": "Setting picker — →/Enter forward · ← back · Esc → prompt"
   },
   "setting.picker.imeCandidateHelpOff": {
     "ja": "オフ — 候補メニューにヘルプを出さない",
@@ -352,6 +356,22 @@
     "en": "off"
   },
   "setting.picker.imeCandidateHelpStateOn": {
+    "ja": "オン",
+    "en": "on"
+  },
+  "setting.picker.promptFireOff": {
+    "ja": "オフ — 入力炎・削除キラキラなし（既定）",
+    "en": "off — no typing fire or delete sparkle (default)"
+  },
+  "setting.picker.promptFireOn": {
+    "ja": "オン — 入力は炎、削除はキラキラと砕け散る",
+    "en": "on — fire while typing; glitter shatter on delete"
+  },
+  "setting.picker.promptFireStateOff": {
+    "ja": "オフ",
+    "en": "off"
+  },
+  "setting.picker.promptFireStateOn": {
     "ja": "オン",
     "en": "on"
   },
@@ -380,8 +400,8 @@
     "en": "text and emoji"
   },
   "setting.picker.importDraft": {
-    "ja": "setting: zip をプレビューに読み込みました（> 設定を保存して終了 で確定）",
-    "en": "setting: zip loaded into preview (use save setting & exit to commit)"
+    "ja": "setting: zip を取り込み保存しました",
+    "en": "setting: zip imported and saved"
   },
   "setting.picker.keysHint": {
     "ja": "設定ピッカーのキー操作",
@@ -447,6 +467,10 @@
     "ja": "ime-candidate-help（候補メニューのヘルプ）: {value}",
     "en": "ime-candidate-help: {value}"
   },
+  "setting.picker.main.promptFire": {
+    "ja": "prompt-fire（入力炎／削除キラキラ）: {value}",
+    "en": "prompt-fire: {value}"
+  },
   "setting.picker.main.searchLegend": {
     "ja": "search-legend（検索結果の凡例）: {value}",
     "en": "search-legend: {value}"
@@ -492,8 +516,8 @@
     "en": "storage-pick-dir — choose external folder again"
   },
   "setting.picker.main.storageReload": {
-    "ja": "storage-reload — 外部フォルダから設定を読み込む（プレビュー）",
-    "en": "storage-reload — load settings from external folder (preview)"
+    "ja": "storage-reload — 外部フォルダから設定を読み込み保存",
+    "en": "storage-reload — load settings from external folder and save"
   },
   "setting.picker.main.snapshotStorage": {
     "ja": "snapshot 保存先: {value}",
@@ -620,8 +644,8 @@
     "en": "setting: external storage enabled ({directory}) — no existing settings bundle"
   },
   "setting.storage.externalActivatedLoaded": {
-    "ja": "setting: 外部保存を有効化し {directory} から設定バンドル（画像含む）を読み込みました（プレビュー）",
-    "en": "setting: external storage enabled; loaded settings bundle (with images) from {directory} (preview)"
+    "ja": "setting: 外部保存を有効化し {directory} から設定バンドル（画像含む）を読み込み・保存しました",
+    "en": "setting: external storage enabled; loaded and saved settings bundle (with images) from {directory}"
   },
   "setting.storage.externalWriteFailed": {
     "ja": "setting: 拡張機能内には保存しましたが、外部フォルダへの書き込みに失敗しました",
@@ -648,8 +672,8 @@
     "en": "setting: folder selection failed — {message}"
   },
   "setting.storage.reloadDraft": {
-    "ja": "setting: 外部バンドル（settings.json + 画像）をプレビューに読み込みました（> 設定を保存して終了 で確定）",
-    "en": "setting: loaded external bundle (settings.json + images) into preview (use save setting & exit to commit)"
+    "ja": "setting: 外部バンドル（settings.json + 画像）を読み込み・保存しました",
+    "en": "setting: loaded and saved external bundle (settings.json + images)"
   },
   "setting.storage.reloadFailed": {
     "ja": "setting: 外部フォルダからの読み込みに失敗しました — {message}",
@@ -764,20 +788,20 @@
     "en": "y — reset all appearance to defaults"
   },
   "setting.picker.saved": {
-    "ja": "setting: 設定を保存しました",
-    "en": "setting: settings saved"
+    "ja": "setting: 設定列を閉じました",
+    "en": "setting: settings column closed"
   },
   "setting.cui.pickerRequired": {
-    "ja": "setting: 先に `setting -list | browse` で設定列を開いてください",
-    "en": "setting: open the settings column with `setting -list | browse` first"
+    "ja": "setting: 設定列が開いていません（`setting -list | browse`）",
+    "en": "setting: settings column is not open (`setting -list | browse`)"
   },
   "setting.cui.setUnknown": {
     "ja": "setting: 未知または無効なキーです: {key}",
     "en": "setting: unknown or invalid key: {key}"
   },
   "setting.cui.setApplied": {
-    "ja": "setting: 下書きを更新しました ({key}={value})",
-    "en": "setting: draft updated ({key}={value})"
+    "ja": "setting: 保存しました ({key}={value})",
+    "en": "setting: saved ({key}={value})"
   },
   "setting.prompt.editBgColor": {
     "ja": "背景色 (hex、現在 {current}):",
@@ -819,9 +843,21 @@
     "ja": "ime-candidate-help: {value}",
     "en": "ime-candidate-help: {value}"
   },
+  "setting.summary.promptFire": {
+    "ja": "prompt-fire: {value}",
+    "en": "prompt-fire: {value}"
+  },
   "setting.summary.searchLegend": {
     "ja": "search-legend: {value}",
     "en": "search-legend: {value}"
+  },
+  "setting.summary.syncHoldIntervalMs": {
+    "ja": "sync-hold-ms: {value}",
+    "en": "sync-hold-ms: {value}"
+  },
+  "setting.summary.cliDoorRetryMs": {
+    "ja": "cli-door-retry-ms: {value}",
+    "en": "cli-door-retry-ms: {value}"
   },
   "setting.summary.locale": {
     "ja": "locale: {token}",
@@ -862,5 +898,9 @@
   "setting.picker.syncSummaryRtc": {
     "ja": "{name} · 接続 {connections}",
     "en": "{name} · connected {connections}"
+  },
+  "setting.storage.reloadCommitted": {
+    "ja": "setting: 外部バンドル（settings.json + 画像）を読み込み・保存しました",
+    "en": "setting: loaded and saved external bundle (settings.json + images)"
   }
 }

@@ -42,17 +42,20 @@ pub enum PipeConsumerClass {
     Open {
         mode: OpenPipeMode,
         #[serde(rename = "windowId", skip_serializing_if = "Option::is_none")]
-        window_id: Option<i32>,
+        window_id: Option<i64>,
         #[serde(rename = "groupId", skip_serializing_if = "Option::is_none")]
-        group_id: Option<i32>,
+        group_id: Option<i64>,
     },
     #[serde(rename = "move")]
     Move {
         #[serde(rename = "windowId")]
-        window_id: i32,
+        window_id: i64,
         #[serde(rename = "groupId")]
-        group_id: i32,
+        group_id: i64,
         ungroup: bool,
+        /// EN: Insert immediately before this tab id; `-1` = end of window/group.
+        #[serde(rename = "beforeTabId")]
+        before_tab_id: i64,
     },
     #[serde(rename = "bookmark-remove")]
     BookmarkRemove,
@@ -149,8 +152,9 @@ fn parse_open(parts: &[String]) -> Option<PipeConsumerClass> {
         return None;
     }
     let mut mode = OpenPipeMode::NewTab;
-    let mut window_id: Option<i32> = None;
-    let mut group_id: Option<i32> = None;
+    // EN: i64 — Firefox tab/group ids can exceed i32 (e.g. tabGroups).
+    let mut window_id: Option<i64> = None;
+    let mut group_id: Option<i64> = None;
     let mut i = 1usize;
     while i < parts.len() {
         let token = parts[i].as_str();
@@ -162,7 +166,7 @@ fn parse_open(parts: &[String]) -> Option<PipeConsumerClass> {
             continue;
         }
         if token == "--into-window" {
-            let id = parts.get(i + 1)?.parse::<i32>().ok()?;
+            let id = parts.get(i + 1)?.parse::<i64>().ok()?;
             if id < 0 {
                 return None;
             }
@@ -173,14 +177,14 @@ fn parse_open(parts: &[String]) -> Option<PipeConsumerClass> {
             continue;
         }
         if token == "--into-group" {
-            let gid = parts.get(i + 1)?.parse::<i32>().ok()?;
+            let gid = parts.get(i + 1)?.parse::<i64>().ok()?;
             if gid < 0 {
                 return None;
             }
             i += 2;
-            let mut wid = -1_i32;
+            let mut wid = -1_i64;
             if parts.get(i).map(|s| s.as_str()) == Some("--window-id") {
-                wid = parts.get(i + 1)?.parse::<i32>().ok()?;
+                wid = parts.get(i + 1)?.parse::<i64>().ok()?;
                 i += 2;
             }
             if wid < 0 {
@@ -192,7 +196,7 @@ fn parse_open(parts: &[String]) -> Option<PipeConsumerClass> {
             continue;
         }
         if token == "--window-id" {
-            let wid = parts.get(i + 1)?.parse::<i32>().ok()?;
+            let wid = parts.get(i + 1)?.parse::<i64>().ok()?;
             i += 2;
             if mode == OpenPipeMode::IntoGroup {
                 if wid < 0 {
@@ -215,19 +219,26 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
     if parts.is_empty() || normalize_token(&parts[0]) != "move" {
         return None;
     }
-    let mut window_id = -1_i32;
-    let mut group_id = -1_i32;
+    // EN: i64 — Firefox tab group ids exceed i32 (e.g. 1795167899435072).
+    let mut window_id = -1_i64;
+    let mut group_id = -1_i64;
+    let mut before_tab_id = -1_i64;
     let mut ungroup = false;
     let mut i = 1usize;
     while i < parts.len() {
         let token = parts[i].as_str();
         if token == "--window" {
-            window_id = parts.get(i + 1)?.parse::<i32>().ok()?;
+            window_id = parts.get(i + 1)?.parse::<i64>().ok()?;
             i += 2;
             continue;
         }
         if token == "--group" {
-            group_id = parts.get(i + 1)?.parse::<i32>().ok()?;
+            group_id = parts.get(i + 1)?.parse::<i64>().ok()?;
+            i += 2;
+            continue;
+        }
+        if token == "--before-tab" {
+            before_tab_id = parts.get(i + 1)?.parse::<i64>().ok().filter(|n| *n >= 0)?;
             i += 2;
             continue;
         }
@@ -248,6 +259,7 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
         window_id,
         group_id,
         ungroup,
+        before_tab_id,
     })
 }
 
@@ -517,6 +529,7 @@ mod tests {
                 window_id: 1,
                 group_id: -1,
                 ungroup: false,
+                before_tab_id: -1,
             })
         );
         assert_eq!(
@@ -525,6 +538,28 @@ mod tests {
                 window_id: 2,
                 group_id: -1,
                 ungroup: true,
+                before_tab_id: -1,
+            })
+        );
+        assert_eq!(
+            classify_pipe_consumer("move --window 1 --before-tab 42"),
+            Some(PipeConsumerClass::Move {
+                window_id: 1,
+                group_id: -1,
+                ungroup: false,
+                before_tab_id: 42,
+            })
+        );
+        // EN: Firefox tabGroups ids can exceed i32::MAX.
+        assert_eq!(
+            classify_pipe_consumer(
+                "move --group 1795167899435072 --window 1 --before-tab 1"
+            ),
+            Some(PipeConsumerClass::Move {
+                window_id: 1,
+                group_id: 1_795_167_899_435_072,
+                ungroup: false,
+                before_tab_id: 1,
             })
         );
         assert_eq!(classify_pipe_consumer("move --ungroup --group 1 --window 2"), None);

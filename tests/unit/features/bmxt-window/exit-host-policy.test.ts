@@ -13,7 +13,7 @@ describe("resolveExitHostAction", () => {
       { kind: "exitSession" }
     )
     assert.deepEqual(
-      resolveExitHostAction({ hostKind: "float", sessionOrderLength: 3, senderTabId: 9 }),
+      resolveExitHostAction({ hostKind: "popup", sessionOrderLength: 3, senderTabId: 9 }),
       { kind: "exitSession" }
     )
   })
@@ -28,42 +28,22 @@ describe("resolveExitHostAction", () => {
       { kind: "closePopupWindow" }
     )
   })
-
-  it("hides float prompt on last float session without closing a browser window", () => {
-    assert.deepEqual(
-      resolveExitHostAction({ hostKind: "float", sessionOrderLength: 1, senderTabId: 42 }),
-      { kind: "hideFloat", tabId: 42 }
-    )
-    assert.deepEqual(
-      resolveExitHostAction({ hostKind: "float", sessionOrderLength: 1 }),
-      { kind: "hideFloat", tabId: undefined }
-    )
-  })
 })
 
 describe("inferHostKindFromSender", () => {
-  it("detects float iframe URL", () => {
-    assert.equal(
-      inferHostKindFromSender({
-        url: "chrome-extension://abc/bmxt-float.html"
-      } as chrome.runtime.MessageSender),
-      "float"
-    )
+  it("always returns popup regardless of sender URL", () => {
     assert.equal(
       inferHostKindFromSender({
         url: "chrome-extension://abc/bmxt.html"
       } as chrome.runtime.MessageSender),
       "popup"
     )
+    assert.equal(inferHostKindFromSender(undefined), "popup")
   })
 
-  it("prefers explicit hostKind over sender", () => {
-    assert.equal(
-      resolveHostKindForExit("float", {
-        url: "chrome-extension://abc/bmxt.html"
-      } as chrome.runtime.MessageSender),
-      "float"
-    )
+  it("resolveHostKindForExit defaults to popup for unknown values", () => {
+    assert.equal(resolveHostKindForExit("popup", undefined), "popup")
     assert.equal(resolveHostKindForExit(undefined, undefined), "popup")
+    assert.equal(resolveHostKindForExit("float", undefined), "popup")
   })
 })

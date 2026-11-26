@@ -11,6 +11,11 @@ export type ListRecordKind =
   | "search.hit"
   | "session.row"
   | "setting.field"
+  | "bookmark.folder"
+  | "bookmark.item"
+  | "history.month"
+  | "history.day"
+  | "history.visit"
 
 export type ListFieldValue = string | number | boolean | null
 

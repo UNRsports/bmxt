@@ -41,7 +41,7 @@ function flattenEntriesToBody(entries: readonly DomTreeEntry[]): string {
   return entries.map((e) => e.line).join("\n")
 }
 
-function entriesFromInjected(result: InjectedDomShowResult, mode: DomShowMode): DomTreeEntry[] {
+function entriesFromInjected(result: InjectedDomShowResult, _mode: DomShowMode): DomTreeEntry[] {
   if (Array.isArray(result.entries) && result.entries.length > 0) {
     const out: DomTreeEntry[] = []
     for (const row of result.entries) {
@@ -54,9 +54,6 @@ function entriesFromInjected(result: InjectedDomShowResult, mode: DomShowMode): 
     if (out.length > 0) {
       return out
     }
-  }
-  if (mode === "html") {
-    return []
   }
   const body = typeof result.body === "string" ? result.body : ""
   return bodyToTerminalLines(body).map((line) => ({ line, path: [] as const }))
@@ -142,10 +139,7 @@ export async function captureDomListForTab(
 }
 
 /** EN: Keep `bmxtDomShowInjected` body shape for log / terminal dumps. */
-export function domShowBodyFromInjected(result: InjectedDomShowResult, mode: DomShowMode): string {
-  if (mode === "html") {
-    return typeof result.body === "string" ? result.body : ""
-  }
+export function domShowBodyFromInjected(result: InjectedDomShowResult, _mode: DomShowMode): string {
   if (Array.isArray(result.entries) && result.entries.length > 0) {
     return flattenEntriesToBody(
       result.entries
@@ -156,5 +150,8 @@ export function domShowBodyFromInjected(result: InjectedDomShowResult, mode: Dom
         }))
     )
   }
-  return typeof result.body === "string" ? result.body : ""
+  if (typeof result.body === "string" && result.body.length > 0) {
+    return result.body
+  }
+  return ""
 }

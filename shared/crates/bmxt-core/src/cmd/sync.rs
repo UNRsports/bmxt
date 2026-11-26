@@ -7,6 +7,7 @@ const USAGE_KEYS: &[&str] = &[
     "cmd.sync.usage.line2",
     "cmd.sync.usage.line3",
     "cmd.sync.usage.line3b",
+    "cmd.sync.usage.line3c",
     "cmd.sync.usage.line4",
     "cmd.sync.usage.line5",
     "cmd.sync.usage.line6",
@@ -158,6 +159,13 @@ pub fn run(args: &[String]) -> DispatchBundle {
                 }
             };
             ui(UiAction::SyncPing { device_id })
+        }
+        "-setname" => {
+            let name = rest_join(args, 2);
+            if name.is_empty() || name.len() > 64 {
+                return usage_bundle(vec![msg_key("cmd.sync.error.setnameUsage")]);
+            }
+            ui(UiAction::SyncSetname { name })
         }
         _ => {
             let option = args.get(1).map(|s| s.as_str()).unwrap_or("");

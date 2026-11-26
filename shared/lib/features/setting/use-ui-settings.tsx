@@ -14,9 +14,14 @@ import { DEFAULT_UI_LOCALE, type UiLocale } from "./locale"
 import { DEFAULT_SEARCH_LEGEND_MODE } from "./search-legend-mode.ts"
 import {
   DEFAULT_IME_CANDIDATE_HELP,
+  DEFAULT_PROMPT_FIRE,
   loadUiSettings,
   type UiSettings
 } from "./settings"
+import {
+  DEFAULT_CLI_DOOR_RETRY_MS,
+  DEFAULT_SYNC_HOLD_INTERVAL_MS
+} from "./sync-timing.ts"
 
 type UiSettingsContextValue = {
   settings: UiSettings
@@ -33,7 +38,10 @@ const INITIAL: UiSettings = {
   locale: DEFAULT_UI_LOCALE,
   hostUiMode: DEFAULT_HOST_UI_MODE,
   imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+  promptFire: DEFAULT_PROMPT_FIRE,
   searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE,
+  syncHoldIntervalMs: DEFAULT_SYNC_HOLD_INTERVAL_MS,
+  cliDoorRetryMs: DEFAULT_CLI_DOOR_RETRY_MS,
   appearance: {
     fg: null,
     bgColor: null,

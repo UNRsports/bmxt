@@ -24,6 +24,9 @@ function scopeFromEffect(e: E): DeviceListScope {
  */
 export async function applyTabsListEffect(_ctx: DispatchHostContext, e: E): Promise<string[]> {
   const locale: UiLocale = _ctx.uiLocale ?? getRunLocale()
+  if (e.device_scope === "device" && e.device_id.trim().length === 0) {
+    return [tCmd("cmd.cli.device.needIdOrBrowse", locale)]
+  }
   const showUrl = e.show_url === "true"
   const scope = scopeFromEffect(e)
   if (scope.kind !== "local") {

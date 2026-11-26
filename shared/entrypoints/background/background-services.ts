@@ -36,7 +36,6 @@ import {
   persistBmxtWindowId,
   readBmxtWindowIdInMemory
 } from "./window-state"
-import { hideBmxtFloatOnTabAsync } from "./float-launch"
 import {
   resolveExitHostAction,
   resolveHostKindForExit
@@ -66,7 +65,7 @@ async function closeBmxtWindowById(windowId: number): Promise<void> {
   }
 }
 
-/** EN: Close the BMXt popup window only (never a normal browser window from a float tab). */
+/** EN: Close the BMXt popup window only. */
 async function closeBmxtWindowOnly(): Promise<void> {
   await hydrateBmxtWindowIdFromStorage()
   const wid = readBmxtWindowIdInMemory()
@@ -94,15 +93,6 @@ async function runExitCommand(
       ok: true,
       patches: [{ type: "exitSession", sessionId, appendExitLog: true }]
     }
-  }
-
-  if (action.kind === "hideFloat") {
-    const tabId = action.tabId ?? senderTabId(sender)
-    if (typeof tabId === "number") {
-      void hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
-    }
-    broadcastSessionClearToUi("float")
-    return { ok: true, patches: [] }
   }
 
   void closeBmxtWindowOnly()
@@ -253,14 +243,6 @@ async function dispatch(
       })
       if (action.kind === "exitSession") {
         sessionPatches.push({ type: "exitSession", sessionId })
-        return []
-      }
-      if (action.kind === "hideFloat") {
-        const tabId = action.tabId ?? senderTabId(sender)
-        if (typeof tabId === "number") {
-          void hideBmxtFloatOnTabAsync(tabId, { clearSessions: true })
-        }
-        broadcastSessionClearToUi("float")
         return []
       }
       exitOutcome.fullClose = true

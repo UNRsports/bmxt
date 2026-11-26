@@ -148,6 +148,47 @@ function listRecordToBmxtRuleRecord(record: ListRecord): BmxtRuleRecord {
         key: stringScalar(record.fields.key),
         value: stringScalar(record.fields.value)
       })
+    case "bookmark.folder":
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["bookmark.folder"], {
+        pageTitle: stringScalar(record.fields.title ?? record.display?.label),
+        bookmarkId: stringScalar(record.fields.bookmarkId),
+        parentId: stringScalar(record.fields.parentId),
+        url: ""
+      })
+    case "bookmark.item":
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["bookmark.item"], {
+        url: stringScalar(record.fields.url),
+        pageTitle: stringScalar(
+          record.fields.pageTitle ?? record.fields.title ?? record.display?.label
+        ),
+        bookmarkId: stringScalar(record.fields.bookmarkId),
+        parentId: stringScalar(record.fields.parentId),
+        dateAdded: toScalar(record.fields.dateAdded) ?? null
+      })
+    case "history.visit":
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["history.visit"], {
+        url: stringScalar(record.fields.url),
+        pageTitle: stringScalar(
+          record.fields.pageTitle ?? record.fields.title ?? record.display?.label
+        ),
+        lastVisitTime: toScalar(record.fields.lastVisitTime) ?? null,
+        visitCount: toScalar(record.fields.visitCount) ?? null,
+        dayKey: stringScalar(record.fields.dayKey),
+        monthKey: stringScalar(record.fields.monthKey)
+      })
+    case "history.month":
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["history.month"], {
+        pageTitle: stringScalar(record.fields.title ?? record.display?.label),
+        monthKey: stringScalar(record.fields.monthKey),
+        url: ""
+      })
+    case "history.day":
+      return bmxtRuleRecord(LIST_KIND_TO_BMXT_RULE_KIND["history.day"], {
+        pageTitle: stringScalar(record.fields.title ?? record.display?.label),
+        dayKey: stringScalar(record.fields.dayKey),
+        monthKey: stringScalar(record.fields.monthKey),
+        url: ""
+      })
     default: {
       const fields: Record<string, BmxtRuleScalar> = {}
       for (const [key, value] of Object.entries(record.fields)) {

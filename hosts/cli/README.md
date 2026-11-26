@@ -39,7 +39,7 @@ Outbound sync tickets (`sync -setup` invite · `sync -offer` / `-accept` answer)
 Same grammar as the extension (`bmxt-core`):
 
 - `setting -list` — print committed (or draft) scalar fields
-- `setting -set <key> <value>` — patch in-memory draft (`locale` · `edit-picker` · `ime-candidate-help` · `search-legend` · `host-ui`)
+- `setting -set <key> <value>` — validate and **save immediately** (same as extension): `locale` · `edit-picker` · `ime-candidate-help` · **`prompt-fire`** (default **off**) · `search-legend` · `host-ui` · … · Tab completes keys/values. **`setting -set prompt-fire on|off`** toggles typing particles on the prompt row / overlays below only (terminal history above stays as-is; no full-screen canvas)
 - `setting -save` / `setting -cancel` — commit draft to disk / discard
 - `setting -list | browse` — **not supported** on CLI (use `-set`/`-save` or the browser window)
 
@@ -50,11 +50,19 @@ Same grammar as the extension (`bmxt-core`):
 3. **Direct start:** `bmxt` or `bmxt repl` → when Family is joined, CLI opens a **localhost HTTP listener** on `http://127.0.0.1:17653/` (loopback only, Family-authenticated). Open the BMXt prompt in each browser — Family-authenticated **auto-reconnect** runs in the background.
 4. **Fallback handshake** (clipboard / file) still works: `sync -offer` / `sync -accept` (Enter/`:pick`), or `bmxt sync-connect [--offer]`. Prefer ticket files under `~/.config/bmxt/`.
 5. With Family joined the prompt is **`BMXt>`** (accepting commands; peers may still be connecting). Extra browsers mesh automatically after the first CLI link. Unjoined Family uses `BMXt*>`.
-6. Connection events print as normal log lines; while `BMXt>` is waiting, logs use rustyline’s external printer so the prompt and caret redraw afterward.
-7. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a Rust line editor:
-   - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`) · **Tab** applies · **Enter** runs
+6. Connection events print as normal log lines; while `BMXt>` is waiting, logs are queued and drained above the prompt so the caret redraws afterward.
+7. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a main-screen line editor (crossterm; not rustyline):
+   - **↑↓** command history · **Ctrl+R** reverse incremental history search (extension parity: type to filter · Ctrl+R/↓ older · ↑ newer · Enter accepts into the prompt without running · Esc cancels) · **grey remainder hint** when the menu is closed (visual only; **Right** does **not** apply — caret move only, same as extension)
+   - **Tab** opens a candidate **overlay** (empty line → all first tokens). **Typing a non-empty partial token at EOL** also auto-opens when there are matches (CLI-only; e.g. `nav en` → `-enter`). Empty typed stays Tab-only. **↑↓** / **Tab** move · **Enter** rewrites that same base line and may offer the next tier (does **not** run) · **Esc** or **↑** at top dismisses until Tab · open **prefix** / open-while **contains** · replace span **reverse-video**
+   - Prompt **Enter** (menu closed) runs the line
    - Tab after `-list` offers `| browse`…; after a typed `|`, Tab completes `browse` / `close` / …
-   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates on the owning peer, stays open until q/Esc; **live refresh** on Family `tabs_changed`)
+   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker assembles `tab -activate … --device …` [+`--focus` after y/N]; ↑↓ `/` Enter; stays open until q/Esc; live `tabs_changed`)
+   - `tab -activate <tabId> --device <id> [--focus]` (oneshot; `--focus` brings the peer browser window forward)
+   - `history -list --device <id>` (oneshot list) · `history -list --device | browse` (number-pick **source** peer, then URL picker; same for `bookmark` / `tab` / `search -list`)
+   - `aboutbmxt` / `aboutbmxt -system` (welcome URL · CLI self-diag + peer `probe_capabilities`)
+   - **CLI-only** (not shared extension grammar): `dom -list --device <id> --tab <n> […]` · Interactive `dom -wizard` / `nav -enter` (ratatui peer→tab pickers under `hosts/cli/src/picker/`)
+   - `nav -enter` (Interactive: peer→tab pickers → arrows=24px free-move · Alt+arrows=72px · Enter=`click` · **keeps terminal focus**; avoid Shift+arrows — terminal scrollback) · `nav -exit`
+   - URL picker: Space-mark URLs → Enter → **Tab**-mark one or more **destination** peers → Enter open (source ≠ destination OK). Typed: `tab -send <id> …` / `bookmark -send <id> --open|--save|--both …`
    - **`quit` / `exit`** ends the `bmxt` process (peer drop while the REPL stays up only prints a “listener keeps running” notice)
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - First peer: `sync -offer` / `sync -accept` (or `bmxt sync-connect`); extra peers join via mesh
@@ -98,7 +106,7 @@ IPC: `POST http://127.0.0.1:17653/v1/exec` with `{ "line": "…" }` → `{ stdou
 
 ## Out of scope (this host)
 
-- `nav` / `dom` page overlays
+- Painting `nav` / `dom` page overlays **inside the terminal** (peer overlay remote-control via `nav -enter` / `dom_*` RPC is in scope — todo §17)
 - `setting -list | browse` picker / FSA / chrome.storage mirror
 - Native messaging / CDP / Playwright
 - Public STUN/TURN on the default path
@@ -148,7 +156,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 拡張と同じ文法（`bmxt-core`）:
 
 - `setting -list` — committed（または下書き）スカラーを印刷
-- `setting -set <key> <value>` — インメモリ下書き（`locale` · `edit-picker` · `ime-candidate-help` · `search-legend` · `host-ui`）
+- `setting -set <key> <value>` — 検証して**即保存**（拡張と同じ）: `locale` · `edit-picker` · `ime-candidate-help` · **`prompt-fire`**（既定 **off**）· `search-legend` · `host-ui` · … · Tab でキー／値候補。**`setting -set prompt-fire on|off`** で打鍵粒子の ON/OFF（プロンプト行と直下オーバーレイのみ。上の端末ログはそのまま・全画面キャンバスなし）
 - `setting -save` / `setting -cancel` — ディスクへ保存 / 破棄
 - `setting -list | browse` — **CLI 非対応**（`-set`/`-save` か拡張窓を使う）
 
@@ -159,11 +167,17 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 3. **直接起動:** `bmxt` または `bmxt repl` → Family 参加済みなら **localhost HTTP 待ち受け** `http://127.0.0.1:17653/`（loopback のみ・Family 認証付き）。各ブラウザで BMXt プロンプトを開くと **自動再接続**が走る。
 4. **フォールバック握手**（コピペ／ファイル）も従来どおり: `sync -offer` / `sync -accept`（Enter / `:pick`）、または `bmxt sync-connect [--offer]`。`~/.config/bmxt/` のチケット推奨。
 5. Family 参加済みならプロンプトは **`BMXt>`**（コマンド受付中。peer 接続は並行しうる）。追加ブラウザは CLI 経由の mesh で自動直結。未参加時は `BMXt*>`。
-6. 接続イベントは通常のログ行として流す。`BMXt>` 待ち中は rustyline の external printer 経由で出し、ログ後にプロンプトとキャレットを描き直す。
-7. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ Rust 行編集:
-   - **↑↓** 履歴 · **灰色の残りヒント**（例: 入力 `sync -se` ＋ 灰色 `tup`）· **Tab** で適用 · **Enter** で実行
+6. 接続イベントは通常のログ行として流す。`BMXt>` 待ち中はキュー経由でプロンプト上に出し、ログ後にプロンプトとキャレットを描き直す。
+7. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ メイン画面の行編集（crossterm · rustyline 不使用）:
+   - **↑↓** 履歴 · **Ctrl+R** 逆方向インクリメンタル履歴検索（拡張と同じ: 入力で絞込 · Ctrl+R/↓ で古い一致 · ↑ で新しい一致 · Enter でプロンプトへ挿入のみ · Esc で取消）· メニュー閉時の **灰色ヒント**（表示のみ。**Right は確定しない** · キャレット移動のみ＝拡張同期）
+   - **Tab** で候補オーバーレイ（空行→第一全件 · ベース `BMXt>` は常に1行）。**CLI のみ:** 行末の非空部分トークン入力でも一致時に自動オープン。**↑↓** / **Tab** 移動 · **Enter** で同行列を書き換え＋次ティア再表示可（**実行しない**）· **Esc** / 先頭で **↑** で Tab まで抑制 · 開時 prefix / 開中 contains · 置換対象は反転
+   - メニュー閉時の **Enter** で行を実行
    - `-list` 後の Tab で `| browse` 等、既に `|` を打った右辺では `browse` / `close` 等を補完
-   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で所有 peer へ activate、q/Esc まで開いたまま。Family `tabs_changed` で**ライブ更新**）
+   - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（picker は `tab -activate … --device …` を組み立て [開始時 y/N で `--focus`]；↑↓ `/` Enter；q/Esc まで開いたまま；`tabs_changed` ライブ更新）
+   - `tab -activate <tabId> --device <id> [--focus]`（ワンショット。`--focus` で peer ブラウザを前面化）
+   - `history -list --device <id>`（ワンショット一覧）· `history -list --device | browse`（番号で**取得元**ピア選択→URL picker。`bookmark` / `tab` / `search -list` も同様）
+   - **CLI 専用**（拡張の共有文法には載せない）: `dom -list --device <id> --tab <n> …` · Interactive `dom -wizard` / `nav -enter`（peer→tab picker · 矢印=24px 移動 · Alt+矢印=大移動 · Enter=`click` · **端末フォーカス維持** · Shift+矢印は端末スクロールのため非使用）
+   - URL picker: Space で URL マーク → Enter → **Tab** で**送信先**ピアを1台以上マーク → Enter で開く（取得元≠送信先可）。typed: `tab -send <id> …` / `bookmark -send <id> --open|--save|--both …`
    - **`quit` / `exit`** で `bmxt` プロセス終了（REPL 継続中のピア切断時のみ「待ち受け継続」案内）
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
    - 最初の peer: `sync -offer` / `sync -accept`（または `bmxt sync-connect`）。追加 peer はメッシュ
@@ -201,7 +215,7 @@ IPC: `POST http://127.0.0.1:17653/v1/exec`。CLI の `--close` はローカル�
 
 ## この host の対象外
 
-- `nav` / `dom` のページオーバーレイ
+- **端末内**への `nav` / `dom` ページオーバーレイ描画（peer overlay の遠隔操作は todo §17 の範囲）
 - `setting -list | browse` ピッカー / FSA / chrome.storage ミラー
 - ネイティブメッセージング / CDP / Playwright
 - 既定経路での公開 STUN/TURN

@@ -27,9 +27,17 @@ import {
   tryLoadUiSettingsFromExternal,
   trySaveUiSettingsToExternal
 } from "./settings-external-storage"
+import {
+  DEFAULT_CLI_DOOR_RETRY_MS,
+  DEFAULT_SYNC_HOLD_INTERVAL_MS,
+  normalizeSyncTimingMs
+} from "./sync-timing.ts"
 
 /** EN: Default on — show usage help beside IME candidate tokens. */
 export const DEFAULT_IME_CANDIDATE_HELP = true
+
+/** EN: Default off — opt-in prompt typing fire particles. */
+export const DEFAULT_PROMPT_FIRE = false
 
 export type UiSettings = {
   locale: UiLocale
@@ -45,10 +53,25 @@ export type UiSettings = {
    */
   imeCandidateHelp: boolean
   /**
+   * EN: When true, typed prompt chars get fire wrap; deleted chars glitter-shatter.
+   * JA: true のとき入力は炎ラップ、削除はキラキラ砕け散り。
+   */
+  promptFire: boolean
+  /**
    * EN: Search picker / `search -list` scope legend style (text / emoji / both).
    * JA: 検索ピッカーおよび `search -list` のスコープ凡例表示（テキスト／絵文字／併用）。
    */
   searchLegendMode: SearchLegendMode
+  /**
+   * EN: Sync tunnel hold tick interval (ms) while the prompt window is open.
+   * JA: プロンプト窓オープン中の Sync トンネル hold 間隔（ミリ秒）。
+   */
+  syncHoldIntervalMs: number
+  /**
+   * EN: CLI localhost door reconnect retry interval (ms).
+   * JA: CLI localhost door 再接続リトライ間隔（ミリ秒）。
+   */
+  cliDoorRetryMs: number
 }
 
 function pickImeCandidateHelpFromPartial(raw: Record<string, unknown>): boolean {
@@ -58,11 +81,32 @@ function pickImeCandidateHelpFromPartial(raw: Record<string, unknown>): boolean 
   return raw.imeCandidateHelp !== false
 }
 
+function pickPromptFireFromPartial(raw: Record<string, unknown>): boolean {
+  if (!("promptFire" in raw)) {
+    return DEFAULT_PROMPT_FIRE
+  }
+  return raw.promptFire === true
+}
+
 function pickSearchLegendModeFromPartial(raw: Record<string, unknown>): SearchLegendMode {
   if (!("searchLegendMode" in raw)) {
     return DEFAULT_SEARCH_LEGEND_MODE
   }
   return normalizeSearchLegendMode(raw.searchLegendMode)
+}
+
+function pickSyncHoldIntervalMsFromPartial(raw: Record<string, unknown>): number {
+  if (!("syncHoldIntervalMs" in raw)) {
+    return DEFAULT_SYNC_HOLD_INTERVAL_MS
+  }
+  return normalizeSyncTimingMs(raw.syncHoldIntervalMs, DEFAULT_SYNC_HOLD_INTERVAL_MS)
+}
+
+function pickCliDoorRetryMsFromPartial(raw: Record<string, unknown>): number {
+  if (!("cliDoorRetryMs" in raw)) {
+    return DEFAULT_CLI_DOOR_RETRY_MS
+  }
+  return normalizeSyncTimingMs(raw.cliDoorRetryMs, DEFAULT_CLI_DOOR_RETRY_MS)
 }
 
 function pickHostUiModeFromPartial(raw: Record<string, unknown>): HostUiMode {
@@ -84,7 +128,10 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
       appearance: normalizeUiAppearance(null),
       hostUiMode: DEFAULT_HOST_UI_MODE,
       imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
-      searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
+      promptFire: DEFAULT_PROMPT_FIRE,
+      searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE,
+      syncHoldIntervalMs: DEFAULT_SYNC_HOLD_INTERVAL_MS,
+      cliDoorRetryMs: DEFAULT_CLI_DOOR_RETRY_MS
     }
   }
   const record = raw as Record<string, unknown>
@@ -93,7 +140,10 @@ export function normalizeUiSettings(raw: Partial<UiSettings> | null | undefined)
     appearance: normalizeUiAppearance(raw.appearance),
     hostUiMode: pickHostUiModeFromPartial(record),
     imeCandidateHelp: pickImeCandidateHelpFromPartial(record),
-    searchLegendMode: pickSearchLegendModeFromPartial(record)
+    promptFire: pickPromptFireFromPartial(record),
+    searchLegendMode: pickSearchLegendModeFromPartial(record),
+    syncHoldIntervalMs: pickSyncHoldIntervalMsFromPartial(record),
+    cliDoorRetryMs: pickCliDoorRetryMsFromPartial(record)
   }
 }
 
@@ -116,6 +166,7 @@ export async function resetUiSettingsToDefaultsAndInternal(): Promise<UiSettings
     appearance: DEFAULT_UI_APPEARANCE,
     hostUiMode: DEFAULT_HOST_UI_MODE,
     imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+    promptFire: DEFAULT_PROMPT_FIRE,
     searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
   })
   await saveUiSettingsToChromeStorage(defaults)
@@ -134,6 +185,7 @@ export async function applyDefaultUiSettingsToInternalCache(): Promise<UiSetting
     appearance: DEFAULT_UI_APPEARANCE,
     hostUiMode: DEFAULT_HOST_UI_MODE,
     imeCandidateHelp: DEFAULT_IME_CANDIDATE_HELP,
+    promptFire: DEFAULT_PROMPT_FIRE,
     searchLegendMode: DEFAULT_SEARCH_LEGEND_MODE
   })
   await saveUiSettingsToChromeStorage(defaults)

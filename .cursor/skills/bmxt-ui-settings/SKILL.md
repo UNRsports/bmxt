@@ -13,9 +13,9 @@ Read [reference.md](reference.md) for storage keys, bundle layout, and module ma
 
 ## Scope
 
-UI locale and terminal/picker appearance edited in **`setting -list`**.
+UI locale and terminal/picker appearance edited in **`setting -list | browse`** or **`setting -set`** (immediate commit on apply).
 
-- Implementation: **`lib/features/setting/`**
+- Implementation: **`lib/features/setting/`** (`commitUiSettings`, `setting-cui-apply.ts`)
 - Storage keys: **`lib/features/extension-storage/keys.ts`**
 - User-facing behavior: README § **`setting`**
 

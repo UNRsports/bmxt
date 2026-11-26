@@ -41,7 +41,6 @@ import { UiSettingsProvider, useUiSettings } from "../setting/use-ui-settings"
 import { ExternalSettingsRecoveryProvider } from "../setting/use-external-settings-recovery"
 import { useTerminalAppearance } from "../setting/apply-appearance"
 import type { BmxtHostKind } from "./bmxt-host-kind"
-import { useFloatTabFocusGuard } from "./shell/useFloatTabFocusGuard"
 
 const EMPTY_SESSION_LIST_ROWS: SessionListRow[] = []
 
@@ -85,10 +84,7 @@ type SessionPaneProps = {
   ) => void | Promise<void>
   sessionOrderLength: number
   hostKind: import("./bmxt-host-kind").BmxtHostKind
-  floatTabId: number | null
-  restoredNavActive: boolean
   processUiReady: boolean
-  flushFloatPersist: () => Promise<void>
   applyRunCmdPatches: (patches: import("./terminal-sessions/session-patches").SessionPatch[]) => void
   refreshTabPickerRows: () => Promise<void>
   scheduleTabPickerRowsRefresh: () => void
@@ -124,10 +120,7 @@ const SessionPaneView = memo(function SessionPaneView({
   appendLogLines,
   sessionOrderLength,
   hostKind,
-  floatTabId,
-  restoredNavActive,
   processUiReady,
-  flushFloatPersist,
   applyRunCmdPatches,
   refreshTabPickerRows,
   scheduleTabPickerRowsRefresh,
@@ -158,10 +151,7 @@ const SessionPaneView = memo(function SessionPaneView({
         appendLogLines={appendLogLines}
         sessionOrderLength={sessionOrderLength}
         hostKind={hostKind}
-        floatTabId={floatTabId}
-        restoredNavActive={restoredNavActive}
         processUiReady={processUiReady}
-        flushFloatPersist={flushFloatPersist}
         applyRunCmdPatches={applyRunCmdPatches}
         appendCommandToHistory={appendCommandToHistory}
         sessionPickers={sessionPickers}
@@ -222,7 +212,6 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
     prev.modeToolbarOrder === next.modeToolbarOrder &&
     prev.navArmed === next.navArmed &&
     prev.navArmedByLeaf === next.navArmedByLeaf &&
-    prev.restoredNavActive === next.restoredNavActive &&
     prev.processUiReady === next.processUiReady &&
     prev.postUpgradeBanner === next.postUpgradeBanner &&
     prev.upgradeBannerReady === next.upgradeBannerReady &&
@@ -240,22 +229,20 @@ function sessionPanePropsEqual(prev: SessionPaneProps, next: SessionPaneProps): 
 }
 
 export function BmxtTerminal(
-  props: { hostKind?: BmxtHostKind; floatTabId?: number | null } = {}
+  props: { hostKind?: BmxtHostKind } = {}
 ) {
   const hostKind = props.hostKind ?? "popup"
-  const floatTabId = props.floatTabId ?? null
   return (
     <UiSettingsProvider>
       <ExternalSettingsRecoveryProvider>
-        <BmxtTerminalInner hostKind={hostKind} floatTabId={floatTabId} />
+        <BmxtTerminalInner hostKind={hostKind} />
       </ExternalSettingsRecoveryProvider>
     </UiSettingsProvider>
   )
 }
 
-function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number | null }) {
-  const { hostKind, floatTabId } = props
-  useFloatTabFocusGuard(hostKind === "float")
+function BmxtTerminalInner(props: { hostKind: BmxtHostKind }) {
+  const { hostKind } = props
   const { settings } = useUiSettings()
   useTerminalAppearance(settings.appearance)
 
@@ -282,9 +269,8 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     appendLogLines: appendLogLinesToSession,
     setActiveSession,
     setSessionDisplayName,
-    applyRunCmdPatches,
-    flushFloatPersist: flushFloatSessionsPersist
-  } = useTerminalSessions(sessionPatchContext, hostKind, floatTabId)
+    applyRunCmdPatches
+  } = useTerminalSessions(sessionPatchContext, hostKind)
   const { postUpgradeBanner, upgradeBannerReady } = useVersionUpgradeBanner()
   const { history, appendCommandToHistory } = useCommandHistory()
   const [completionCandidates, setCompletionCandidates] = useState<string[]>([])
@@ -302,15 +288,8 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     setModeToolbarOrderForLeaf,
     navArmedByLeaf,
     setNavArmedForLeaf,
-    restoredNavActive,
-    processUiReady,
-    flushFloatBrowsePersist
-  } = useProcessUiPersistence(validSessionIds, true, hostKind, floatTabId, sessionsReady)
-
-  const flushFloatPersist = useCallback(async () => {
-    await flushFloatSessionsPersist()
-    await flushFloatBrowsePersist()
-  }, [flushFloatBrowsePersist, flushFloatSessionsPersist])
+    processUiReady
+  } = useProcessUiPersistence(validSessionIds, true, hostKind)
 
   pickersBySessionRef.current = pickersBySession
   navArmedByLeafRef.current = navArmedByLeaf
@@ -525,11 +504,8 @@ function BmxtTerminalInner(props: { hostKind: BmxtHostKind; floatTabId: number |
     onSetSessionDisplayName: setSessionDisplayName,
     sessionOrderLength: state.order.length,
     hostKind,
-    floatTabId,
-    restoredNavActive,
     processUiReady,
     applyRunCmdPatches,
-    flushFloatPersist,
     refreshTabPickerRows,
     scheduleTabPickerRowsRefresh,
     postUpgradeBanner,

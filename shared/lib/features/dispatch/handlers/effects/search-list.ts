@@ -1,7 +1,10 @@
 import type { HostEffect } from "../../effect-types"
 import type { DispatchHostContext } from "../../dispatch-context"
 import { runPlainListForCommandId } from "../../../command-line/list-commands"
-import { listPlanFromSearchListEffect } from "../../../command-line/list-commands/list-plan-from-ir"
+import {
+  isBareDeviceScope,
+  listPlanFromSearchListEffect
+} from "../../../command-line/list-commands/list-plan-from-ir"
 import type { UiLocale } from "../../../setting/locale"
 import { tCmd } from "../../../setting/i18n/ns/cmd"
 import { getRunLocale } from "../../../setting/i18n/run-locale"
@@ -15,6 +18,9 @@ type E = Extract<HostEffect, { kind: "search_list" }>
  */
 export async function applySearchListEffect(ctx: DispatchHostContext, e: E): Promise<string[]> {
   const locale: UiLocale = ctx.uiLocale ?? getRunLocale()
+  if (isBareDeviceScope(e.device_scope, e.device_id)) {
+    return [tCmd("cmd.cli.device.needIdOrBrowse", locale)]
+  }
   try {
     const listPlan = listPlanFromSearchListEffect(e)
     const scope = (listPlan.match as { scope?: { kind: string } }).scope

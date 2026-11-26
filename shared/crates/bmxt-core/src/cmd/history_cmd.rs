@@ -87,12 +87,16 @@ fn run_list(args: &[String]) -> DispatchBundle {
             if device_scope != "local" {
                 return usage();
             }
-            let Some(id) = args.get(i + 1).and_then(|s| sanitize_device_id(s)) else {
-                return usage();
-            };
+            // EN: Bare `--device` (no id) is a valid plan; host picks via `| browse` or misuse on plain.
+            // JA: ID なし `--device` は合法 plan。plain はホストが misuse、`| browse` で番号選択。
             device_scope = "device".to_string();
-            device_id = id;
-            i += 2;
+            if let Some(id) = args.get(i + 1).and_then(|s| sanitize_device_id(s)) {
+                device_id = id;
+                i += 2;
+            } else {
+                device_id = String::new();
+                i += 1;
+            }
             continue;
         }
         if args[i].starts_with('-') {
@@ -102,31 +106,44 @@ fn run_list(args: &[String]) -> DispatchBundle {
         i += 1;
     }
 
-    let mut peer_parts = vec![
-        "search".to_string(),
-        "-list".to_string(),
-        "--history".to_string(),
-    ];
-    peer_parts.extend(pattern_parts.iter().cloned());
-    let mut dispatch_parts = vec![
-        "search".to_string(),
-        "-list".to_string(),
-        "--history".to_string(),
-    ];
-    if device_scope == "peers" {
-        dispatch_parts.push("--peers".to_string());
-    } else if device_scope == "device" {
-        dispatch_parts.push("--device".to_string());
-        dispatch_parts.push(device_id.clone());
+    // EN: Cross-device history stays on search (flat). Local uses date-tree list.
+    // JA: ピア横断は search のフラット一覧。ローカルは日付ツリー list。
+    if device_scope == "peers" || device_scope == "device" {
+        let mut peer_parts = vec![
+            "search".to_string(),
+            "-list".to_string(),
+            "--history".to_string(),
+        ];
+        peer_parts.extend(pattern_parts.iter().cloned());
+        let mut dispatch_parts = vec![
+            "search".to_string(),
+            "-list".to_string(),
+            "--history".to_string(),
+        ];
+        if device_scope == "peers" {
+            dispatch_parts.push("--peers".to_string());
+        } else {
+            dispatch_parts.push("--device".to_string());
+            if !device_id.is_empty() {
+                dispatch_parts.push(device_id.clone());
+            }
+        }
+        dispatch_parts.extend(pattern_parts);
+        return effects(vec![HostEffect::SearchList {
+            dispatch_line: dispatch_parts.join(" "),
+            peer_dispatch_line: peer_parts.join(" "),
+            device_scope,
+            device_id,
+        }]);
     }
-    dispatch_parts.extend(pattern_parts);
 
-    effects(vec![HostEffect::SearchList {
-        dispatch_line: dispatch_parts.join(" "),
-        peer_dispatch_line: peer_parts.join(" "),
+    ui(UiAction::OpenPlainList {
+        list_id: "history".to_string(),
+        line: args.join(" "),
+        show_url: "false".to_string(),
         device_scope,
         device_id,
-    }])
+    })
 }
 
 fn run_delete(args: &[String]) -> DispatchBundle {
@@ -222,8 +239,34 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_emits_search_history() {
+    fn list_local_emits_open_plain_list() {
         let bundle = run(&["history".into(), "-list".into(), "foo".into()]);
+        match bundle {
+            DispatchBundle::Ui {
+                action:
+                    UiAction::OpenPlainList {
+                        list_id,
+                        line,
+                        ..
+                    },
+                ..
+            } => {
+                assert_eq!(list_id, "history");
+                assert!(line.contains("history -list"));
+                assert!(line.contains("foo"));
+            }
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_peers_emits_search_history() {
+        let bundle = run(&[
+            "history".into(),
+            "-list".into(),
+            "--peers".into(),
+            "foo".into(),
+        ]);
         match bundle {
             DispatchBundle::Effects { effects, .. } => match &effects[0] {
                 HostEffect::SearchList {
@@ -231,6 +274,28 @@ mod tests {
                 } => {
                     assert!(peer_dispatch_line.contains("--history"));
                     assert!(peer_dispatch_line.contains("foo"));
+                }
+                other => panic!("unexpected: {other:?}"),
+            },
+            other => panic!("unexpected: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn list_bare_device_emits_search_list_with_empty_id() {
+        let bundle = run(&["history".into(), "-list".into(), "--device".into()]);
+        match bundle {
+            DispatchBundle::Effects { effects, .. } => match &effects[0] {
+                HostEffect::SearchList {
+                    dispatch_line,
+                    device_scope,
+                    device_id,
+                    ..
+                } => {
+                    assert_eq!(device_scope, "device");
+                    assert!(device_id.is_empty());
+                    assert!(dispatch_line.ends_with("--device") || dispatch_line.contains("--device "));
+                    assert!(!dispatch_line.contains("--device  "));
                 }
                 other => panic!("unexpected: {other:?}"),
             },

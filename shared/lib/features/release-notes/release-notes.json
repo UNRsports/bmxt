@@ -1,10 +1,17 @@
 {
-  "0.9.5": {
+  "0.9.6": {
     "ja": [
-      "UIの細部動作と内部のコマンドや連携処理の仕様を見直し"
+      "searchコマンドの処理を改善",
+      "不要になったコードを削除",
+      "テキスト入力時にエフェクトが表示できる設定を追加",
+      "settingコマンドの実装を改善",
+      "システムチェック機能を実装",
+      "bookmarkおよびhistoryコマンドにpickerを実装",
+      "pcikerの汎用化と動作範囲の見直し",
+      "その他、全体の細部修正"
     ],
     "en": [
-      "Reviewed UI detail behavior and internal command and collaboration processing specifications"
+      ""
     ]
   }
 }

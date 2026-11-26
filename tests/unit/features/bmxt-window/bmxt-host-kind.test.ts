@@ -7,21 +7,23 @@ import {
 } from "../../../../shared/lib/features/bmxt-window/bmxt-host-kind.ts"
 
 describe("bmxt-host-kind", () => {
-  it("recognizes host kinds and clear hosts", () => {
+  it("recognizes only popup as a valid host kind", () => {
     assert.equal(isBmxtHostKind("popup"), true)
-    assert.equal(isBmxtHostKind("float"), true)
+    assert.equal(isBmxtHostKind("float"), false)
     assert.equal(isBmxtHostKind("all"), false)
+    assert.equal(isBmxtHostKind("other"), false)
+    assert.equal(isBmxtHostKind(undefined), false)
+  })
+
+  it("recognizes valid clear host values", () => {
     assert.equal(isBmxtSessionClearHost("all"), true)
     assert.equal(isBmxtSessionClearHost("popup"), true)
+    assert.equal(isBmxtSessionClearHost("float"), false)
     assert.equal(isBmxtSessionClearHost("other"), false)
   })
 
   it("applies clear only to matching host or all", () => {
     assert.equal(sessionClearAppliesToHost("all", "popup"), true)
-    assert.equal(sessionClearAppliesToHost("all", "float"), true)
     assert.equal(sessionClearAppliesToHost("popup", "popup"), true)
-    assert.equal(sessionClearAppliesToHost("popup", "float"), false)
-    assert.equal(sessionClearAppliesToHost("float", "popup"), false)
-    assert.equal(sessionClearAppliesToHost("float", "float"), true)
   })
 })

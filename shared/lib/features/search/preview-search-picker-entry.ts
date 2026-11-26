@@ -1,10 +1,12 @@
 import type { PickerEntry, SearchPageMatch } from "../side-picker/model/picker-entry"
 import type { BmxtNeedleHighlightColorsPayload } from "../page-dom/page-scroll-needle-message"
+import { isGoogleSheetsUrl } from "../url/parse-google-sheets-url"
 import { resolveOpenTabForSearchEntry } from "./search-entry-open-tab"
 import type { SearchEntryDetailHit } from "./search-entry-detail-hits"
 import { listSearchPickerPreviewTargetIndices } from "./search-picker-preview-targets"
 import { resolveSearchPickerPageMatchFromMatches, lineHitIndexForPageMatch } from "./search-picker-page-match"
 import { clearSearchPageHighlights } from "./sources/clear-search-page-highlights"
+import { navigateSheetsTabToCell } from "./sources/navigate-sheets-to-cell"
 import { scrollSearchPageToNeedle } from "./sources/page-scroll-to-search-needle"
 import { activateTabInBackground } from "../side-picker/preview/activate-tab-in-background"
 
@@ -177,6 +179,33 @@ async function scrollToPageMatch(
   return run
 }
 
+async function previewSheetsCellInOpenTab(
+  tabId: number,
+  entryUrl: string,
+  match: SearchPageMatch
+): Promise<boolean> {
+  const cellRef = match.cellRef?.trim()
+  if ((!cellRef && !match.cellValue) || match.lineNo <= 0 || !isGoogleSheetsUrl(entryUrl)) {
+    return false
+  }
+  const generation = ++previewScrollGeneration
+  const run = previewScrollTail.then(async () => {
+    if (generation !== previewScrollGeneration) {
+      return false
+    }
+    return navigateSheetsTabToCell(tabId, entryUrl, {
+      cellRef: cellRef || "A1",
+      cellValue: match.cellValue ?? match.snippet,
+      preferFind: match.sheetsRowTrusted !== true
+    })
+  })
+  previewScrollTail = run.then(
+    () => undefined,
+    () => undefined
+  )
+  return run
+}
+
 async function previewPageMatchInOpenTab(
   entry: PickerEntry,
   pageMatchIndex: number,
@@ -190,21 +219,36 @@ async function previewPageMatchInOpenTab(
   }
 
   const needle = searchPattern.trim()
+  const sheetsCell =
+    match?.cellRef && isGoogleSheetsUrl(entry.url) ? match.cellRef.trim() : ""
   const skipActivateDelay =
-    needle.length > 0 && isPreviewSessionReady(resolved.tabId, needle)
+    !sheetsCell &&
+    needle.length > 0 &&
+    isPreviewSessionReady(resolved.tabId, needle)
 
   const activated = await activateTabInBackground(resolved.tabId)
   if (!activated) {
     return false
   }
 
-  if (!match || !needle || match.lineNo <= 0) {
+  if (!match || match.lineNo <= 0) {
     return true
   }
 
   if (!skipActivateDelay) {
     await sleep(PREVIEW_TAB_ACTIVATE_DELAY_MS)
   }
+
+  // EN: Sheets — canvas has no DOM highlight; jump the selected cell instead.
+  // JA: Sheets は canvas のため DOM ハイライト不可。セル選択ジャンプで代替する。
+  if (sheetsCell) {
+    return previewSheetsCellInOpenTab(resolved.tabId, entry.url, match)
+  }
+
+  if (!needle) {
+    return true
+  }
+
   return scrollToPageMatch(
     resolved.tabId,
     match,

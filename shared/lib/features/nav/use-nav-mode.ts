@@ -64,8 +64,8 @@ export type UseNavModeOptions = {
   translateAssistActive?: boolean
   uiLocale: UiLocale
   /**
-   * EN: Prefer this tab for overlay inject (float host tab). Falls back to active-window target.
-   * JA: フロート宿主タブを優先してオーバーレイ注入（なければ通常の対象タブ解決）。
+   * EN: Optional preferred tab for overlay inject; falls back to active-window target.
+   * JA: オーバーレイ注入の優先タブ（省略時は通常の対象タブ解決）。
    */
   hostTabId?: number | null
 }
@@ -692,7 +692,7 @@ export function useNavMode({
     if (!armed || !active) {
       return
     }
-    // EN: Keep overlay alive after remount / navigation (float restores armed+active).
+    // EN: Keep overlay alive after remount / navigation (restores armed+active state).
     void showOverlayOnActiveTab().then(() => {
       try {
         window.focus()
@@ -708,7 +708,7 @@ export function useNavMode({
     wasArmedRef.current = armed
     if (!armed) {
       void teardownAll()
-      // EN: Clear active only when disarming after armed — not on initial false during float hydrate.
+      // EN: Clear active only when disarming after armed — not on initial false before first activation.
       if (wasArmed) {
         setActive(false)
       }

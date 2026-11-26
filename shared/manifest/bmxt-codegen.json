@@ -14,7 +14,7 @@
       "module": "back",
       "canonicalName": "back",
       "aliases": [],
-      "usagePrimary": "back | \u2026 | back",
+      "usagePrimary": "back | … | back",
       "subcommands": []
     },
     {
@@ -23,7 +23,7 @@
       "aliases": [
         "c"
       ],
-      "usagePrimary": "close | close <tabId> | \u2026 | close",
+      "usagePrimary": "close | close <tabId> | close --window <id…> | close --group <id> | … | close",
       "subcommands": []
     },
     {
@@ -107,10 +107,28 @@
       "module": "group",
       "canonicalName": "group",
       "aliases": [],
-      "usagePrimary": "group new [tabId…] | group add <groupId> <tabId…>",
+      "usagePrimary": "group new [tabId…] [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>",
       "subcommands": [
-        { "head": "new", "tail": "rest" },
-        { "head": "add", "tail": "rest" }
+        {
+          "head": "new",
+          "trailingTokens": [
+            "--title",
+            "--color"
+          ],
+          "tail": "rest"
+        },
+        {
+          "head": "add",
+          "tail": "rest"
+        },
+        {
+          "head": "rename",
+          "tail": "rest"
+        },
+        {
+          "head": "ungroup",
+          "tail": "rest"
+        }
       ]
     },
     {
@@ -126,21 +144,21 @@
       "module": "forward",
       "canonicalName": "forward",
       "aliases": [],
-      "usagePrimary": "forward | \u2026 | forward",
+      "usagePrimary": "forward | … | forward",
       "subcommands": []
     },
     {
       "module": "reload",
       "canonicalName": "reload",
       "aliases": [],
-      "usagePrimary": "reload | \u2026 | reload",
+      "usagePrimary": "reload | … | reload",
       "subcommands": []
     },
     {
       "module": "tabs",
       "canonicalName": "tab",
       "aliases": [],
-      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url\u2026> [--group <title>] [--close] | tab help",
+      "usagePrimary": "tab -list [-url] [--device <id>|--peers] | tab -exit -list | tab -setting -page-active | tab -activate <tabId> [--device <id>] [--focus] | tab -moveurl <url> | tab -nowurl | tab -send <deviceId> <url…> [--group <title>] [--close] | tab help",
       "subcommands": [
         {
           "head": "-list",
@@ -164,6 +182,14 @@
             "-page-active"
           ],
           "tail": "none"
+        },
+        {
+          "head": "-activate",
+          "trailingTokens": [
+            "--device",
+            "--focus"
+          ],
+          "tail": "rest"
         },
         {
           "head": "-moveurl",
@@ -235,8 +261,13 @@
       "module": "aboutbmxt",
       "canonicalName": "aboutbmxt",
       "aliases": [],
-      "usagePrimary": "aboutbmxt",
-      "subcommands": []
+      "usagePrimary": "aboutbmxt | aboutbmxt -system",
+      "subcommands": [
+        {
+          "head": "-system",
+          "tail": "none"
+        }
+      ]
     },
     {
       "module": "session",
@@ -297,7 +328,7 @@
       "module": "setting",
       "canonicalName": "setting",
       "aliases": [],
-      "usagePrimary": "setting -list | setting -set <key> <value> | setting -save | setting -cancel | setting -exit -list | setting help",
+      "usagePrimary": "setting -list | setting -set <key> <value> | setting -export | setting -import | setting -bg-import [--picker] | setting -reset-default | setting -storage internal|external | setting -pick-dir | setting -reload | setting -snapshot-storage bundled|vault | setting -snapshot-pick-dir | setting -sync-guide | setting -save | setting -cancel | setting -exit -list | setting help",
       "subcommands": [
         {
           "head": "-list",
@@ -306,6 +337,49 @@
         {
           "head": "-set",
           "tail": "rest"
+        },
+        {
+          "head": "-export",
+          "tail": "none"
+        },
+        {
+          "head": "-import",
+          "tail": "none"
+        },
+        {
+          "head": "-bg-import",
+          "trailingTokens": [
+            "--picker"
+          ],
+          "tail": "none"
+        },
+        {
+          "head": "-reset-default",
+          "tail": "none"
+        },
+        {
+          "head": "-storage",
+          "tail": "rest"
+        },
+        {
+          "head": "-pick-dir",
+          "tail": "none"
+        },
+        {
+          "head": "-reload",
+          "tail": "none"
+        },
+        {
+          "head": "-snapshot-storage",
+          "tail": "rest"
+        },
+        {
+          "head": "-snapshot-pick-dir",
+          "tail": "none"
+        },
+        {
+          "head": "-sync-guide",
+          "tail": "none"
         },
         {
           "head": "-save",
@@ -352,7 +426,7 @@
       "module": "sync",
       "canonicalName": "sync",
       "aliases": [],
-      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
+      "usagePrimary": "sync -setup | sync -status | sync -pair [invite] | sync -members | sync -connect <deviceId> | sync -setname <name> | sync -offer | sync -answer <code> | sync -accept <code> | sync -ping <deviceId> | sync help",
       "subcommands": [
         {
           "head": "-setup",
@@ -372,6 +446,10 @@
         },
         {
           "head": "-connect",
+          "tail": "rest"
+        },
+        {
+          "head": "-setname",
           "tail": "rest"
         },
         {
@@ -404,12 +482,21 @@
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--folder", "--device", "--peers"],
+          "trailingTokens": [
+            "--folder",
+            "--device",
+            "--peers"
+          ],
           "tail": "rest"
         },
         {
           "head": "-add",
-          "trailingTokens": ["--title", "--parent", "--force", "--skip-dup"],
+          "trailingTokens": [
+            "--title",
+            "--parent",
+            "--force",
+            "--skip-dup"
+          ],
           "tail": "rest"
         },
         {
@@ -434,7 +521,9 @@
         },
         {
           "head": "-restore",
-          "trailingTokens": ["--as-bookmarks"],
+          "trailingTokens": [
+            "--as-bookmarks"
+          ],
           "tail": "rest"
         },
         {
@@ -451,7 +540,10 @@
       "subcommands": [
         {
           "head": "-list",
-          "trailingTokens": ["--device", "--peers"],
+          "trailingTokens": [
+            "--device",
+            "--peers"
+          ],
           "tail": "rest"
         },
         {
@@ -460,7 +552,10 @@
         },
         {
           "head": "-delete-range",
-          "trailingTokens": ["--from", "--to"],
+          "trailingTokens": [
+            "--from",
+            "--to"
+          ],
           "tail": "rest"
         },
         {
@@ -469,7 +564,9 @@
         },
         {
           "head": "-restore",
-          "trailingTokens": ["--as-bookmarks"],
+          "trailingTokens": [
+            "--as-bookmarks"
+          ],
           "tail": "rest"
         },
         {
@@ -496,7 +593,7 @@
       "module": "move_cmd",
       "canonicalName": "move",
       "aliases": [],
-      "usagePrimary": "move --window <id> [tabId…] | move --group <gid> --window <wid> [tabId…] | … | move --window <id>",
+      "usagePrimary": "move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>",
       "subcommands": []
     },
     {
@@ -505,6 +602,18 @@
       "aliases": [],
       "usagePrimary": "new-window <tabId…> | … | new-window",
       "subcommands": []
+    },
+    {
+      "module": "window_cmd",
+      "canonicalName": "window",
+      "aliases": [],
+      "usagePrimary": "window rename <windowId> <name>",
+      "subcommands": [
+        {
+          "head": "rename",
+          "tail": "rest"
+        }
+      ]
     }
   ],
   "effects": [
@@ -604,7 +713,9 @@
       "rustVariant": "GroupNew",
       "shape": "record",
       "fields": {
-        "tab_ids": "vec_i32"
+        "tab_ids": "vec_i32",
+        "title": "string",
+        "color": "string"
       },
       "tsHandlerFile": "group-new",
       "tsHandlerExport": "applyGroupNewEffect"
@@ -639,7 +750,8 @@
       "fields": {
         "tab_ids": "vec_i32",
         "window_id": "i32",
-        "group_id": "i32"
+        "group_id": "i32",
+        "before_tab_id": "i32"
       },
       "tsHandlerFile": "tabs-move",
       "tsHandlerExport": "applyTabsMoveEffect"
@@ -731,6 +843,13 @@
       "shape": "unit",
       "tsHandlerFile": "open-welcome-page",
       "tsHandlerExport": "applyOpenWelcomePageEffect"
+    },
+    {
+      "kind": "probe_capabilities",
+      "rustVariant": "ProbeCapabilities",
+      "shape": "unit",
+      "tsHandlerFile": "probe-capabilities",
+      "tsHandlerExport": "applyProbeCapabilitiesEffect"
     },
     {
       "kind": "session_new",
@@ -876,6 +995,59 @@
       },
       "tsHandlerFile": "tabs-list",
       "tsHandlerExport": "applyTabsListEffect"
+    },
+    {
+      "kind": "tabs_activate",
+      "rustVariant": "TabsActivate",
+      "shape": "record",
+      "fields": {
+        "tab_id": "i32",
+        "device_id": "string",
+        "focus": "string"
+      },
+      "tsHandlerFile": "tabs-activate",
+      "tsHandlerExport": "applyTabsActivateEffect"
+    },
+    {
+      "kind": "close_window",
+      "rustVariant": "CloseWindow",
+      "shape": "record",
+      "fields": {
+        "window_ids": "vec_i32"
+      },
+      "tsHandlerFile": "close-window",
+      "tsHandlerExport": "applyCloseWindowEffect"
+    },
+    {
+      "kind": "close_group",
+      "rustVariant": "CloseGroup",
+      "shape": "record",
+      "fields": {
+        "group_id": "i32"
+      },
+      "tsHandlerFile": "close-group",
+      "tsHandlerExport": "applyCloseGroupEffect"
+    },
+    {
+      "kind": "group_ungroup",
+      "rustVariant": "GroupUngroup",
+      "shape": "record",
+      "fields": {
+        "group_id": "i32"
+      },
+      "tsHandlerFile": "group-ungroup",
+      "tsHandlerExport": "applyGroupUngroupEffect"
+    },
+    {
+      "kind": "group_rename",
+      "rustVariant": "GroupRename",
+      "shape": "record",
+      "fields": {
+        "group_id": "i32",
+        "title": "string"
+      },
+      "tsHandlerFile": "group-rename",
+      "tsHandlerExport": "applyGroupRenameEffect"
     }
   ],
   "uiActions": [
@@ -1088,6 +1260,68 @@
       }
     },
     {
+      "kind": "setting_export",
+      "rustVariant": "SettingExport",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_import",
+      "rustVariant": "SettingImport",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_bg_import",
+      "rustVariant": "SettingBgImport",
+      "shape": "record",
+      "fields": {
+        "layer": "string"
+      }
+    },
+    {
+      "kind": "setting_reset_default",
+      "rustVariant": "SettingResetDefault",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_storage",
+      "rustVariant": "SettingStorage",
+      "shape": "record",
+      "fields": {
+        "mode": "string"
+      }
+    },
+    {
+      "kind": "setting_pick_dir",
+      "rustVariant": "SettingPickDir",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_reload",
+      "rustVariant": "SettingReload",
+      "shape": "unit"
+    },
+    {
+      "kind": "setting_snapshot_storage",
+      "rustVariant": "SettingSnapshotStorage",
+      "shape": "record",
+      "fields": {
+        "mode": "string"
+      }
+    },
+    {
+      "kind": "setting_snapshot_pick_dir",
+      "rustVariant": "SettingSnapshotPickDir",
+      "shape": "unit"
+    },
+    {
+      "kind": "sync_setname",
+      "rustVariant": "SyncSetname",
+      "shape": "record",
+      "fields": {
+        "name": "string"
+      }
+    },
+    {
       "kind": "sync_bookmark_send",
       "rustVariant": "SyncBookmarkSend",
       "shape": "record",
@@ -1121,6 +1355,15 @@
       "shape": "record",
       "fields": {
         "as_bookmarks": "string"
+      }
+    },
+    {
+      "kind": "window_rename",
+      "rustVariant": "WindowRename",
+      "shape": "record",
+      "fields": {
+        "window_id": "i32",
+        "name": "string"
       }
     }
   ]

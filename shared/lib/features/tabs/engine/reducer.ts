@@ -18,11 +18,14 @@ export function reduceTabPickerEngine(
   action: TabPickerEngineAction
 ): TabPickerEngineState {
   switch (action.type) {
-    case "rowsRebuilt":
-      if (action.rows === state.rows) {
+    case "rowsRebuilt": {
+      const nextPeer =
+        action.peerNoticeLines !== undefined ? action.peerNoticeLines : state.peerNoticeLines
+      if (action.rows === state.rows && nextPeer === state.peerNoticeLines) {
         return state
       }
-      return { ...state, rows: action.rows }
+      return { ...state, rows: action.rows, peerNoticeLines: nextPeer }
+    }
     case "reducer": {
       const next = reducePickerState(pickerSlice(state), action.event)
       if (

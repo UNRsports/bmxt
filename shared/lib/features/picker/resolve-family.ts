@@ -1,6 +1,6 @@
 import type { ListRecordKind, ListResult } from "../command-line/list-output/types.ts"
 
-export type PickerListFamily = "tabs" | "search" | "dom" | "session" | "setting"
+export type PickerListFamily = "tabs" | "search" | "dom" | "session" | "setting" | "bookmark" | "history"
 
 const KIND_FAMILY: Record<ListRecordKind, PickerListFamily> = {
   "tabs.window": "tabs",
@@ -10,7 +10,12 @@ const KIND_FAMILY: Record<ListRecordKind, PickerListFamily> = {
   "dom.node": "dom",
   "dom.notice": "dom",
   "session.row": "session",
-  "setting.field": "setting"
+  "setting.field": "setting",
+  "bookmark.folder": "bookmark",
+  "bookmark.item": "bookmark",
+  "history.month": "history",
+  "history.day": "history",
+  "history.visit": "history"
 }
 
 export type ResolvePickerFamilyResult =
@@ -55,5 +60,7 @@ function familyFromCommandName(command: string): PickerListFamily | null {
   if (name === "dom") return "dom"
   if (name === "session") return "session"
   if (name === "setting") return "setting"
+  if (name === "bookmark") return "bookmark"
+  if (name === "history") return "history"
   return null
 }

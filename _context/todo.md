@@ -40,7 +40,6 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | 領域 | 確認 |
 |------|------|
 | nav | HUD / 属性ジャンプ / typing · Alt ON/OFF |
-| float | デュアルホスト・handoff・ショートカット |
 | 独立動詞 | `back` / `forward` / `reload` / `close`（裸 + `tab -list \| …` + `#t:… \| …`） |
 | `tab:` チップ | 複数選択 → パイプ |
 | compound / pipe | `&&` `\|\|` `;` と `|` の併用・短絡 |
@@ -57,7 +56,7 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 |------|------|
 | host | 必須 `host_permissions`: `https://*/*` のみ（`<all_urls>` / 平文 `http://*/*` にはしない。タブ open・履歴・BM の http URL は従来どおり） |
 | 注入 | `ensurePageContentScript` + `onInstalled` で既存タブへ manifest CS を `executeScript({ files })` |
-| CS | `bmxt-nav-overlay.content` を再注入時に冪等化（二重 listener / float 防止） |
+| CS | `bmxt-nav-overlay.content` を再注入時に冪等化（overlay 二重防止） |
 | UX | `shell.reloadHint` / `error.reloadHint` をリロード誘導から具体失敗理由へ |
 | 審査 | 外部通信なし + 横断ページ操作の正当性を justification に明記 |
 
@@ -69,21 +68,21 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 **権限縮小・SW 区画（実装済み）**
 
 - [x] ページ内操作を https のみ（`host_permissions` / CS / `isScriptablePageUrl`）
-- [x] `RUN_CMD` / `NAV_CONTROL` は `bmxt.html` / `bmxt-float.html` のみ（`trusted-ui-sender`）
+- [x] `RUN_CMD` / `NAV_CONTROL` は `bmxt.html` のみ（`trusted-ui-sender`）
 
 **実装チェック**
 
 - [x] host `wxt.config` / `hosts/create-host-wxt-config.ts`: https を必須 `host_permissions` へ
 - [x] `shared/lib/features/page-scripting/ensure-content-script.ts`（probe / inject / ensure / bulk reinject）
-- [x] 呼び出し側で ensure リトライ: nav · float · dom · page-extract · search CS パス
+- [x] 呼び出し側で ensure リトライ: nav · dom · page-extract · search CS パス
 - [x] `onInstalled`（install / update）で open tabs へ bulk reinject
 - [x] content script 冪等化
 - [x] i18n / optional-host 文言更新 / README 更新
 
 **手元スモーク**
 
-- [ ] 拡張をリロードしたあと、**ページ非リロード**で float / nav / `search -list --page` / `dom -list` が動く
-- [ ] 二重注入しても overlay / float が二重にならない
+- [ ] 拡張をリロードしたあと、**ページ非リロード**で nav / `search -list --page` / `dom -list` が動く
+- [ ] 二重注入しても overlay が二重にならない
 - [ ] `chrome://` 等は従来どおり拒否
 
 ### E. Chrome + Firefox 共有リポジトリ（§5.3–5.6 — 実装済み）
@@ -293,8 +292,10 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 | **session** | `-switch` / `-next` / `-prev` / `-new` / `-setting-name` あり | list Enter → `session -switch <name>` の `submitLine` 再入場 | 最も近い。雛形 |
 | **search** | `-list` + `\| open` / `\| jump` + `--into-window` / `--into-group` | （残任意なし・本線完了） | picker Enter は同形行を submit |
 | **dom** | `-list`・`-setting` は CUI 可 | `dom -list … \| jump`（`dom.node` path） | jump / link activate が picker 直実行 |
-| **setting** | `-list` 読み取り専用 | `setting -set …` + `-save` / `-cancel` | 現状 UI 編集が本線（README）。FSA はジェスチャ上限 |
-| **tab**（参考） | close / reload / nav / `#t:` / `move` / `new-window` / `group add` パイプ可 | `:edit` / plain Enter focus 等（任意） | 7e で bulk 本線は CUI 化済み |
+| **setting** | `-set` / `-export` / `-import` / `-bg-import` / `-storage` / … | （列ピッカーは `submitConstructedLine` のみ） | §7 wizard 化済み。FSA／zip／画像はコマンド→UiAction→chooser |
+| **tab** | close / reload / `#t:` / `move` / `new-window` / `group add|new|rename|ungroup` / `tab -activate` / `close --window|--group` / `window rename` | （空白 URL の新タブのみ Chrome create 残） | §7 wizard 化済み。preview は非コマンドのまま |
+| **bookmark** | `-list` tree / `-remove` / `-move` / `-send` / `open` | （new folder/add サブウィザードは任意） | §7: folder ツリー picker + `submitConstructedLine` |
+| **history** | `-list` date tree / `-delete` / `-delete-range` / `open` | | §7: month→day→visit picker + `submitConstructedLine` |
 
 **実装チェック（段階）**
 
@@ -303,14 +304,15 @@ Living checklist. Completed historical phases are summarized under **Archive** (
 - [x] **7b 突合:** session / search open·jump / dom jump / setting save·cancel は同一コマンド面（picker は行組み立てのみ）
 - [x] **7c 切替:** session / search / dom / setting(save·cancel) Enter → `submitConstructedLine` → `submitLine`
 - [x] **7d 削除:** search Enter の `openSearchPickerEntry` 直呼びを除去。dom/setting も submit 経路へ。`map_command.csv` / i18n 更新
-- [x] **7e:** tab bulk（`move` / `group add` / `new-window`）+ search destination（`open --into-window` / `--into-group`）。picker は `submitConstructedLine`。`:edit` / plain Enter focus は任意後続
+- [x] **7e:** tab bulk（`move` / `group add` / `new-window`）+ search destination（`open --into-window` / `--into-group`）。picker は `submitConstructedLine`
+- [x] **7f:** tab close/reload/`open --into-window` / `tab -activate` / `close --window|--group` / `group rename|ungroup|new --title|--color` / `window rename` を CUI+submit 化。`:edit` / plain Enter / window close / group-new meta も submit。空白 URL 新タブのみ Chrome create 例外
 
 **手元スモーク（7c 以降）**
 
 - [ ] 各 family: plain `-list` と `… \| browse` の入口が従来どおり
 - [ ] 同じ作用を typed のみ / picker Enter のみで実行し、結果が一致する
 - [ ] picker 操作後に history / ログへ想定どおりコマンド行が残る（方針どおり）
-- [ ] 直実行モジュールに残存呼び出しがない（grep / テスト）
+- [x] 直実行モジュールに残存呼び出しがない（grep: picker Enter 経路は `submitConstructedLine`。例外は空白 URL `tabs.create` と preview）
 
 **参照:** 本会話の整理 · `shared/lib/features/command-line/inter-command/` · `shared/lib/features/picker/open-from-list-result.ts` · pipe consumers（`browse` / `close` 等）· skill `bmxt-add-command`
 
@@ -457,10 +459,10 @@ bmxt-browser-backup/
 
 - peer 上の履歴削除
 - 履歴 DB への完全書き戻し（Chrome API 非対応）
-- peer 上での BM 削除／移動（必要なら次フェーズ `bookmarks_ops`）
+- peer 上での BM 削除／移動 → **§16 `bookmarks_ops`**
 - Netscape HTML を主形式にすること（任意 interop は後回し可）
 
-**参照:** plan `bookmark_history_ops` · skill `bmxt-add-command` · `shared/lib/features/search/cache/` · `shared/lib/features/sync/` · `shared/manifest/bmxt-rule.json`
+**参照:** plan `bookmark_history_ops` · skill `bmxt-add-command` · `shared/lib/features/search/cache/` · `shared/lib/features/sync/` · `shared/manifest/bmxt-rule.json` · **§16**
 
 ### 10. 端末版 BMXt（Rust CLI peer · Family DataChannel）
 
@@ -474,7 +476,7 @@ bmxt-browser-backup/
 | 制御面 | **native messaging 不使用**（§6 と同じ）。本線は WebRTC DataChannel + `bmxt-rtc1.` コピペ握手 |
 | 初版輸送 | 同一 PC · **host ICE のみ**（§6c 延長）。常時 TURN／クラウドシグナリングは後続 |
 | 言語 | 端末製品は **Rust のみ**。拡張側の `RTCPeerConnection` 宿主は TS のまま |
-| UI | **ratatui + crossterm**。tab／search リスト picker から。`nav`／`dom` ページオーバーレイは非目標 |
+| UI | **ratatui + crossterm**。tab／search リスト picker から。CLI **端末上**の `nav`／`dom` ページオーバーレイ描画は非目標（**遠隔操作は §17**） |
 | 配置 | モノレポ `hosts/cli` + `shared/crates/*`。既存 `bmxt-core` とは **クレート境界で区別** |
 | ブランチ | **一本の作業ブランチ**で実装段階（下記 10.0–10.5）を順に進める。長期の `cli` 専用分岐は作らない。共有契約は小さく本流へ載せ、CLI 固有は同ブランチ上で積む |
 
@@ -512,7 +514,7 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 - [x] **10.2 輸送 + 最小 CLI:** `bmxt-peer-rtc` + `hosts/cli`（`bmxt`）。`status` / `sync-setup` / `sync-pair` / `sync-connect` / REPL `ping`。**手元:** 拡張との握手→ping は下記スモーク
 - [x] **10.3 バス RPC:** REPL `tabs` / `open` / `close` / `activate` / `search`（chunk 収集）。タイムアウト `SYNC_REMOTE_QUERY_TIMEOUT_MS`
 - [x] **10.4a core 分割（実用形）:** `bmxt-core` に `wasm` feature（default on）。CLI は `default-features = false` で純 rlib 利用。拡張 wasm-pack は従来どおり default。専用 `bmxt-core-wasm` クレート分離は任意の後続
-- [x] **10.4b CliHostAdapter:** REPL が拡張と同じ文法（`tab -list --peers | browse` 等）。`HostEffect`／`UiAction` → 遠隔 RPC。`nav`／`dom`／握手系は明示案内。msgs は共有 EN i18n
+- [x] **10.4b CliHostAdapter:** REPL が拡張と同じ文法（`tab -list --peers | browse` 等）。`HostEffect`／`UiAction` → 遠隔 RPC。当時は `nav`／`dom`／握手系は明示案内（**実パリティは §17**）。msgs は共有 EN i18n
 - [x] **10.4c TUI picker MVP（初期）:** REPL `tui` → ratatui 一覧（`↑↓` `/` Enter Esc）。フル列レイアウト・tabs_picker reducer 接続は後続
 - [x] **10.5 配布手順:** `hosts/cli/README.md` · `hosts/README.md` 追記。`cargo build --release -p bmxt-cli` → `target/release/bmxt`。Linux 一次
 
@@ -534,7 +536,7 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 
 - native messaging / CDP / Playwright
 - 常時 TURN・クラウドシグナリング（§6b／遠隔段）
-- CLI 単体での `nav`／`dom` ページオーバーレイ
+- CLI **端末内**への `nav`／`dom` ページオーバーレイ描画（peer 上 overlay の **遠隔駆動は §17**）
 - 拡張内 WebRTC スタックの Rust 置換（ブラウザ `RTCPeerConnection` 維持）
 - React 版 picker の見た目完全一致
 
@@ -839,6 +841,361 @@ BMXt grammar line
 
 **参照:** §13 · §14 · plan `posix_i_o_foundation` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md` · `tests/unit/features/command-line/conformance/posix-profile.test.ts`
 
+### 16. CLI bookmark/history パリティ + 拡張残ギャップ
+
+**前提:** §9（拡張側 `bookmark` / `history` 本線完了）· §10（CLI = ブラウザ API なし・Family DataChannel）· §7（picker = コマンド組み立て）· §15（POSIX Profile ゲート）。
+
+**目標:** CLI peer で tabs 相当に bookmark / history を操作できるようにし、拡張側の残ギャップ（picker send モード · peer `bookmarks_ops` · スモーク）を閉じる。コマンド文法は既存 `bmxt-core` のまま。picker は引き続き `submitConstructedLine` のみ。
+
+**現状ギャップ**
+
+| 面 | 状態 |
+|----|------|
+| 拡張 `bookmark` / `history` | CRUD · picker · backup · `bookmarks_import`（TS）まで実装済 |
+| CLI | `tab` のみフル。`OpenPlainList` / `OpenPicker` の `bookmark`/`history` は `listLimited` / `pickerLimited`。`--peers` 経由の flat `search_query` のみ可 |
+| Wire | TS に `bookmarks_import` あり。**Rust `bmxt-sync-wire` / CLI `BusClient` 未移植**。`bookmarks_ops` 未着手 |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| CLI 在庫 | ローカル Chrome 無し → bare `bookmark -list` / `history -list` は接続 peer へ fan-out（初段は既存 `search_query`） |
+| 一覧の初段 | **flat のみ**。フォルダ／日付ツリー TUI · 専用 `bookmarks_list` RPC は後段（16.7） |
+| peer BM 変更 | **`bookmarks_ops`** を新設（`tabs_ops` 同型: create / create_folder / remove / move）。拡張 handler + CLI effect を同じ RPC に載せる |
+| peer history delete | **作らない**（§9 どおり）。CLI の `history -delete*` は当面 unsupported / misuse |
+| 送信 | `bookmark -send --open\|--save\|--both` を CLI でも実装（`open_tabs` + `bookmarks_import`） |
+| スコープ外 | CLI backup/restore · `window` first-command 拡張 · downloads 等の未着手 API · 真のインクリメンタル配信 |
+
+**アーキテクチャ（要約）**
+
+```
+CLI / 拡張 同一文法（bmxt-core）
+  → DispatchBundle（OpenPlainList / SyncBookmarkSend / Bookmark* effects）
+  → CLI adapter:
+       list  → search_query fan-out（flat）→ stdout / Interactive browse → open_tabs
+       send  → open_tabs_on / bookmarks_import_on
+       mutate → bookmarks_ops_on（接続 peer）
+  → 拡張:
+       picker send モード UI → submitConstructedLine
+       apply-remote-bookmarks-ops ← DataChannel
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `hosts/cli/src/adapter.rs` | `list_id` bookmark/history 許可 · SyncBookmarkSend · Bookmark* → RPC · pipe consumers |
+| `hosts/cli/src/bus.rs` | `bookmarks_import_on` · `bookmarks_ops_on` |
+| `shared/crates/bmxt-sync-wire` | `bookmarks_import` / `_result` · `bookmarks_ops` / `_result`（TS と同期） |
+| `shared/lib/features/sync/types.ts` · `adapters/webrtc-command-bus.ts` | 拡張側 wire · waiter |
+| `shared/lib/features/sync/bus/apply-remote-bookmarks-ops.ts`（新） | peer 上 `chrome.bookmarks.*` |
+| `shared/lib/features/bookmark/` · `picker/build-picker-command-line.ts` | picker `--save`/`--both` UI |
+| `SyncRemoteSearchHit` | optional `bookmarkId` / `parentId`（remove/move の id 手渡し） |
+
+**実装チェック（段階）**
+
+- [x] **16.0 契約:** 本節方針を `_context/cli-peer/CONTRACT.md`（または本節参照）に追記。§9 スコープ外の `bookmarks_ops` を本節へ移管済みであること
+- [x] **16.1 拡張 picker send モード（A1）:** bookmark picker から `--open\|--save\|--both` を選択可能。typed CUI と同形行を `submitConstructedLine`
+- [x] **16.2 CLI flat 一覧（B1）:** `OpenPlainList` / `OpenPicker` で `list_id` ∈ {bookmark, history} を許可し `search_query` へ寄せる。Interactive flat browse → `open_tabs`。NonInteractive は stdout のみ。i18n `listLimited` / `pickerLimited` 更新
+- [x] **16.3 CLI Family send（B2）:** Rust wire に `bookmarks_import` / `_result` · `BusClient` · adapter `UiAction::SyncBookmarkSend`（`--open`/`--save`/`--both`）。pipe `| bookmark -send` は URL materialize 後に同経路
+- [x] **16.4 peer `bookmarks_ops`（B3 · 拡張+CLI）:** wire（TS+Rust）· `apply-remote-bookmarks-ops` · search hit に optional `bookmarkId` · CLI の `BookmarkCreate`/`_Folder`/`_Remove`/`_Move` → `bookmarks_ops_on` · pipe `BookmarkSend`（Remove/Move/Add は HostEffect 経路）
+- [x] **16.5 検証（A2）:** `apply-remote-bookmarks-ops` unit · `check:cli-command-io` · `verify:host-blind` · `cargo check -p bmxt-cli` · `tsc`。§9 手元スモーク（ローカル CRUD · send · Chrome↔Firefox · backup）は下記「手元スモーク」で実施
+- [ ] **16.6（任意）:** bookmark picker の add / new-folder ウィザード（§7 任意の続き · `submitConstructedLine` のみ）
+- [ ] **16.7（後続・必須でない）:** 構造化 `bookmarks_list` RPC · フォルダ／日付ツリー plain print · ratatui ツリー TUI
+
+**手元スモーク**
+
+- [ ] 拡張: picker から `bookmark -send <id> --save` / `--both` が history/ログに残り、peer で期待どおり動く
+- [ ] CLI: `bookmark -list` / `history -list` が接続 peer の flat 一覧を stdout に出す
+- [ ] CLI Interactive: `bookmark -list | browse` → Enter で peer に URL open
+- [ ] CLI: `bookmark -send <deviceId> --open|--save|--both <url…>` 成功
+- [ ] CLI: `bookmark -add` / `-folder` / `-remove` / `-move` が `bookmarks_ops` 経由で peer に反映
+- [ ] CLI: `history -delete*` が明確に unsupported（ハングしない）
+- [ ] `bmxt exec -- 'bookmark -list'` が NonInteractive で一覧のみ（browse なし）
+
+**スコープ外（本節）**
+
+- peer 履歴削除 · 履歴 DB 書き戻し
+- CLI 上の `bookmark|history -backup/-restore`（拡張 FSA のまま）
+- `window` の list/manage first-command 化（既存 `tab` / `close --window` で足りる）
+- downloads / cookies / browsingData / readingList / `chrome.sessions`
+- 16.7 完了前のツリー TUI 必須化
+
+**参照:** §7 · §9 · §10 · §15 · `hosts/cli/src/adapter.rs` · `shared/crates/bmxt-sync-wire` · `shared/lib/features/sync/` · `shared/lib/features/bookmark/` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md`
+
+### 17. CLI `aboutbmxt` / `dom` / `nav`（probe · DOM 取得 · overlay 遠隔操作）
+
+**前提:** §10（CLI = ブラウザ API なし・Family DataChannel · 端末上 overlay 非描画）· §13–15（POSIX / Interactive ガード）· §16（CLI list/browse / wire 拡張の型）。plan `cli_dom_nav_about`。
+
+**目標:** 拡張にある `aboutbmxt` / `dom` / `nav` を CLI から使えるようにする。DOM はワンショット（LLM/`bmxt exec`）優先。人間向けは `dom -wizard`。nav は **サイト上の overlay 動作は拡張と同じ**にし、CLI は WebRTC 経由で命令を注入して肩代わりする。
+
+**現状ギャップ**
+
+| 面 | 状態 |
+|----|------|
+| 拡張 `aboutbmxt` / `dom` / `nav` | welcome · capability probe · DOM scrape · nav overlay（`nav-tab-bridge`）実装済 |
+| CLI | `OpenWelcomePage` 拒否 · `DomList` / `ProbeCapabilities` 汎用 unsupported · `NavArm`/`NavDisarm`/`NavConfirmClose` → `uiUnsupported` |
+| Wire | **`probe_capabilities` / `dom_list` / `nav_control` 未存在**（`SyncBusCommand` に載せ替えが必要） |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| `aboutbmxt` | CLI ローカル: welcome URL を stdout（Interactive なら `$BROWSER` / `xdg-open` 試行）。`-system`: CLI 自己診断 + **接続 peer へ `probe_capabilities` 新 RPC** |
+| `dom` ワンショット | `dom -list --device <id> --tab <tabId> [--document\|--viewport] [--html\|--react] …` → RPC → **stdout に DOM 行**（LLM/シェル向け）。欠落は exit 2 |
+| `dom -wizard` | **第二コマンド**（Interactive のみ）。① peer 番号選択 → ② tab 番号選択 → ③ document/viewport → ④ html/react → 取得してログ |
+| `dom --with` 完全再現 | **本節スコープ外**（semantic menu / Alt 連動は拡張のまま） |
+| `dom \| jump` | **後続**（本節必須にしない） |
+| `nav` | CLI **端末に overlay を描かない**。`nav -enter` で peer(+tab) 選択 → RPC `nav_control start` → **raw キー転送ループ**。`nav -exit` で `stop`。サイト UI 上の見え方は拡張プロンプト操作と同等 |
+| `nav -windowclose` | 確認後、peer の window close（`tabs_ops` / 対象 window 解決） |
+| NonInteractive | `-wizard` / `nav -enter` キーループは拒否（§14／§15 どおり） |
+| 宿主 | RPC 実行は **拡張プロンプト窓**（既存 search/tabs と同様。SW-only では CS inject / WebRTC 文脈が足りない） |
+
+**アーキテクチャ（要約）**
+
+```
+CLI
+  aboutbmxt [-system] → (local URL / self-diag) + probe_capabilities RPC
+  dom -list …          → dom_list RPC → stdout lines
+  dom -wizard          → Interactive 4 段 → dom_list RPC → stdout
+  nav -enter / -exit   → nav_control (start|key|stop|…) RPC
+       ⇄ DataChannel SyncBusCommand
+拡張プロンプト窓
+  probe → runCapabilityReport
+  dom_list → captureDom* (tab_id / scope / flavor)
+  nav_control → nav-tab-bridge / run-nav-inject（既存 overlay）
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `shared/crates/bmxt-sync-wire` · `shared/lib/features/sync/types.ts` | `probe_capabilities` · `dom_list` · `nav_control` (+ result) |
+| 拡張 UI bus ハンドラ | prompt 宿主で上記 RPC を実行 |
+| `hosts/cli/src/dom_nav_host.rs` · `adapter.rs` | **CLI 専用** `dom -list --device/--tab` · `dom -wizard`（共有コア文法には載せない） |
+| `hosts/cli/src/adapter.rs` · `bus.rs` · `tui.rs` | about / dom oneshot+wizard / nav キー転送 |
+| `_context/cli-peer/CONTRACT.md` | 新 RPC · 「端末 overlay 非描画 / 遠隔 nav 可」 |
+
+**実装チェック（段階）**
+
+- [x] **17.0 契約:** 本節方針を `CONTRACT.md` に追記。§10「overlay 非目標」を **端末描画非目標／遠隔操作は本節** に整合
+- [x] **17.1 Wire:** TS+Rust に `probe_capabilities` / `dom_list` / `nav_control`（+ result）。巨大 HTML は行数 soft-cap + **`dom_list_chunk`**（search と同型）
+- [x] **17.2 拡張 handlers:** prompt bus で probe · `captureDom*` · `nav-tab-bridge` へディスパッチ
+- [x] **17.3 `aboutbmxt` CLI:** welcome URL · `-system` = 自己診断 + peer probe。拒否メッセージ撤去
+- [x] **17.4 `dom` CLI 入口:** 共有コアは拡張どおり据え置き。CLI host が `dom -list --device/--tab` · `dom -wizard` を横取り（peer RPC）
+- [x] **17.5 `dom` CLI:** oneshot → stdout · `-wizard` 4 段（番号選択）· NonInteractive で wizard 拒否
+- [x] **17.6 `nav` CLI:** `-enter` キー転送 · `-exit` · `-windowclose` は hint（misuse）· NonInteractive 拒否
+- [x] **17.7 検証:** i18n EN+JA · `cargo test -p bmxt-core` · `cargo check -p bmxt-cli` · README / map_command.csv（手元スモークは下記）
+
+**手元スモーク**
+
+- [ ] `aboutbmxt` が URL を出し、Interactive でブラウザが開く（または URL のみで足りる）
+- [ ] `aboutbmxt -system` が CLI 行 + 接続 peer の OK/NG 行を stdout に出す
+- [ ] `bmxt exec -- 'dom -list --device <id> --tab <n> --html'` が DOM 行のみ（対話なし）
+- [ ] REPL: `dom -wizard` で peer→tab→scope→flavor 後にログへ DOM
+- [ ] REPL: `nav -enter` 後、キー操作が peer ページ overlay に反映 · `nav -exit` で消える
+- [ ] `bmxt exec` で `dom -wizard` / `nav -enter` が明確に拒否（ハングしない）
+
+**スコープ外（本節）**
+
+- CLI 端末内へのページオーバーレイ HUD 描画
+- `dom -list --with` の拡張フル UX（semantic menu / ビューポート連動フィルタ）の完全移植
+- `dom \| jump` pipe（後続）
+- `session` / `translate` / `tutorial` / `group` / `snapshot` 等の別ギャップ
+- peer history delete
+
+**参照:** plan `cli_dom_nav_about` · §10 · §13–15 · `shared/lib/features/dom/` · `shared/lib/features/nav/nav-tab-bridge.ts` · `shared/lib/features/capability/` · `hosts/cli/` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md`
+
+### 18. CLI `nav`/`dom` ウィザードを ratatui picker 化し、picker を独立ディレクトリへ
+
+**前提:** §17（`nav_control` / `dom_list` RPC · CLI host 専用 wizard · 共有コアの `nav`/`dom` 表示仕様は変えない）· §10（端末 overlay 非描画）· §14–15（Interactive のみ）。plan `cli_nav_picker_wizard`。
+
+**目標:**
+
+1. `nav -enter` を `dom -wizard` と同様、**実施ピア選択 → 実施ページ（tab）選択**のウィザードにする
+2. 各選択は `tab -list | browse` と同じ **ratatui picker**（↑↓ `/` Enter / q）にする
+3. picker 機能自体を拡張の `shared/lib/features/picker/` に倣い、CLI Rust では **`hosts/cli/src/picker/` 独立ディレクトリ**で管理する
+
+**現状ギャップ**
+
+| 面 | 状態 |
+|----|------|
+| `tab -list \| browse` | ratatui `run_tab_picker`（Enter=activate・開きっぱなし · live refresh）が [`hosts/cli/src/tui.rs`](hosts/cli/src/tui.rs) に同居 |
+| `nav -enter` / `dom -wizard` | peer は `pick_peer_by_number`（stderr+stdin 番号）、tab/scope/flavor も番号選択 |
+| ディレクトリ | picker 実装が `tui.rs` 一枚 (~751 行)。拡張側のような独立 `picker/` がない |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 共有コア / 拡張 | **変更しない**（`NavArm` のまま。peer/tab 選択は CLI host 専用） |
+| `nav -enter` | Interactive: peer picker → tab one-shot picker → 既存 `nav_control` Start / key loop / Stop |
+| `dom -wizard` | 同じ peer/tab picker に統一。scope / flavor も同ディレクトリの短い one-shot list |
+| tab browse | Enter=activate・開きっぱなしの意味は維持（one-shot とは API 分離） |
+| `--device/--tab` oneshot for nav | **本節では入れない**（要求はウィザード UI） |
+| NonInteractive | 現状どおり wizard / キーループ拒否 |
+
+**アーキテクチャ（要約）**
+
+```
+hosts/cli/src/picker/          ← 拡張 features/picker 相当（独立ディレクトリ）
+  mod.rs / terminal.rs
+  tab.rs      run_tab_picker（browse）· pick_tab_once（wizard）
+  url.rs      run_url_picker
+  peer.rs     pick_peer（ratatui one-shot · 番号入力廃止）
+  oneshot.rs  汎用 short list（scope/flavor 等）
+
+nav -enter / dom -wizard  → picker::peer → picker::tab oneshot → RPC
+tab -list | browse        → picker::tab live（既存意味）
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `hosts/cli/src/picker/` | ratatui picker 実装の単一の置き場（`tui.rs` から移設） |
+| `hosts/cli/src/dom_nav_host.rs` | wizard オーケストレーションのみ（番号 UI を持たない） |
+| `hosts/cli/src/adapter.rs` | `tui::` → `picker::` 参照置換 · bare `--device` も `pick_peer` |
+| `hosts/cli/src/tui.rs` | デモ薄いラッパに縮小、または削除して `picker` へ寄せる |
+| `_context/cli-peer/CONTRACT.md` · README | picker ディレクトリ · nav/dom wizard UX |
+
+**実装チェック（段階）**
+
+- [x] **18.0 契約:** 本節を `CONTRACT.md` / README に追記（CLI picker dir · nav/dom wizard = ratatui）
+- [x] **18.1 移設:** `tui.rs` → `hosts/cli/src/picker/{mod,terminal,tab,url,peer,oneshot}.rs` · `main.rs` に `mod picker` · 呼び出しを `picker::` へ
+- [x] **18.2 one-shot API:** `pick_peer` · `pick_tab_once`（Enter で閉じて返す · activate しない）· scope/flavor 用 short oneshot
+- [x] **18.3 `nav` wizard:** `run_nav_enter_session` を peer→tab picker → key loop に変更
+- [x] **18.4 `dom` wizard:** `run_dom_wizard` の peer/tab/scope/flavor を同 picker に統一
+- [x] **18.5 検証:** `cargo check -p bmxt-cli` · `check:cli-command-io` · i18n（必要なら）· 手元スモーク
+
+**手元スモーク**
+
+- [ ] REPL: `nav -enter` → peer picker → tab picker → **矢印で仮想カーソル移動** · Enter で click · **端末フォーカス維持** · q/Esc で終了（`no-typing-target` 連発なし）
+- [ ] REPL: `dom -wizard` → 同 peer/tab picker → scope/flavor → DOM 行
+- [ ] REPL: `tab -list | browse` が移設後も activate / live refresh 動作
+- [ ] bare `--device`（history/bookmark/tab/search）が peer picker で選べる
+- [ ] `bmxt exec` で `nav -enter` / `dom -wizard` が明確に拒否
+
+**スコープ外（本節）**
+
+- `nav -enter --device/--tab` oneshot
+- 共有コアへの wizard 文法追加
+- 拡張側 picker / nav / dom 表示・ロジック変更
+- CLI 端末内へのページ overlay 描画
+
+**参照:** plan `cli_nav_picker_wizard` · §17 · `hosts/cli/src/tui.rs` · `hosts/cli/src/dom_nav_host.rs` · `shared/lib/features/picker/` · `_context/cli-peer/CONTRACT.md`
+
+### 19. CLI 実行モデルを拡張と同一化（コマンド正本 · picker は行組み立て · `--focus`）
+
+**前提:** §7（拡張 picker = CUI 同等のコマンド構築）· §10 / §15（CLI POSIX · Interactive）· §18（`hosts/cli/src/picker/`）。plan `cli_tab_focus_option`。
+
+**目標（不変条件）:**
+
+1. **コマンドが絶対的なベース** — 副作用は必ず `run_line` / `DispatchBundle` → host effect（／peer RPC）経由
+2. **picker は 1）を組み立てるウィザードにすぎない** — Enter で型付きコマンド行を組み立てて実行するだけ。`tabs_ops` / `open_tabs` 等の **直接 RPC は禁止**
+3. ブラウザ OS フォーカスは **明示オプトイン**（oneshot `--focus` · picker 開始時 y/N → 行に `--focus` 付与）
+
+**現状ギャップ**
+
+| 面 | 状態 |
+|----|------|
+| 拡張 picker | Enter → `build*CommandLine` → `submitConstructedLine`（構文ウィザード）✓ |
+| CLI `tab -list \| browse` | Enter → **`tabs_ops Activate` 直叩き**（ウィンドウ focus 常時）✗ |
+| CLI URL picker | Enter → **`open_tabs` 直叩き**（同原則の後続） |
+| `tab -activate` | `<tabId>` のみ。CLI peer 向け `--device` / フォーカス制御なし |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 正本コマンド | `tab -activate <tabId> [--device <deviceId>] [--focus]` |
+| HostEffect | `TabsActivate { tab_id, device_id, focus }`。CLI は device 必須（ローカル browser なし） |
+| Wire | `SyncTabsOp::Activate` に `focusWindow`（欠落時 default true = 旧互換）。true のときだけ `windows.update({ focused })` |
+| CLI picker | 開始時 **一度** y/N（既定 N）→ Enter は行組み立て → `run_line`（RPC しない） |
+| CLI oneshot | 既定はウィンドウ非フォーカス。`--focus` であり |
+| 拡張 picker | `buildTabActivateCommandLine` に `--focus` を付けて **現行の前面化 UX を維持** |
+| URL picker 行組み立て化 | **本節で原則を約束 · 実装は tab 完了後の後続可** |
+
+**アーキテクチャ（要約）**
+
+```
+tab -list | browse
+  → picker（確認: focus?）
+  → build: tab -activate <id> --device <peer> [--focus]
+  → adapter.run_line → HostEffect::TabsActivate → tabs_ops Activate { focusWindow }
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `shared/manifest/bmxt-codegen.json` · `cmd/tabs.rs` | `--device` / `--focus` 文法 · effect フィールド |
+| `bmxt-sync-wire` · `apply-remote-tabs-ops.ts` | `focusWindow` |
+| `hosts/cli/src/adapter.rs` | `TabsActivate` 実装 · browse を行組み立て化 · 確認プロンプト |
+| `shared/lib/features/picker/build-picker-command-line.ts` | 拡張行に `--focus` |
+| `_context/cli-peer/CONTRACT.md` | 「CLI picker = 行組み立てのみ」不変条件 |
+
+**実装チェック（段階）**
+
+- [x] **19.0 契約:** CONTRACT / README にコマンド正本 · picker ウィザード · `--focus` を追記
+- [x] **19.1 文法:** `tab -activate` に `--device` / `--focus` · codegen · HostEffect 拡張
+- [x] **19.2 Wire:** `Activate.focusWindow` · apply-remote · ローカル `tabs-activate.ts`
+- [x] **19.3 CLI effect:** adapter で `TabsActivate` → `tabs_ops_on`（device 必須）
+- [x] **19.4 CLI picker:** 直接 RPC 削除 · y/N 確認 · 行組み立て → `run_line`
+- [x] **19.5 拡張 builder:** `tab -activate <id> --focus`
+- [x] **19.6 検証:** codegen · `cargo check/test` · tsc · i18n · 手元スモーク
+- [ ] **19.7（後続可）:** URL picker も行組み立て（`tab -send` / open 系）へ
+
+**手元スモーク**
+
+- [ ] `tab -list --peers | browse` → 確認 N → Enter で peer タブ active · **端末フォーカス維持**
+- [ ] 同確認 y → Enter でブラウザウィンドウ前面
+- [ ] `tab -activate <id> --device <peer>` が非フォーカス · `… --focus` で前面
+- [ ] 拡張タブ picker Enter が従来どおり前面化
+- [ ] `bmxt exec -- 'tab -activate …'` が NonInteractive で一覧/副作用のみ（browse なし）
+
+**スコープ外（本節）**
+
+- URL / bookmark picker の完全行組み立て化（19.7）
+- nav / dom wizard の「コマンド行化」（§17–18 の CLI host 専用入口は維持可）
+- 拡張側 picker UI の再設計
+
+**参照:** plan `cli_tab_focus_option` · §7 · §18 · `hosts/cli/src/adapter.rs` · `shared/lib/features/picker/` · `_context/cli-peer/CONTRACT.md`
+
+---
+
+### 20. CLI 候補メニュー（拡張 IME に近い操作感）
+
+**目標:** Interactive `BMXt>` のコマンド記入補助を、拡張の Tab 起点候補メニューに寄せる。データ SoT は従来どおり `bmxt_core::complete_line`。提示面だけを bash List から選択式オーバーレイへ置き換える。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| トリガ | **Tab** 明示オープン · **CLI のみ**非空部分トークン（行末）で自動オープン（空 typed / 空行は Tab のみ · 完成唯一候補は開かない） |
+| 操作 | ↑↓ / Tab で移動 · Enter でトークン挿入（実行しない）· Esc / ↑先頭で閉じて Tab まで抑制 |
+| 再フィルタ | メニュー開中の編集は `complete_line` を呼び直す |
+| 灰色ヒント | メニュー**閉**かつ行末のみ（Right で適用） |
+| 挿入文法 | `completion_replacement`（先頭空白）+ 行末は末尾空白（拡張 append と同方針） |
+| 非目標（本節） | Mozc 風ヘルプ列 · favicon 行 · rustyline 互換 · alternate-screen 候補 UI |
+| ドメイン picker | `hosts/cli/src/picker/` は従来どおり alternate-screen モーダル |
+
+**実装チェック**
+
+- [x] **20.0 契約:** CONTRACT / README に候補メニュー契約を追記
+- [x] **20.1 プロンプト:** rustyline Editor を廃止しメイン画面 crossterm ループへ
+- [x] **20.2 メニュー:** Tab 起点の選択式リスト + Esc suppress + 履歴↑↓（閉時）
+- [x] **20.3 挿入 / ヒント:** `apply_candidate` · grey remainder · pipe / second-tier 空白
+- [x] **20.4 ログ:** `repl_log` をプロンプトキュー sink に切替（ExternalPrinter 撤廃）
+- [x] **20.5 検証:** `cargo test -p bmxt-cli`
+- [x] **20.6 反転 + contains:** 開中トークン反転 · 開時 prefix（option body）· 開中 contains · prefix 0 件フォールバック
+- [x] **20.7 単一ベース行:** 候補は絶対座標オーバーレイ（`\\r\\n` スクロール二重 `BMXt>` 禁止）· Enter 確定は同行列書き換え
+- [x] **20.8 第一コマンド Tab:** 空行 Tab → `all_completion_tokens` · Right は確定しない · Enter 後に次ティア再同期
+- [x] **20.9 部分入力自動オープン:** 非空 typed · 行末 · Esc/↑抑制尊重 · 完成唯一候補は開かない · `cargo test -p bmxt-cli`
+
+**手元スモーク**
+
+- [ ] 空行 Tab → first-tier 一覧 · ↑↓ · Enter で挿入 · 再 Enter で実行
+- [ ] `sync -se` 灰色 `tup` · Tab メニューから `-setup` 確定
+- [ ] `nav en`（Tab なし）→ `-enter` が出て `en` が反転 · Enter で挿入
+- [ ] `tab -list` Tab → `| browse` を選んで挿入
+- [ ] Esc / ↑先頭後は Tab までメニューが開かない
+- [ ] 接続ログが `BMXt>` 待ち中にプロンプトを壊さない
+
+**参照:** plan `cli_candidate_menu` · `hosts/cli/src/shell.rs` · `_context/cli-peer/CONTRACT.md`
+
 ---
 
 ## Archive（ポインタのみ）
@@ -851,7 +1208,7 @@ BMXt grammar line
 | §11 | 旧プレフィックス `picker`/`browse <list>` 時代。**`| browse` に置換**（本 Active 1） |
 | §12 | nav インクリメンタル — 実装済・スモークは Active 3 |
 | §13–14 | WASM prompt / complete SoT |
-| §15 | float ホスト — 実装済・スモークは Active 3 |
+| §15 | float ホスト — 廃止（Phase 3 ドキュメント整理済み） |
 | §16 | `tab -back` 等 → **§18 で独立 first に置換済み** |
 | §17 | Host IR bmxt-host/2（当時 Phases A–E・完了） |
 | §18–19 | `back`/`forward`/`reload`/`close` + `tab:` チップ — 実装済・スモークは Active 3 |

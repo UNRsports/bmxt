@@ -6,7 +6,15 @@
 import { normalizePickerOpenUrl } from "../side-picker/model/normalize-picker-open-url.ts"
 import type { PickerEntry } from "../side-picker/model/picker-entry.ts"
 import type { SearchOpenDestinationRow } from "../search/search-open-destination.ts"
-import { buildSessionSwitchCommandLine, type SessionListRow } from "../session"
+import {
+  buildSessionSwitchCommandLine,
+  type SessionListRow
+} from "../session/session-summary.ts"
+import {
+  buildGoogleSheetsCellUrl,
+  isGoogleSheetsUrl,
+  parseGoogleSheetsUrl
+} from "../url/parse-google-sheets-url.ts"
 
 function shellQuote(value: string): string {
   if (/^[A-Za-z0-9_./:?&=%+#@~-]+$/.test(value)) {
@@ -51,22 +59,39 @@ export function buildSearchOpenCommandLine(
   return `open ${quoted}`
 }
 
-/** EN: `#t:… | move --window <id>` / `--group` / `--ungroup`. */
+/**
+ * EN: `#t:… | move --window <id> [--before-tab <id>]` / `--group` / `--ungroup`.
+ *     Picker MOVE uses insert *slots*: `--before-tab` = gap above that tab;
+ *     omit = end of window (window-row slot).
+ * JA: ピッカー MOVE は挿入スロット。`--before-tab`＝そのタブ直前、省略＝ウィンドウ末尾。
+ */
 export function buildTabMoveCommandLine(
   tabIds: readonly number[],
-  opts: { windowId: number; groupId?: number; ungroup?: boolean }
+  opts: {
+    windowId: number
+    groupId?: number
+    ungroup?: boolean
+    /** EN: Insert immediately before this tab; omit for end-of-window/group. */
+    beforeTabId?: number
+  }
 ): string | null {
   if (tabIds.length === 0 || opts.windowId < 0) {
     return null
   }
   const chips = tabIds.map((id) => `#t:${id}`).join(" ")
+  const before =
+    opts.beforeTabId !== undefined &&
+    Number.isFinite(opts.beforeTabId) &&
+    opts.beforeTabId >= 0
+      ? ` --before-tab ${opts.beforeTabId}`
+      : ""
   if (opts.ungroup) {
-    return `${chips} | move --ungroup --window ${opts.windowId}`
+    return `${chips} | move --ungroup --window ${opts.windowId}${before}`
   }
   if (opts.groupId !== undefined && opts.groupId >= 0) {
-    return `${chips} | move --group ${opts.groupId} --window ${opts.windowId}`
+    return `${chips} | move --group ${opts.groupId} --window ${opts.windowId}${before}`
   }
-  return `${chips} | move --window ${opts.windowId}`
+  return `${chips} | move --window ${opts.windowId}${before}`
 }
 
 export function buildTabNewWindowCommandLine(tabIds: readonly number[]): string | null {
@@ -84,6 +109,112 @@ export function buildTabGroupAddCommandLine(
     return null
   }
   return `group add ${groupId} ${tabIds.join(" ")}`
+}
+
+/** EN: `#t:… | close` for bulk tab close via pipe consumer. */
+export function buildTabCloseCommandLine(tabIds: readonly number[]): string | null {
+  if (tabIds.length === 0) {
+    return null
+  }
+  return `${tabIds.map((id) => `#t:${id}`).join(" ")} | close`
+}
+
+/** EN: `#t:… | reload` for bulk tab reload via pipe consumer. */
+export function buildTabReloadCommandLine(tabIds: readonly number[]): string | null {
+  if (tabIds.length === 0) {
+    return null
+  }
+  return `${tabIds.map((id) => `#t:${id}`).join(" ")} | reload`
+}
+
+/**
+ * EN: `open --into-window <id> <url>` for new-tab URL panel.
+ * Returns null when URL is empty or not http(s) — caller keeps Chrome create fallback.
+ */
+export function buildOpenIntoWindowCommandLine(
+  windowId: number,
+  urlRaw: string
+): string | null {
+  if (windowId < 0) {
+    return null
+  }
+  const url = normalizePickerOpenUrl(urlRaw)
+  if (url === undefined) {
+    return null
+  }
+  return `open --into-window ${windowId} ${shellQuote(url)}`
+}
+
+/** EN: `tab -activate <tabId> --focus` — local tab + window focus from picker Enter. */
+export function buildTabActivateCommandLine(tabId: number): string | null {
+  if (tabId < 0) {
+    return null
+  }
+  return `tab -activate ${tabId} --focus`
+}
+
+/** EN: `close --window <id…>` for marked window close. */
+export function buildCloseWindowsCommandLine(windowIds: readonly number[]): string | null {
+  const ids = windowIds.filter((id) => id >= 0)
+  if (ids.length === 0) {
+    return null
+  }
+  return `close --window ${ids.join(" ")}`
+}
+
+/** EN: `close --group <groupId>` — remove all tabs in the group. */
+export function buildCloseGroupCommandLine(groupId: number): string | null {
+  if (groupId < 0) {
+    return null
+  }
+  return `close --group ${groupId}`
+}
+
+/** EN: `group ungroup <groupId>`. */
+export function buildGroupUngroupCommandLine(groupId: number): string | null {
+  if (groupId < 0) {
+    return null
+  }
+  return `group ungroup ${groupId}`
+}
+
+/** EN: `group rename <groupId> <title>`. */
+export function buildGroupRenameCommandLine(groupId: number, title: string): string | null {
+  if (groupId < 0) {
+    return null
+  }
+  return `group rename ${groupId} ${shellQuote(title.trim())}`
+}
+
+/**
+ * EN: `group new <tabId…> [--title …] [--color …]`.
+ * Color must already be a Chrome tabGroups color enum string.
+ */
+export function buildGroupNewCommandLine(
+  tabIds: readonly number[],
+  opts?: { title?: string; color?: string }
+): string | null {
+  if (tabIds.length === 0) {
+    return null
+  }
+  const parts = ["group", "new", ...tabIds.map(String)]
+  const title = opts?.title?.trim() ?? ""
+  if (title.length > 0) {
+    parts.push("--title", shellQuote(title))
+  }
+  const color = opts?.color?.trim() ?? ""
+  if (color.length > 0) {
+    parts.push("--color", color)
+  }
+  return parts.join(" ")
+}
+
+/** EN: `window rename <windowId> <name>` — display name in extension storage. */
+export function buildWindowRenameCommandLine(windowId: number, name: string): string | null {
+  if (windowId < 0) {
+    return null
+  }
+  return `window rename ${windowId} ${shellQuote(name.trim())}`
 }
 
 /**
@@ -110,6 +241,23 @@ export function buildSearchJumpCommandLine(
     if (match && match.lineNo > 0) {
       parts.push("--line", String(match.lineNo))
     }
+    // EN: Pass Sheets URL (with range when cellRef known) so jump uses Find/Name Box / tabs.update.
+    //     Do not quote `#` URLs — tokenizer is whitespace-only and would keep quote chars.
+    // JA: Sheets URL（cellRef があれば range 付き）を渡し Find／Name Box／tabs.update へ。
+    //     `#` URL は引用しない（tokenize は空白分割のみで引用符が残る）。
+    let url = normalizePickerOpenUrl(entry.url)
+    if (url !== undefined && isGoogleSheetsUrl(url) && match?.cellRef) {
+      const sheetParts = parseGoogleSheetsUrl(url)
+      if (sheetParts) {
+        const ranged = buildGoogleSheetsCellUrl(sheetParts, match.cellRef)
+        if (ranged) {
+          url = ranged
+        }
+      }
+    }
+    if (url !== undefined) {
+      parts.push("--url", url)
+    }
     return parts.join(" ")
   }
   return buildSearchOpenCommandLine(entry)
@@ -127,10 +275,140 @@ export function buildDomJumpCommandLine(
   return parts.join(" ")
 }
 
+/** EN: Compat alias — settings commit on apply; this only closes the column. */
 export function buildSettingSaveCommandLine(): string {
-  return "setting -save"
+  return "setting -exit -list"
 }
 
+/** EN: Compat alias — no draft to discard; closes the column. */
 export function buildSettingCancelCommandLine(): string {
-  return "setting -cancel"
+  return "setting -exit -list"
+}
+
+/** EN: Max ids / urls per generated line (matches host effect caps). */
+const MAX_PICKER_BULK_ARGS = 200
+
+// EN: Leading "-" is rejected — the Rust parser treats it as a flag.
+const BOOKMARK_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_-]{0,63}$/
+const ISO_BOUND_PATTERN = /^[0-9A-Za-z:.+-]{1,64}$/
+
+/**
+ * EN: `bookmark -remove <id…>` (ids are positional; no `#b:` chip exists).
+ * Returns null when empty, too many, or any id fails validation.
+ */
+export function buildBookmarkRemoveCommandLine(ids: readonly string[]): string | null {
+  if (ids.length === 0 || ids.length > MAX_PICKER_BULK_ARGS) {
+    return null
+  }
+  const checked: string[] = []
+  for (const id of ids) {
+    if (!BOOKMARK_ID_PATTERN.test(id)) {
+      return null
+    }
+    checked.push(id)
+  }
+  return `bookmark -remove ${checked.join(" ")}`
+}
+
+/** EN: `open <url>` for a bookmark leaf (http(s) only). */
+export function buildBookmarkOpenCommandLine(urlRaw: string): string | null {
+  const url = normalizePickerOpenUrl(urlRaw)
+  if (url === undefined) {
+    return null
+  }
+  return `open ${shellQuote(url)}`
+}
+
+/**
+ * EN: `bookmark -move <id…> --parent <parentId>`.
+ * Parent must not appear in the id list (no self-move).
+ */
+export function buildBookmarkMoveCommandLine(
+  ids: readonly string[],
+  parentId: string
+): string | null {
+  if (ids.length === 0 || ids.length > MAX_PICKER_BULK_ARGS) {
+    return null
+  }
+  if (!BOOKMARK_ID_PATTERN.test(parentId)) {
+    return null
+  }
+  const checked: string[] = []
+  for (const id of ids) {
+    if (!BOOKMARK_ID_PATTERN.test(id)) {
+      return null
+    }
+    if (id === parentId) {
+      return null
+    }
+    checked.push(id)
+  }
+  return `bookmark -move ${checked.join(" ")} --parent ${parentId}`
+}
+
+/**
+ * EN: `bookmark -send <deviceId> --open|--save|--both <url…>` (item URLs only).
+ */
+export function buildBookmarkSendCommandLine(
+  deviceId: string,
+  urls: readonly string[],
+  mode: "open" | "save" | "both" = "open"
+): string | null {
+  if (!BOOKMARK_ID_PATTERN.test(deviceId)) {
+    return null
+  }
+  if (urls.length === 0 || urls.length > MAX_PICKER_BULK_ARGS) {
+    return null
+  }
+  const quoted: string[] = []
+  for (const raw of urls) {
+    const url = normalizePickerOpenUrl(raw)
+    if (url === undefined) {
+      return null
+    }
+    quoted.push(shellQuote(url))
+  }
+  const modeFlag = mode === "save" ? "--save" : mode === "both" ? "--both" : "--open"
+  return `bookmark -send ${deviceId} ${modeFlag} ${quoted.join(" ")}`
+}
+
+/** EN: `history -delete <url…>` for visit rows (http(s) only). */
+export function buildHistoryDeleteCommandLine(urls: readonly string[]): string | null {
+  if (urls.length === 0 || urls.length > MAX_PICKER_BULK_ARGS) {
+    return null
+  }
+  const quoted: string[] = []
+  for (const raw of urls) {
+    const url = normalizePickerOpenUrl(raw)
+    if (url === undefined) {
+      return null
+    }
+    quoted.push(shellQuote(url))
+  }
+  return `history -delete ${quoted.join(" ")}`
+}
+
+/**
+ * EN: `history -delete-range --from <iso> --to <iso>`.
+ * Bounds must be whitespace-free ISO-8601 or epoch-millisecond strings.
+ */
+export function buildHistoryDeleteRangeCommandLine(
+  fromIso: string,
+  toIso: string
+): string | null {
+  const from = fromIso.trim()
+  const to = toIso.trim()
+  if (!ISO_BOUND_PATTERN.test(from) || !ISO_BOUND_PATTERN.test(to)) {
+    return null
+  }
+  return `history -delete-range --from ${from} --to ${to}`
+}
+
+/** EN: `open <url>` for a history visit (http(s) only). */
+export function buildHistoryOpenCommandLine(urlRaw: string): string | null {
+  const url = normalizePickerOpenUrl(urlRaw)
+  if (url === undefined) {
+    return null
+  }
+  return `open ${shellQuote(url)}`
 }
