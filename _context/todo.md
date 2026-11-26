@@ -1064,7 +1064,7 @@ tab -list | browse        → picker::tab live（既存意味）
 
 **手元スモーク**
 
-- [ ] REPL: `nav -enter` → peer picker → tab picker → キーが peer overlay に反映 · q/Esc で終了
+- [ ] REPL: `nav -enter` → peer picker → tab picker → **矢印で仮想カーソル移動** · Enter で click · **端末フォーカス維持** · q/Esc で終了（`no-typing-target` 連発なし）
 - [ ] REPL: `dom -wizard` → 同 peer/tab picker → scope/flavor → DOM 行
 - [ ] REPL: `tab -list | browse` が移設後も activate / live refresh 動作
 - [ ] bare `--device`（history/bookmark/tab/search）が peer picker で選べる

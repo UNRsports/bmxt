@@ -1,6 +1,8 @@
 /**
  * EN: Handle peer `nav_control` — drive nav overlay via nav-tab-bridge.
+ *     Does not activate the tab or focus the browser window (CLI keeps TTY focus).
  * JA: peer `nav_control` — nav-tab-bridge で overlay を駆動。
+ *     タブ activate / ウィンドウ focus はしない（CLI は端末フォーカスのまま）。
  */
 
 import type { SyncNavControlOp } from "../types.ts"

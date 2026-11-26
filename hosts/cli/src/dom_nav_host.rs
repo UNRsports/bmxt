@@ -246,8 +246,19 @@ pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<
 }
 
 /**
- * EN: Pick peer + tab via ratatui, start overlay, forward keys until q/Esc.
- * JA: peer+tab を ratatui で選択 → overlay start → q/Esc までキー転送。
+ * EN: CLI free-move steps (px). Plain arrows use pixel move — spatial step=1 feels stuck
+ *     without the extension HUD. Shift+arrow is avoided: many terminals steal it for scrollback.
+ * JA: CLI の自由移動 px。素の矢印はピクセル移動（空間 step=1 は CLI ではほぼ動かない）。
+ *     Shift+矢印は端末のスクロール横取りが多いため使わない。
+ */
+const NAV_ARROW_STEP_PX: i64 = 24;
+const NAV_ARROW_STEP_FAST_PX: i64 = 72;
+
+/**
+ * EN: Pick peer + tab via ratatui, start overlay, drive cursor with arrows until q/Esc.
+ *     Does not focus the peer browser window — keys stay in this terminal (raw mode).
+ * JA: peer+tab を ratatui で選択 → overlay start → 矢印でカーソル操作 → q/Esc。
+ *     peer ブラウザへフォーカスしない（キーは本端末の raw mode で消費）。
  */
 pub async fn run_nav_enter_session(client: &BusClient, self_device_id: &str) -> Result<()> {
     let peers = client.list_connected().await;
@@ -268,7 +279,9 @@ pub async fn run_nav_enter_session(client: &BusClient, self_device_id: &str) -> 
         .await?;
     eprintln!("{}", t_cli("cmd.cli.nav.sessionHelp", &[]));
 
-    let loop_result = tokio::task::block_in_place(|| -> Result<()> {
+    // EN: Collect last RPC error; never eprintln inside raw mode (corrupts the TTY).
+    let (loop_result, last_err) = tokio::task::block_in_place(|| {
+        let mut last_err: Option<String> = None;
         enable_raw_mode()?;
         let result = (|| -> Result<()> {
             loop {
@@ -286,14 +299,9 @@ pub async fn run_nav_enter_session(client: &BusClient, self_device_id: &str) -> 
                 {
                     return Ok(());
                 }
-                let (key_s, code_s) = key_to_wire(&key.code);
-                let op = SyncNavControlOp::Key {
-                    key: key_s,
-                    code: code_s,
-                    ctrl_key: key.modifiers.contains(KeyModifiers::CONTROL),
-                    shift_key: key.modifiers.contains(KeyModifiers::SHIFT),
-                    alt_key: key.modifiers.contains(KeyModifiers::ALT),
-                    meta_key: key.modifiers.contains(KeyModifiers::META),
+                let Some(op) = key_to_nav_op(&key.code, key.modifiers) else {
+                    // EN: Printable / other keys ignored until CLI typing mode exists.
+                    continue;
                 };
                 let handle = tokio::runtime::Handle::current();
                 if let Err(err) = handle.block_on(client.nav_control_on(
@@ -302,39 +310,86 @@ pub async fn run_nav_enter_session(client: &BusClient, self_device_id: &str) -> 
                     tab_id,
                     op,
                 )) {
-                    eprintln!("nav: {err:#}");
+                    last_err = Some(format!("{err:#}"));
                 }
             }
         })();
         disable_raw_mode()?;
-        result
-    });
+        Ok::<_, anyhow::Error>((result, last_err))
+    })?;
 
     let _ = client
         .nav_control_on(self_device_id, &remote_id, tab_id, SyncNavControlOp::Stop)
         .await;
+    if let Some(detail) = last_err {
+        eprintln!("nav: {detail}");
+    }
     loop_result
 }
 
-fn key_to_wire(code: &KeyCode) -> (String, String) {
-    match code {
-        KeyCode::Char(c) => {
-            let s = c.to_string();
-            (s.clone(), format!("Key{}", c.to_ascii_uppercase()))
-        }
-        KeyCode::Enter => ("Enter".into(), "Enter".into()),
-        KeyCode::Tab => ("Tab".into(), "Tab".into()),
-        KeyCode::Backspace => ("Backspace".into(), "Backspace".into()),
-        KeyCode::Delete => ("Delete".into(), "Delete".into()),
-        KeyCode::Left => ("ArrowLeft".into(), "ArrowLeft".into()),
-        KeyCode::Right => ("ArrowRight".into(), "ArrowRight".into()),
-        KeyCode::Up => ("ArrowUp".into(), "ArrowUp".into()),
-        KeyCode::Down => ("ArrowDown".into(), "ArrowDown".into()),
-        KeyCode::Home => ("Home".into(), "Home".into()),
-        KeyCode::End => ("End".into(), "End".into()),
-        KeyCode::PageUp => ("PageUp".into(), "PageUp".into()),
-        KeyCode::PageDown => ("PageDown".into(), "PageDown".into()),
-        KeyCode::Esc => ("Escape".into(), "Escape".into()),
-        other => (format!("{other:?}"), format!("{other:?}")),
+/**
+ * EN: Map CLI keys to overlay ops. Arrows = pixel free-move (not spatial step=1).
+ *     Alt+arrow = larger step. Never use Shift (terminal scrollback). Never `Key`/`forwardKey`.
+ * JA: 矢印=ピクセル自由移動（空間 step=1 ではない）。Alt+矢印=大ステップ。
+ *     Shift は使わない（端末スクロール）。`Key`/`forwardKey` には送らない。
+ */
+fn key_to_nav_op(code: &KeyCode, modifiers: KeyModifiers) -> Option<SyncNavControlOp> {
+    if matches!(code, KeyCode::Enter) {
+        return Some(SyncNavControlOp::Click);
+    }
+    let step = if modifiers.contains(KeyModifiers::ALT) {
+        NAV_ARROW_STEP_FAST_PX
+    } else {
+        NAV_ARROW_STEP_PX
+    };
+    let (dx, dy) = match code {
+        KeyCode::Left => (-step, 0),
+        KeyCode::Right => (step, 0),
+        KeyCode::Up => (0, -step),
+        KeyCode::Down => (0, step),
+        _ => return None,
+    };
+    Some(SyncNavControlOp::Move {
+        dx,
+        dy,
+        free_move: true,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn arrows_map_to_pixel_free_move() {
+        let op = key_to_nav_op(&KeyCode::Left, KeyModifiers::NONE).expect("left");
+        assert!(matches!(
+            op,
+            SyncNavControlOp::Move {
+                dx: -24,
+                dy: 0,
+                free_move: true
+            }
+        ));
+        let op = key_to_nav_op(&KeyCode::Up, KeyModifiers::ALT).expect("up");
+        assert!(matches!(
+            op,
+            SyncNavControlOp::Move {
+                dx: 0,
+                dy: -72,
+                free_move: true
+            }
+        ));
+    }
+
+    #[test]
+    fn enter_maps_to_click() {
+        let op = key_to_nav_op(&KeyCode::Enter, KeyModifiers::NONE).expect("enter");
+        assert!(matches!(op, SyncNavControlOp::Click));
+    }
+
+    #[test]
+    fn printable_ignored() {
+        assert!(key_to_nav_op(&KeyCode::Char('a'), KeyModifiers::NONE).is_none());
     }
 }

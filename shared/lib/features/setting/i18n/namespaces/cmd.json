@@ -1476,8 +1476,8 @@
     "en": "Pick nav target tab by number:"
   },
   "cmd.cli.nav.sessionHelp": {
-    "ja": "nav セッション中 · キーを peer へ転送 · q / Esc で終了",
-    "en": "nav session · keys forward to peer · q / Esc to end"
+    "ja": "nav セッション中 · ↑↓←→ で移動（24px）· Alt+矢印で大きく移動 · Enter で click · q / Esc で終了（Shift+矢印は端末スクロールになるため使わない / ブラウザへフォーカスしません）",
+    "en": "nav session · ↑↓←→ move (24px) · Alt+arrows jump farther · Enter click · q / Esc end (avoid Shift+arrows — terminal scrollback; does not focus the browser)"
   },
   "cmd.cli.nav.sessionEnded": {
     "ja": "nav セッションを終了しました。",
