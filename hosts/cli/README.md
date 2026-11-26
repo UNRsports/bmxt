@@ -39,7 +39,7 @@ Outbound sync tickets (`sync -setup` invite · `sync -offer` / `-accept` answer)
 Same grammar as the extension (`bmxt-core`):
 
 - `setting -list` — print committed (or draft) scalar fields
-- `setting -set <key> <value>` — validate and **save immediately** (same as extension): `locale` · `edit-picker` · `ime-candidate-help` · **`prompt-fire`** · `search-legend` · `host-ui` · … · Tab completes keys/values. **`setting -set prompt-fire on|off`** toggles typing particles on the prompt row / overlays below only (terminal history above stays as-is; no full-screen canvas)
+- `setting -set <key> <value>` — validate and **save immediately** (same as extension): `locale` · `edit-picker` · `ime-candidate-help` · **`prompt-fire`** (default **off**) · `search-legend` · `host-ui` · … · Tab completes keys/values. **`setting -set prompt-fire on|off`** toggles typing particles on the prompt row / overlays below only (terminal history above stays as-is; no full-screen canvas)
 - `setting -save` / `setting -cancel` — commit draft to disk / discard
 - `setting -list | browse` — **not supported** on CLI (use `-set`/`-save` or the browser window)
 
@@ -156,7 +156,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 拡張と同じ文法（`bmxt-core`）:
 
 - `setting -list` — committed（または下書き）スカラーを印刷
-- `setting -set <key> <value>` — 検証して**即保存**（拡張と同じ）: `locale` · `edit-picker` · `ime-candidate-help` · **`prompt-fire`** · `search-legend` · `host-ui` · … · Tab でキー／値候補。**`setting -set prompt-fire on|off`** で打鍵粒子の ON/OFF（プロンプト行と直下オーバーレイのみ。上の端末ログはそのまま・全画面キャンバスなし）
+- `setting -set <key> <value>` — 検証して**即保存**（拡張と同じ）: `locale` · `edit-picker` · `ime-candidate-help` · **`prompt-fire`**（既定 **off**）· `search-legend` · `host-ui` · … · Tab でキー／値候補。**`setting -set prompt-fire on|off`** で打鍵粒子の ON/OFF（プロンプト行と直下オーバーレイのみ。上の端末ログはそのまま・全画面キャンバスなし）
 - `setting -save` / `setting -cancel` — ディスクへ保存 / 破棄
 - `setting -list | browse` — **CLI 非対応**（`-set`/`-save` か拡張窓を使う）
 

@@ -104,6 +104,14 @@ mod tests {
     use super::*;
 
     #[test]
+    fn prompt_fire_defaults_off() {
+        assert!(!DEFAULT_PROMPT_FIRE);
+        assert!(!default_ui_settings().prompt_fire);
+        let normalized = normalize_ui_settings(None, None, None, None, None, None, None);
+        assert!(!normalized.prompt_fire);
+    }
+
+    #[test]
     fn locale_defaults_to_ja() {
         assert_eq!(parse_ui_locale(None), "ja");
         assert_eq!(parse_ui_locale(Some("en")), "en");

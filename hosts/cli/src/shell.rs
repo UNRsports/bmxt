@@ -640,7 +640,8 @@ impl PromptShell {
             pending_logs: Arc::new(Mutex::new(Vec::new())),
             session_log_ring: VecDeque::new(),
             particles: Vec::new(),
-            prompt_fire: false,
+            // EN: Default off until committed/draft settings apply (`DEFAULT_PROMPT_FIRE`).
+            prompt_fire: bmxt_ui_settings::DEFAULT_PROMPT_FIRE,
             rng: StdRng::from_entropy(),
         })
     }

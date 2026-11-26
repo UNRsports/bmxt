@@ -282,7 +282,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
             .as_ref()
             .map(|s| s.prompt_fire)
             .or_else(|| ui_settings_host::load_committed().ok().map(|s| s.prompt_fire))
-            .unwrap_or(false);
+            .unwrap_or(bmxt_ui_settings::DEFAULT_PROMPT_FIRE);
         shell.set_prompt_fire(prompt_fire);
 
         // EN: `BMXt>` = accepting commands (Family ready and/or peers linked).

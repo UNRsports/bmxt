@@ -9,8 +9,8 @@ mod types;
 
 pub use normalize::{
     default_ui_settings, normalize_host_ui_mode, normalize_search_legend_mode, normalize_ui_settings,
-    parse_ui_locale, DEFAULT_HOST_UI_MODE, DEFAULT_IME_CANDIDATE_HELP, DEFAULT_SEARCH_LEGEND_MODE,
-    DEFAULT_UI_LOCALE,
+    parse_ui_locale, DEFAULT_HOST_UI_MODE, DEFAULT_IME_CANDIDATE_HELP, DEFAULT_PROMPT_FIRE,
+    DEFAULT_SEARCH_LEGEND_MODE, DEFAULT_UI_LOCALE,
 };
 pub use paths::{
     cli_ui_settings_bundle_dir_name, cli_ui_settings_dir, cli_ui_settings_path,

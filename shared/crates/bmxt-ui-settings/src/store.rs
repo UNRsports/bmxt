@@ -127,5 +127,26 @@ mod tests {
         let path = dir.path().join("missing.json");
         let loaded = load_or_default(&path).unwrap();
         assert_eq!(loaded.locale, "ja");
+        assert!(!loaded.prompt_fire);
+    }
+
+    #[test]
+    fn omitted_prompt_fire_field_stays_off() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("settings.json");
+        // EN: Legacy / partial JSON without promptFire must not enable FX.
+        let raw = r#"{
+  "version": 2,
+  "exportedAt": "2026-01-01T00:00:00.000Z",
+  "locale": "ja"
+}"#;
+        std::fs::write(&path, raw).unwrap();
+        let loaded = load_or_default(&path).unwrap();
+        assert!(!loaded.prompt_fire);
+        let lines = format_setting_list_lines(&loaded);
+        assert!(
+            lines.iter().any(|l| l == "prompt-fire\toff"),
+            "expected prompt-fire off in {lines:?}"
+        );
     }
 }
