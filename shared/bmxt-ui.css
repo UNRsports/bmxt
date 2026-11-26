@@ -2152,6 +2152,11 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   outline-offset: -1px;
 }
 
+/* EN: Whole destination group band when group marks target a group (dissolve warning). */
+.bmxt-tab-picker-row--move-dest-band {
+  background: rgba(163, 113, 247, 0.14);
+}
+
 .bmxt-tab-picker-row-block {
   display: block;
 }

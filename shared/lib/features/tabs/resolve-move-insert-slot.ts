@@ -52,6 +52,57 @@ function lastTabInWindow(
   return last
 }
 
+function lastTabInGroup(
+  rows: readonly TabPickerRow[],
+  windowId: number,
+  groupId: number
+): Extract<TabPickerRow, { kind: "tab" }> | null {
+  let last: Extract<TabPickerRow, { kind: "tab" }> | null = null
+  for (const row of rows) {
+    if (row.kind === "tab" && row.windowId === windowId && row.groupId === groupId) {
+      last = row
+    }
+  }
+  return last
+}
+
+/**
+ * EN: Tab immediately after `afterTabId` in the same window (picker order), or null.
+ * JA: 同一ウィンドウで `afterTabId` の次のタブ（picker 順）。無ければ null。
+ */
+function nextTabAfterInWindow(
+  rows: readonly TabPickerRow[],
+  afterTabId: number
+): Extract<TabPickerRow, { kind: "tab" }> | null {
+  let seen = false
+  for (const row of rows) {
+    if (row.kind === "window") {
+      if (seen) {
+        return null
+      }
+      continue
+    }
+    if (row.kind !== "tab") {
+      continue
+    }
+    if (seen) {
+      return row
+    }
+    if (row.tabId === afterTabId) {
+      seen = true
+    }
+  }
+  return null
+}
+
+export type ResolveMoveInsertSlotOptions = {
+  /**
+   * EN: Group/window header destinations (group marks). Group row → append to end of that group.
+   * JA: グループ選択時のヘッダ宛先。グループ行 → そのグループ末尾へ追加。
+   */
+  headerDestMode?: boolean
+}
+
 function rowIndexOfTab(rows: readonly TabPickerRow[], tabId: number): number {
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i]
@@ -69,7 +120,8 @@ function rowIndexOfTab(rows: readonly TabPickerRow[], tabId: number): number {
 export function resolveMoveInsertSlot(
   rows: readonly TabPickerRow[],
   visibleRowIndices: readonly number[],
-  moveDestHi: number
+  moveDestHi: number,
+  options?: ResolveMoveInsertSlotOptions
 ): MoveInsertSlot | null {
   if (rows.length === 0 || visibleRowIndices.length === 0) {
     return null
@@ -86,7 +138,12 @@ export function resolveMoveInsertSlot(
     return null
   }
 
+  const headerDestMode = options?.headerDestMode === true
+
   if (dest.kind === "tab") {
+    if (headerDestMode) {
+      return null
+    }
     const groupId = dest.groupId
     return {
       windowId: dest.windowId,
@@ -103,6 +160,30 @@ export function resolveMoveInsertSlot(
     const groupId = dest.groupId
     if (groupId === null || groupId < 0) {
       return null
+    }
+    if (headerDestMode) {
+      const last = lastTabInGroup(rows, dest.windowId, groupId)
+      if (last === null) {
+        return {
+          windowId: dest.windowId,
+          beforeTabId: null,
+          groupId,
+          ungroup: false,
+          marker: { rowIndex: destRowIndex, place: "after" }
+        }
+      }
+      const next = nextTabAfterInWindow(rows, last.tabId)
+      const lastIndex = rowIndexOfTab(rows, last.tabId)
+      const markerOnLast = lastIndex >= 0 && visibleSet.has(lastIndex)
+      return {
+        windowId: dest.windowId,
+        beforeTabId: next !== null ? next.tabId : null,
+        groupId,
+        ungroup: false,
+        marker: markerOnLast
+          ? { rowIndex: lastIndex, place: "after" }
+          : { rowIndex: destRowIndex, place: "after" }
+      }
     }
     const first = firstTabInGroup(rows, dest.windowId, groupId)
     if (first !== null) {

@@ -45,6 +45,7 @@ export function useTabPickerKeyboard({
   applyReducedState,
   applyReducedStateSequence,
   setHi,
+  setMoveDestHi,
   setSearchMode,
   setFilterQuery,
   hlSearchPattern,
@@ -121,6 +122,7 @@ export function useTabPickerKeyboard({
   applyReducedState: ApplyReduced
   applyReducedStateSequence: ApplyReducedSeq
   setHi: Dispatch<SetStateAction<number>>
+  setMoveDestHi: Dispatch<SetStateAction<number>>
   setSearchMode: Dispatch<SetStateAction<boolean>>
   setFilterQuery: Dispatch<SetStateAction<string>>
   hlSearchPattern: string
@@ -209,6 +211,7 @@ export function useTabPickerKeyboard({
     applyReducedState,
     applyReducedStateSequence,
     setHi,
+    setMoveDestHi,
     setHlSearchPattern,
     setBulkSubMode,
     setMoveCloseAfter,

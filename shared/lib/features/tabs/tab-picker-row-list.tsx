@@ -10,12 +10,13 @@ import { resolveLiveTabFaviconSrc } from "./tab-picker-live-display"
 import { resolveLiveTabTitle, resolveLiveTabUrl } from "./tab-picker-live-tab-fields"
 import { formatWindowPickerLabel } from "./tab-picker-window-label"
 import { groupRowKey } from "./tab-picker-keyboard"
-import type { BulkSubMode } from "./tab-picker-overlay-types"
+import type { BulkSubMode, SelectKind } from "./tab-picker-overlay-types"
 import {
   moveInsertMarkerAt,
   resolveMoveInsertSlot,
   type MoveInsertSlot
 } from "./resolve-move-insert-slot"
+import { isMoveHeaderDestMode } from "./move-dest-navigable"
 import { useTabPickerLiveFieldsRevision } from "./use-tab-picker-live-fields-revision"
 
 function renderHighlighted(text: string, needle: string, keyPrefix: string): ReactNode {
@@ -70,6 +71,7 @@ export type TabPickerRowListProps = {
   hi: number
   moveDestHi: number
   bulkSubMode: BulkSubMode | null
+  markedKind: SelectKind | null
   markedWindowSet: Set<number>
   markedGroupSet: Set<string>
   markedTabSet: Set<number>
@@ -90,6 +92,7 @@ export function TabPickerRowList({
   hi,
   moveDestHi,
   bulkSubMode,
+  markedKind,
   markedWindowSet,
   markedGroupSet,
   markedTabSet,
@@ -105,9 +108,20 @@ export function TabPickerRowList({
   const { settings: uiSettings } = useUiSettings()
   useTabPickerLiveFieldsRevision()
 
+  const headerDestMode = isMoveHeaderDestMode(markedKind)
   const insertSlot: MoveInsertSlot | null =
     bulkSubMode === "move"
-      ? resolveMoveInsertSlot(rows, visibleRowIndices, moveDestHi)
+      ? resolveMoveInsertSlot(rows, visibleRowIndices, moveDestHi, {
+          headerDestMode
+        })
+      : null
+  const destGroupId =
+    bulkSubMode === "move" && headerDestMode && insertSlot !== null && insertSlot.groupId !== null
+      ? insertSlot.groupId
+      : null
+  const destWindowIdForGroup =
+    bulkSubMode === "move" && headerDestMode && insertSlot !== null && insertSlot.groupId !== null
+      ? insertSlot.windowId
       : null
 
   if (rows.length === 0) {
@@ -125,8 +139,18 @@ export function TabPickerRowList({
         const hiRow = visibleRowIndices[hi] === i
         const moveCursorRow =
           bulkSubMode === "move" && visIndex >= 0 && visibleRowIndices[moveDestHi] === i
-        const slotBefore = moveInsertMarkerAt(insertSlot, i, "before")
-        const slotAfter = moveInsertMarkerAt(insertSlot, i, "after")
+        const showInsertSlots = bulkSubMode === "move" && !headerDestMode
+        const slotBefore = showInsertSlots && moveInsertMarkerAt(insertSlot, i, "before")
+        const slotAfter = showInsertSlots && moveInsertMarkerAt(insertSlot, i, "after")
+        const moveDestBand =
+          destGroupId !== null &&
+          destWindowIdForGroup !== null &&
+          ((row.kind === "group" &&
+            row.windowId === destWindowIdForGroup &&
+            row.groupId === destGroupId) ||
+            (row.kind === "tab" &&
+              row.windowId === destWindowIdForGroup &&
+              row.groupId === destGroupId))
         const { byUrl, needle } = parsePickerSearchNeedle(searchHighlightQuery)
         if (row.kind === "window") {
           const markedRow = markedWindowSet.has(row.windowId)
@@ -140,7 +164,7 @@ export function TabPickerRowList({
           )
           return (
             <div key={i} className="bmxt-tab-picker-row-block">
-              <InsertSlotMarker active={slotBefore} />
+              <InsertSlotMarker active={Boolean(slotBefore)} />
               <div
                 id={`bmxt-tab-row-${i}`}
                 ref={(el) => setRowRef(i, el)}
@@ -155,7 +179,7 @@ export function TabPickerRowList({
                 <span className="bmxt-tab-picker-tab-glyph">{markedRow ? "#" : " "}</span>
                 {byUrl ? windowLabel : renderHighlighted(windowLabel, needle, `w-${i}`)}
               </div>
-              <InsertSlotMarker active={slotAfter} />
+              <InsertSlotMarker active={Boolean(slotAfter)} />
             </div>
           )
         }
@@ -165,7 +189,7 @@ export function TabPickerRowList({
           const groupLabelClass = `bmxt-tab-picker-group-label bmxt-tab-picker-group-accent--${row.color}`
           return (
             <div key={i} className="bmxt-tab-picker-row-block">
-              <InsertSlotMarker active={slotBefore} />
+              <InsertSlotMarker active={Boolean(slotBefore)} />
               <div
                 id={`bmxt-tab-row-${i}`}
                 ref={(el) => setRowRef(i, el)}
@@ -173,7 +197,9 @@ export function TabPickerRowList({
                   expanded ? "" : " bmxt-tab-picker-row--folded"
                 }${hiRow ? " bmxt-tab-picker-row--hi" : ""}${
                   markedRow ? " bmxt-tab-picker-row--marked" : ""
-                }${moveCursorRow ? " bmxt-tab-picker-row--move-cursor" : ""}`}>
+                }${moveCursorRow ? " bmxt-tab-picker-row--move-cursor" : ""}${
+                  moveDestBand ? " bmxt-tab-picker-row--move-dest-band" : ""
+                }`}>
                 <span className="bmxt-tab-picker-fold-glyph" aria-hidden>
                   {expanded ? "▼" : "▶"}
                 </span>
@@ -182,7 +208,7 @@ export function TabPickerRowList({
                   {byUrl ? row.label : renderHighlighted(row.label, needle, `g-${i}`)}
                 </span>
               </div>
-              <InsertSlotMarker active={slotAfter} />
+              <InsertSlotMarker active={Boolean(slotAfter)} />
             </div>
           )
         }
@@ -191,7 +217,9 @@ export function TabPickerRowList({
           row.groupColor ? " bmxt-tab-picker-row--tab-in-group" : ""
         }${hiRow ? " bmxt-tab-picker-row--hi" : ""}${
           markedRow ? " bmxt-tab-picker-row--marked" : ""
-        }${moveCursorRow ? " bmxt-tab-picker-row--move-cursor" : ""}`
+        }${moveCursorRow ? " bmxt-tab-picker-row--move-cursor" : ""}${
+          moveDestBand ? " bmxt-tab-picker-row--move-dest-band" : ""
+        }`
         const liveTitle = resolveLiveTabTitle(row.tabId, row.title)
         const liveUrl = resolveLiveTabUrl(row.tabId, row.url)
         const titleShown = displayTitle(liveTitle)
@@ -200,7 +228,7 @@ export function TabPickerRowList({
         const markedTab = markedTabSet.has(row.tabId)
         return (
           <div key={`tab-${row.tabId}`} className="bmxt-tab-picker-row-block">
-            <InsertSlotMarker active={slotBefore} />
+            <InsertSlotMarker active={Boolean(slotBefore)} />
             <div
               id={`bmxt-tab-row-${i}`}
               ref={(el) => setRowRef(i, el)}
@@ -242,7 +270,7 @@ export function TabPickerRowList({
                 </div>
               ) : null}
             </div>
-            <InsertSlotMarker active={slotAfter} />
+            <InsertSlotMarker active={Boolean(slotAfter)} />
           </div>
         )
       })}
