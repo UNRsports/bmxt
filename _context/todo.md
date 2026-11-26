@@ -476,7 +476,7 @@ bmxt-browser-backup/
 | 制御面 | **native messaging 不使用**（§6 と同じ）。本線は WebRTC DataChannel + `bmxt-rtc1.` コピペ握手 |
 | 初版輸送 | 同一 PC · **host ICE のみ**（§6c 延長）。常時 TURN／クラウドシグナリングは後続 |
 | 言語 | 端末製品は **Rust のみ**。拡張側の `RTCPeerConnection` 宿主は TS のまま |
-| UI | **ratatui + crossterm**。tab／search リスト picker から。`nav`／`dom` ページオーバーレイは非目標 |
+| UI | **ratatui + crossterm**。tab／search リスト picker から。CLI **端末上**の `nav`／`dom` ページオーバーレイ描画は非目標（**遠隔操作は §17**） |
 | 配置 | モノレポ `hosts/cli` + `shared/crates/*`。既存 `bmxt-core` とは **クレート境界で区別** |
 | ブランチ | **一本の作業ブランチ**で実装段階（下記 10.0–10.5）を順に進める。長期の `cli` 専用分岐は作らない。共有契約は小さく本流へ載せ、CLI 固有は同ブランチ上で積む |
 
@@ -514,7 +514,7 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 - [x] **10.2 輸送 + 最小 CLI:** `bmxt-peer-rtc` + `hosts/cli`（`bmxt`）。`status` / `sync-setup` / `sync-pair` / `sync-connect` / REPL `ping`。**手元:** 拡張との握手→ping は下記スモーク
 - [x] **10.3 バス RPC:** REPL `tabs` / `open` / `close` / `activate` / `search`（chunk 収集）。タイムアウト `SYNC_REMOTE_QUERY_TIMEOUT_MS`
 - [x] **10.4a core 分割（実用形）:** `bmxt-core` に `wasm` feature（default on）。CLI は `default-features = false` で純 rlib 利用。拡張 wasm-pack は従来どおり default。専用 `bmxt-core-wasm` クレート分離は任意の後続
-- [x] **10.4b CliHostAdapter:** REPL が拡張と同じ文法（`tab -list --peers | browse` 等）。`HostEffect`／`UiAction` → 遠隔 RPC。`nav`／`dom`／握手系は明示案内。msgs は共有 EN i18n
+- [x] **10.4b CliHostAdapter:** REPL が拡張と同じ文法（`tab -list --peers | browse` 等）。`HostEffect`／`UiAction` → 遠隔 RPC。当時は `nav`／`dom`／握手系は明示案内（**実パリティは §17**）。msgs は共有 EN i18n
 - [x] **10.4c TUI picker MVP（初期）:** REPL `tui` → ratatui 一覧（`↑↓` `/` Enter Esc）。フル列レイアウト・tabs_picker reducer 接続は後続
 - [x] **10.5 配布手順:** `hosts/cli/README.md` · `hosts/README.md` 追記。`cargo build --release -p bmxt-cli` → `target/release/bmxt`。Linux 一次
 
@@ -536,7 +536,7 @@ BMXt 拡張プロンプト窓 (PeerHost · TS RTC · chrome.* 実行)
 
 - native messaging / CDP / Playwright
 - 常時 TURN・クラウドシグナリング（§6b／遠隔段）
-- CLI 単体での `nav`／`dom` ページオーバーレイ
+- CLI **端末内**への `nav`／`dom` ページオーバーレイ描画（peer 上 overlay の **遠隔駆動は §17**）
 - 拡張内 WebRTC スタックの Rust 置換（ブラウザ `RTCPeerConnection` 維持）
 - React 版 picker の見た目完全一致
 
@@ -920,6 +920,87 @@ CLI / 拡張 同一文法（bmxt-core）
 - 16.7 完了前のツリー TUI 必須化
 
 **参照:** §7 · §9 · §10 · §15 · `hosts/cli/src/adapter.rs` · `shared/crates/bmxt-sync-wire` · `shared/lib/features/sync/` · `shared/lib/features/bookmark/` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md`
+
+### 17. CLI `aboutbmxt` / `dom` / `nav`（probe · DOM 取得 · overlay 遠隔操作）
+
+**前提:** §10（CLI = ブラウザ API なし・Family DataChannel · 端末上 overlay 非描画）· §13–15（POSIX / Interactive ガード）· §16（CLI list/browse / wire 拡張の型）。plan `cli_dom_nav_about`。
+
+**目標:** 拡張にある `aboutbmxt` / `dom` / `nav` を CLI から使えるようにする。DOM はワンショット（LLM/`bmxt exec`）優先。人間向けは `dom -wizard`。nav は **サイト上の overlay 動作は拡張と同じ**にし、CLI は WebRTC 経由で命令を注入して肩代わりする。
+
+**現状ギャップ**
+
+| 面 | 状態 |
+|----|------|
+| 拡張 `aboutbmxt` / `dom` / `nav` | welcome · capability probe · DOM scrape · nav overlay（`nav-tab-bridge`）実装済 |
+| CLI | `OpenWelcomePage` 拒否 · `DomList` / `ProbeCapabilities` 汎用 unsupported · `NavArm`/`NavDisarm`/`NavConfirmClose` → `uiUnsupported` |
+| Wire | **`probe_capabilities` / `dom_list` / `nav_control` 未存在**（`SyncBusCommand` に載せ替えが必要） |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| `aboutbmxt` | CLI ローカル: welcome URL を stdout（Interactive なら `$BROWSER` / `xdg-open` 試行）。`-system`: CLI 自己診断 + **接続 peer へ `probe_capabilities` 新 RPC** |
+| `dom` ワンショット | `dom -list --device <id> --tab <tabId> [--document\|--viewport] [--html\|--react] …` → RPC → **stdout に DOM 行**（LLM/シェル向け）。欠落は exit 2 |
+| `dom -wizard` | **第二コマンド**（Interactive のみ）。① peer 番号選択 → ② tab 番号選択 → ③ document/viewport → ④ html/react → 取得してログ |
+| `dom --with` 完全再現 | **本節スコープ外**（semantic menu / Alt 連動は拡張のまま） |
+| `dom \| jump` | **後続**（本節必須にしない） |
+| `nav` | CLI **端末に overlay を描かない**。`nav -enter` で peer(+tab) 選択 → RPC `nav_control start` → **raw キー転送ループ**。`nav -exit` で `stop`。サイト UI 上の見え方は拡張プロンプト操作と同等 |
+| `nav -windowclose` | 確認後、peer の window close（`tabs_ops` / 対象 window 解決） |
+| NonInteractive | `-wizard` / `nav -enter` キーループは拒否（§14／§15 どおり） |
+| 宿主 | RPC 実行は **拡張プロンプト窓**（既存 search/tabs と同様。SW-only では CS inject / WebRTC 文脈が足りない） |
+
+**アーキテクチャ（要約）**
+
+```
+CLI
+  aboutbmxt [-system] → (local URL / self-diag) + probe_capabilities RPC
+  dom -list …          → dom_list RPC → stdout lines
+  dom -wizard          → Interactive 4 段 → dom_list RPC → stdout
+  nav -enter / -exit   → nav_control (start|key|stop|…) RPC
+       ⇄ DataChannel SyncBusCommand
+拡張プロンプト窓
+  probe → runCapabilityReport
+  dom_list → captureDom* (tab_id / scope / flavor)
+  nav_control → nav-tab-bridge / run-nav-inject（既存 overlay）
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `shared/crates/bmxt-sync-wire` · `shared/lib/features/sync/types.ts` | `probe_capabilities` · `dom_list` · `nav_control` (+ result) |
+| 拡張 UI bus ハンドラ | prompt 宿主で上記 RPC を実行 |
+| `shared/crates/bmxt-core/src/cmd/dom.rs` + codegen | `-wizard` · `DomList` に `device_id` / `tab_id` / `scope` |
+| `hosts/cli/src/adapter.rs` · `bus.rs` · `tui.rs` | about / dom oneshot+wizard / nav キー転送 |
+| `_context/cli-peer/CONTRACT.md` | 新 RPC · 「端末 overlay 非描画 / 遠隔 nav 可」 |
+
+**実装チェック（段階）**
+
+- [ ] **17.0 契約:** 本節方針を `CONTRACT.md` に追記。§10「overlay 非目標」を **端末描画非目標／遠隔操作は本節** に整合
+- [ ] **17.1 Wire:** TS+Rust に `probe_capabilities` / `dom_list` / `nav_control`（+ result）。必要なら `dom_list` chunk（巨大 HTML 対策）
+- [ ] **17.2 拡張 handlers:** prompt bus で probe · `captureDom*` · `nav-tab-bridge` へディスパッチ
+- [ ] **17.3 `aboutbmxt` CLI:** welcome URL · `-system` = 自己診断 + peer probe。拒否メッセージ撤去
+- [ ] **17.4 `dom` 文法:** manifest / codegen · `-wizard` · `-list` に `--device` / `--tab` / `--document`\|`--viewport`
+- [ ] **17.5 `dom` CLI:** oneshot → stdout · `-wizard` 4 段（番号選択）· NonInteractive で wizard 拒否
+- [ ] **17.6 `nav` CLI:** `-enter` キー転送 · `-exit` · `-windowclose` · NonInteractive 拒否
+- [ ] **17.7 検証:** i18n EN+JA · `check:cli-command-io` · `cargo test -p bmxt-core` · `cargo check -p bmxt-cli` · README / map_command.csv
+
+**手元スモーク**
+
+- [ ] `aboutbmxt` が URL を出し、Interactive でブラウザが開く（または URL のみで足りる）
+- [ ] `aboutbmxt -system` が CLI 行 + 接続 peer の OK/NG 行を stdout に出す
+- [ ] `bmxt exec -- 'dom -list --device <id> --tab <n> --html'` が DOM 行のみ（対話なし）
+- [ ] REPL: `dom -wizard` で peer→tab→scope→flavor 後にログへ DOM
+- [ ] REPL: `nav -enter` 後、キー操作が peer ページ overlay に反映 · `nav -exit` で消える
+- [ ] `bmxt exec` で `dom -wizard` / `nav -enter` が明確に拒否（ハングしない）
+
+**スコープ外（本節）**
+
+- CLI 端末内へのページオーバーレイ HUD 描画
+- `dom -list --with` の拡張フル UX（semantic menu / ビューポート連動フィルタ）の完全移植
+- `dom \| jump` pipe（後続）
+- `session` / `translate` / `tutorial` / `group` / `snapshot` 等の別ギャップ
+- peer history delete
+
+**参照:** plan `cli_dom_nav_about` · §10 · §13–15 · `shared/lib/features/dom/` · `shared/lib/features/nav/nav-tab-bridge.ts` · `shared/lib/features/capability/` · `hosts/cli/` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md`
 
 ---
 
