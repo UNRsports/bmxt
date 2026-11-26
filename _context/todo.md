@@ -1055,12 +1055,12 @@ tab -list | browse        → picker::tab live（既存意味）
 
 **実装チェック（段階）**
 
-- [ ] **18.0 契約:** 本節を `CONTRACT.md` / README に追記（CLI picker dir · nav/dom wizard = ratatui）
-- [ ] **18.1 移設:** `tui.rs` → `hosts/cli/src/picker/{mod,terminal,tab,url,peer,oneshot}.rs` · `main.rs` に `mod picker` · 呼び出しを `picker::` へ
-- [ ] **18.2 one-shot API:** `pick_peer` · `pick_tab_once`（Enter で閉じて返す · activate しない）· scope/flavor 用 short oneshot
-- [ ] **18.3 `nav` wizard:** `run_nav_enter_session` を peer→tab picker → key loop に変更
-- [ ] **18.4 `dom` wizard:** `run_dom_wizard` の peer/tab/scope/flavor を同 picker に統一
-- [ ] **18.5 検証:** `cargo check -p bmxt-cli` · `check:cli-command-io` · i18n（必要なら）· 手元スモーク
+- [x] **18.0 契約:** 本節を `CONTRACT.md` / README に追記（CLI picker dir · nav/dom wizard = ratatui）
+- [x] **18.1 移設:** `tui.rs` → `hosts/cli/src/picker/{mod,terminal,tab,url,peer,oneshot}.rs` · `main.rs` に `mod picker` · 呼び出しを `picker::` へ
+- [x] **18.2 one-shot API:** `pick_peer` · `pick_tab_once`（Enter で閉じて返す · activate しない）· scope/flavor 用 short oneshot
+- [x] **18.3 `nav` wizard:** `run_nav_enter_session` を peer→tab picker → key loop に変更
+- [x] **18.4 `dom` wizard:** `run_dom_wizard` の peer/tab/scope/flavor を同 picker に統一
+- [x] **18.5 検証:** `cargo check -p bmxt-cli` · `check:cli-command-io` · i18n（必要なら）· 手元スモーク
 
 **手元スモーク**
 

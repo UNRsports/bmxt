@@ -4,16 +4,14 @@
 //! EN: These entry points stay in the CLI host — they are not shared bmxt-core grammar.
 //! JA: 入口は CLI host に閉じる（共有 bmxt-core 文法には載せない）。
 
-use std::io::{self, Write};
-
 use anyhow::{anyhow, Result};
-use bmxt_sync_wire::SyncNavControlOp;
+use bmxt_sync_wire::{SyncNavControlOp, SyncRemoteTabRow};
 use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 
 use crate::bus::BusClient;
 use crate::msgs::t_cli;
-use crate::tui;
+use crate::picker::{self, PeerTabRow};
 
 const MAX_ID_LEN: usize = 64;
 
@@ -171,55 +169,54 @@ fn sanitize_tab_id(raw: &str) -> Option<String> {
     Some(n.to_string())
 }
 
-/**
- * EN: Interactive 4-step source pick for `dom -wizard`.
- * JA: `dom -wizard` の 4 段選択（peer → tab → scope → flavor）。
- */
-pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<DomCapturePlan> {
-    let peers = client.list_connected().await;
-    let remote_id = tokio::task::block_in_place(|| tui::pick_peer_by_number(&peers))?;
-
-    let bundles = client.tabs_all(self_device_id, true).await?;
-    let mut tab_choices: Vec<(i64, String)> = Vec::new();
+fn peer_tab_rows_for(
+    bundles: Vec<(String, String, Vec<SyncRemoteTabRow>)>,
+    remote_id: &str,
+) -> Vec<PeerTabRow> {
+    let mut out = Vec::new();
     for (id, name, rows) in bundles {
         if id != remote_id {
             continue;
         }
         let peer_label = if name.is_empty() {
-            id.as_str()
+            id.clone()
         } else {
-            name.as_str()
+            name.clone()
         };
+        out.push(PeerTabRow {
+            peer_device_id: id.clone(),
+            peer_display_name: peer_label.clone(),
+            row: SyncRemoteTabRow::Window {
+                window_id: -1,
+                title: format!("── {peer_label} ──"),
+                focused: false,
+            },
+        });
         for row in rows {
-            if let bmxt_sync_wire::SyncRemoteTabRow::Tab {
-                tab_id,
-                title,
-                url,
-                ..
-            } = row
-            {
-                tab_choices.push((
-                    tab_id,
-                    format!("[{peer_label}] {title} — {url}"),
-                ));
-            }
+            out.push(PeerTabRow {
+                peer_device_id: id.clone(),
+                peer_display_name: peer_label.clone(),
+                row,
+            });
         }
     }
-    if tab_choices.is_empty() {
-        return Err(anyhow!(t_cli("cmd.cli.dom.noTabs", &[])));
-    }
-    let tab_id = tokio::task::block_in_place(|| pick_numbered_choice(
-        &t_cli("cmd.cli.dom.pickTab", &[]),
-        &tab_choices
-            .iter()
-            .map(|(id, label)| (id.to_string(), label.clone()))
-            .collect::<Vec<_>>(),
-    ))?
-    .parse::<i64>()
-    .map_err(|_| anyhow!(t_cli("cmd.cli.device.invalidNumber", &[])))?;
+    out
+}
+
+/**
+ * EN: Interactive 4-step source pick for `dom -wizard` (ratatui pickers).
+ * JA: `dom -wizard` の 4 段選択（peer → tab → scope → flavor）。ratatui picker。
+ */
+pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<DomCapturePlan> {
+    let peers = client.list_connected().await;
+    let remote_id = tokio::task::block_in_place(|| picker::pick_peer(&peers))?;
+
+    let bundles = client.tabs_all(self_device_id, true).await?;
+    let rows = peer_tab_rows_for(bundles, &remote_id);
+    let tab = tokio::task::block_in_place(|| picker::pick_tab_once(rows))?;
 
     let scope = tokio::task::block_in_place(|| {
-        pick_numbered_choice(
+        picker::pick_labeled_once(
             &t_cli("cmd.cli.dom.pickScope", &[]),
             &[
                 ("document".into(), t_cli("cmd.cli.dom.scopeDocument", &[])),
@@ -229,7 +226,7 @@ pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<
     })?;
 
     let flavor = tokio::task::block_in_place(|| {
-        pick_numbered_choice(
+        picker::pick_labeled_once(
             &t_cli("cmd.cli.dom.pickFlavor", &[]),
             &[
                 ("--html".into(), "--html".into()),
@@ -240,7 +237,7 @@ pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<
 
     Ok(DomCapturePlan {
         remote_id,
-        tab_id,
+        tab_id: tab.tab_id,
         scope,
         flavor,
         show_tag: false,
@@ -248,97 +245,18 @@ pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<
     })
 }
 
-fn pick_numbered_choice(prompt: &str, choices: &[(String, String)]) -> Result<String> {
-    if choices.is_empty() {
-        return Err(anyhow!("empty choices"));
-    }
-    if choices.len() == 1 {
-        eprintln!("{}", t_cli("cmd.cli.device.autoSelected", &[("peer", &choices[0].1)]));
-        return Ok(choices[0].0.clone());
-    }
-    eprintln!("{prompt}");
-    for (i, (_, label)) in choices.iter().enumerate() {
-        eprintln!("  {}. {label}", i + 1);
-    }
-    eprint!(
-        "{}",
-        t_cli(
-            "cmd.cli.device.pickNumber",
-            &[("max", &choices.len().to_string())]
-        )
-    );
-    let _ = io::stderr().flush();
-    let mut line = String::new();
-    io::stdin().read_line(&mut line)?;
-    let trimmed = line.trim();
-    let Ok(n) = trimmed.parse::<usize>() else {
-        return Err(anyhow!(t_cli("cmd.cli.device.invalidNumber", &[])));
-    };
-    if n == 0 || n > choices.len() {
-        return Err(anyhow!(t_cli("cmd.cli.device.invalidNumber", &[])));
-    }
-    Ok(choices[n - 1].0.clone())
-}
-
 /**
- * EN: Pick peer + tab, start overlay, forward keys until q/Esc.
- * JA: peer+tab 選択 → overlay start → q/Esc までキー転送。
+ * EN: Pick peer + tab via ratatui, start overlay, forward keys until q/Esc.
+ * JA: peer+tab を ratatui で選択 → overlay start → q/Esc までキー転送。
  */
 pub async fn run_nav_enter_session(client: &BusClient, self_device_id: &str) -> Result<()> {
     let peers = client.list_connected().await;
-    let remote_id = tokio::task::block_in_place(|| tui::pick_peer_by_number(&peers))?;
+    let remote_id = tokio::task::block_in_place(|| picker::pick_peer(&peers))?;
 
     let bundles = client.tabs_all(self_device_id, true).await?;
-    let mut tab_choices: Vec<(i64, String)> = Vec::new();
-    for (id, name, rows) in bundles {
-        if id != remote_id {
-            continue;
-        }
-        let peer_label = if name.is_empty() {
-            id.as_str()
-        } else {
-            name.as_str()
-        };
-        for row in rows {
-            if let bmxt_sync_wire::SyncRemoteTabRow::Tab {
-                tab_id,
-                title,
-                url,
-                active,
-                ..
-            } = row
-            {
-                let mark = if active { "*" } else { " " };
-                tab_choices.push((
-                    tab_id,
-                    format!("{mark} [{peer_label}] {title} — {url}"),
-                ));
-            }
-        }
-    }
-    if tab_choices.is_empty() {
-        return Err(anyhow!(t_cli("cmd.cli.dom.noTabs", &[])));
-    }
-    // Prefer active tab when present.
-    let default_idx = tab_choices
-        .iter()
-        .position(|(_, label)| label.starts_with('*'))
-        .unwrap_or(0);
-    let tab_id = if tab_choices.len() == 1 {
-        tab_choices[0].0
-    } else {
-        tokio::task::block_in_place(|| {
-            pick_numbered_choice(
-                &t_cli("cmd.cli.nav.pickTab", &[]),
-                &tab_choices
-                    .iter()
-                    .map(|(id, label)| (id.to_string(), label.clone()))
-                    .collect::<Vec<_>>(),
-            )
-        })?
-        .parse::<i64>()
-        .unwrap_or(tab_choices[default_idx].0)
-    };
+    let rows = peer_tab_rows_for(bundles, &remote_id);
+    let tab = tokio::task::block_in_place(|| picker::pick_tab_once(rows))?;
+    let tab_id = tab.tab_id;
 
     client
         .nav_control_on(
@@ -369,8 +287,6 @@ pub async fn run_nav_enter_session(client: &BusClient, self_device_id: &str) -> 
                     return Ok(());
                 }
                 let (key_s, code_s) = key_to_wire(&key.code);
-                // Fire-and-forget is awkward in sync block — collect and send outside.
-                // Store last op in thread-local via return? Simpler: use Handle::block_on per key.
                 let op = SyncNavControlOp::Key {
                     key: key_s,
                     code: code_s,

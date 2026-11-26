@@ -17,6 +17,7 @@ mod progress;
 mod posix_io_tests;
 mod repl_log;
 mod shell;
+mod picker;
 mod tui;
 mod dom_nav_host;
 mod ui_settings_host;

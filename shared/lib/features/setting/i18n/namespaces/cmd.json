@@ -1295,6 +1295,26 @@
     "ja": "一覧を更新しました · ↑↓ 移動 · / 絞り込み · Enter · q/Esc",
     "en": "list refreshed · ↑↓ move · / filter · Enter · q/Esc"
   },
+  "cmd.cli.picker.oneshotHelp": {
+    "ja": "↑↓ 移動 · / 絞り込み · Enter で決定 · q/Esc でキャンセル",
+    "en": "↑↓ move · / filter · Enter confirm · q/Esc cancel"
+  },
+  "cmd.cli.picker.cancelled": {
+    "ja": "選択をキャンセルしました。",
+    "en": "Selection cancelled."
+  },
+  "cmd.cli.picker.peerTitle": {
+    "ja": "BMXt peer 選択",
+    "en": "BMXt peer picker"
+  },
+  "cmd.cli.picker.tabOneshotTitle": {
+    "ja": "BMXt タブ選択",
+    "en": "BMXt tab picker"
+  },
+  "cmd.cli.picker.tabNotSelectable": {
+    "ja": "タブ行を選んでください（Window/Group は選べません）",
+    "en": "Select a tab row (window/group rows are not selectable)"
+  },
   "cmd.cli.urlPicker.help": {
     "ja": "↑↓ 移動 · Space URLマーク · Enter で送信先へ · / 絞り込み · q/Esc 閉じる",
     "en": "↑↓ move · Space mark URLs · Enter → destinations · / filter · q/Esc close"

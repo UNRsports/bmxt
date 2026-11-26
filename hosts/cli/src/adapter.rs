@@ -24,7 +24,7 @@ use crate::handshake;
 use crate::msgs::{expand_msgs, t_cli, resolve_cli_locale};
 use crate::open_payload::parse_open_payload;
 use crate::progress;
-use crate::tui;
+use crate::picker;
 use crate::ui_settings_host;
 
 /** EN: Cap Interactive URL picker rows so ratatui does not freeze on huge history. */
@@ -114,8 +114,8 @@ impl<'a> CliHostAdapter<'a> {
     }
 
     /**
-     * EN: For bare `--device` in Interactive browse, pick one connected peer by number.
-     * JA: Interactive の `| browse` で ID なし `--device` なら番号で1台選ぶ。
+     * EN: For bare `--device` in Interactive browse, pick one connected peer (ratatui).
+     * JA: Interactive の `| browse` で ID なし `--device` なら ratatui で1台選ぶ。
      */
     async fn resolve_source_device_id(
         &mut self,
@@ -126,7 +126,7 @@ impl<'a> CliHostAdapter<'a> {
             return Ok(device_id.to_string());
         }
         let peers = self.require_client()?.list_connected().await;
-        tokio::task::block_in_place(|| tui::pick_peer_by_number(&peers))
+        tokio::task::block_in_place(|| picker::pick_peer(&peers))
     }
 
     fn require_client(&self) -> Result<&'a BusClient> {
@@ -1101,9 +1101,9 @@ impl<'a> CliHostAdapter<'a> {
         if peers.is_empty() {
             return Err(anyhow!("no connected peers"));
         }
-        let open_peers: Vec<tui::UrlOpenPeer> = peers
+        let open_peers: Vec<picker::UrlOpenPeer> = peers
             .into_iter()
-            .map(|(device_id, display_name)| tui::UrlOpenPeer {
+            .map(|(device_id, display_name)| picker::UrlOpenPeer {
                 device_id,
                 display_name,
             })
@@ -1119,7 +1119,7 @@ impl<'a> CliHostAdapter<'a> {
                 ],
             ));
         }
-        let rows: Vec<tui::PeerUrlHit> = capped
+        let rows: Vec<picker::PeerUrlHit> = capped
             .into_iter()
             .map(|tagged| {
                 let peer = if tagged.peer_display_name.is_empty() {
@@ -1127,7 +1127,7 @@ impl<'a> CliHostAdapter<'a> {
                 } else {
                     tagged.peer_display_name.as_str()
                 };
-                tui::PeerUrlHit {
+                picker::PeerUrlHit {
                     source: format!("{}@{}", tagged.hit.source, peer),
                     title: tagged.hit.title,
                     url: tagged.hit.url,
@@ -1137,7 +1137,7 @@ impl<'a> CliHostAdapter<'a> {
             .collect();
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            tui::run_url_picker(rows, open_peers, |dest_peer_ids, sels| {
+            picker::run_url_picker(rows, open_peers, |dest_peer_ids, sels| {
                 let urls: Vec<String> = sels.iter().map(|s| s.url.clone()).collect();
                 if urls.is_empty() || dest_peer_ids.is_empty() {
                     return Ok(());
@@ -1256,7 +1256,7 @@ impl<'a> CliHostAdapter<'a> {
 
     async fn run_picker_and_maybe_activate(
         &self,
-        rows: Vec<tui::PeerTabRow>,
+        rows: Vec<picker::PeerTabRow>,
         list_scope: &str,
         list_device_id: &str,
         show_url: bool,
@@ -1270,7 +1270,7 @@ impl<'a> CliHostAdapter<'a> {
         // JA: ratatui は同期。picker を閉じずにバス経由で activate / 再取得する。
         tokio::task::block_in_place(|| {
             let handle = tokio::runtime::Handle::current();
-            tui::run_tab_picker(
+            picker::run_tab_picker(
                 rows,
                 |sel| {
                     handle.block_on(async {
@@ -1303,7 +1303,7 @@ impl<'a> CliHostAdapter<'a> {
                         }
                     }
                     if !saw_tab_signal {
-                        return tui::PickerRefresh::Idle;
+                        return picker::PickerRefresh::Idle;
                     }
                     match handle.block_on(async {
                         fetch_tabs_scope_for_client(
@@ -1315,8 +1315,8 @@ impl<'a> CliHostAdapter<'a> {
                         )
                         .await
                     }) {
-                        Ok(new_rows) => tui::PickerRefresh::Updated(new_rows),
-                        Err(err) => tui::PickerRefresh::Failed(format!("{err:#}")),
+                        Ok(new_rows) => picker::PickerRefresh::Updated(new_rows),
+                        Err(err) => picker::PickerRefresh::Failed(format!("{err:#}")),
                     }
                 },
             )
@@ -1327,7 +1327,7 @@ impl<'a> CliHostAdapter<'a> {
     async fn materialize_tab_rows(
         &self,
         bundle: &DispatchBundle,
-    ) -> Result<Vec<tui::PeerTabRow>> {
+    ) -> Result<Vec<picker::PeerTabRow>> {
         match bundle {
             DispatchBundle::Ui {
                 action:
@@ -1377,7 +1377,7 @@ impl<'a> CliHostAdapter<'a> {
         device_scope: &str,
         device_id: &str,
         show_url: bool,
-    ) -> Result<Vec<tui::PeerTabRow>> {
+    ) -> Result<Vec<picker::PeerTabRow>> {
         fetch_tabs_scope_for_client(
             self.require_client()?,
             &self.cfg.device_id,
@@ -1613,7 +1613,7 @@ async fn fetch_tabs_scope_for_client(
     device_scope: &str,
     device_id: &str,
     show_url: bool,
-) -> Result<Vec<tui::PeerTabRow>> {
+) -> Result<Vec<picker::PeerTabRow>> {
     match device_scope {
         "device" if !device_id.is_empty() => {
             let bundles = client.tabs_all(self_device_id, show_url).await?;
@@ -1642,12 +1642,12 @@ async fn fetch_tabs_scope_for_client(
 }
 
 fn push_peer_section(
-    out: &mut Vec<tui::PeerTabRow>,
+    out: &mut Vec<picker::PeerTabRow>,
     peer_id: &str,
     peer_name: &str,
     rows: Vec<SyncRemoteTabRow>,
 ) {
-    out.push(tui::PeerTabRow {
+    out.push(picker::PeerTabRow {
         peer_device_id: peer_id.to_string(),
         peer_display_name: peer_name.to_string(),
         row: SyncRemoteTabRow::Window {
@@ -1657,7 +1657,7 @@ fn push_peer_section(
         },
     });
     for row in rows {
-        out.push(tui::PeerTabRow {
+        out.push(picker::PeerTabRow {
             peer_device_id: peer_id.to_string(),
             peer_display_name: peer_name.to_string(),
             row,
@@ -1674,7 +1674,7 @@ fn format_parse_error(error: ParseSegmentError) -> String {
 }
 
 /** EN: Group tab ids by owning peer — tab ids are not globally unique across browsers. */
-fn tab_ids_by_peer(rows: &[tui::PeerTabRow]) -> Vec<(String, Vec<i64>)> {
+fn tab_ids_by_peer(rows: &[picker::PeerTabRow]) -> Vec<(String, Vec<i64>)> {
     let mut map: std::collections::BTreeMap<String, Vec<i64>> = std::collections::BTreeMap::new();
     for peer_row in rows {
         if let SyncRemoteTabRow::Tab { tab_id, .. } = &peer_row.row {
@@ -1686,7 +1686,7 @@ fn tab_ids_by_peer(rows: &[tui::PeerTabRow]) -> Vec<(String, Vec<i64>)> {
     map.into_iter().collect()
 }
 
-fn urls_from_rows(rows: &[tui::PeerTabRow]) -> Vec<String> {
+fn urls_from_rows(rows: &[picker::PeerTabRow]) -> Vec<String> {
     let mut urls = Vec::new();
     for peer_row in rows {
         if let SyncRemoteTabRow::Tab { url, .. } = &peer_row.row {
@@ -1698,7 +1698,7 @@ fn urls_from_rows(rows: &[tui::PeerTabRow]) -> Vec<String> {
     urls
 }
 
-fn print_peer_tab_rows(io: &mut CommandIo, rows: &[tui::PeerTabRow], show_url: bool) {
+fn print_peer_tab_rows(io: &mut CommandIo, rows: &[picker::PeerTabRow], show_url: bool) {
     for peer_row in rows {
         io.stdout_line(format_row(&peer_row.row, show_url));
     }
