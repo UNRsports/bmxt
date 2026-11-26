@@ -20,7 +20,7 @@ import type {
 } from "../../../../shared/lib/features/tabs/tab-picker-overlay-types.ts"
 
 function target(tabId: number, url: string, title = `t${tabId}`): ActionMenuTabTarget {
-  return { tabId, title, url, faviconSrc: null, groupColor: null }
+  return { tabId, title, url, faviconSrc: null, groupColor: null, groupTitle: null }
 }
 
 function panel(overrides: Partial<BookmarkPanel>): BookmarkPanel {

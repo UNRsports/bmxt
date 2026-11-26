@@ -1,9 +1,34 @@
-import { groupRowKey } from "./tab-picker-keyboard"
-import { actionMenuItemsForKind, NEW_GROUP_COLORS } from "./tab-picker-overlay-constants"
-import type { NewGroupPaletteColor } from "./tab-picker-overlay-constants"
-import type { ActionMenuPanel, ActionMenuTabTarget, SelectKind } from "./tab-picker-overlay-types"
-import type { TabPickerRow } from "./picker-rows"
+import { actionMenuItemsForKind, NEW_GROUP_COLORS } from "./tab-picker-overlay-constants.ts"
+import type { NewGroupPaletteColor } from "./tab-picker-overlay-constants.ts"
+import type { ActionMenuPanel, ActionMenuTabTarget, SelectKind } from "./tab-picker-overlay-types.ts"
+import type { TabPickerRow } from "./picker-rows.ts"
 import { computeSelectedTabIdsFromMarks } from "./picker-selected-tab-ids.ts"
+
+/** EN: Same format as `groupRowKey` in tab-picker-keyboard (kept local for node:test). */
+function groupRowKey(windowId: number, groupId: number | null): string {
+  return `${windowId}:${groupId === null ? "none" : String(groupId)}`
+}
+
+function groupTitleForTab(
+  rows: TabPickerRow[],
+  windowId: number,
+  groupId: number | null
+): string | null {
+  if (groupId === null || groupId < 0) {
+    return null
+  }
+  for (const row of rows) {
+    if (row.kind === "group" && row.windowId === windowId && row.groupId === groupId) {
+      const label = row.label.trim()
+      if (label.length > 0) {
+        return label
+      }
+      const title = row.title.trim()
+      return title.length > 0 ? title : null
+    }
+  }
+  return null
+}
 
 function tabTargetById(rows: TabPickerRow[], tabId: number): ActionMenuTabTarget {
   for (const row of rows) {
@@ -13,11 +38,19 @@ function tabTargetById(rows: TabPickerRow[], tabId: number): ActionMenuTabTarget
         title: row.title,
         url: row.url,
         faviconSrc: row.faviconSrc,
-        groupColor: row.groupColor
+        groupColor: row.groupColor,
+        groupTitle: groupTitleForTab(rows, row.windowId, row.groupId)
       }
     }
   }
-  return { tabId, title: `#${tabId}`, url: "", faviconSrc: null, groupColor: null }
+  return {
+    tabId,
+    title: `#${tabId}`,
+    url: "",
+    faviconSrc: null,
+    groupColor: null,
+    groupTitle: null
+  }
 }
 
 /** EN: Divider accent — tab group color when set, else palette cycle for ungrouped rows. */

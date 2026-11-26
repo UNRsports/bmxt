@@ -41,13 +41,31 @@ export function TabPickerActionMenuPanel({
             const titleShown = displayTitle(liveTitle)
             const faviconSrc = resolveLiveTabFaviconSrc(target.tabId, target.faviconSrc, liveUrl)
             const dividerColor = actionMenuTargetDividerColor(target.groupColor, idx)
+            const prev = idx > 0 ? actionMenuPanel.tabTargets[idx - 1] : undefined
+            const showGroupHeader =
+              target.groupTitle !== null &&
+              (prev === undefined ||
+                prev.groupTitle !== target.groupTitle ||
+                prev.groupColor !== target.groupColor)
+            const groupAccent =
+              target.groupColor !== null
+                ? ` bmxt-tab-picker-group-accent--${target.groupColor} bmxt-tab-picker-group-accent-bg--${target.groupColor}`
+                : ""
             return (
               <Fragment key={target.tabId}>
-                {idx > 0 ? (
+                {idx > 0 && !showGroupHeader ? (
                   <hr
                     className={`bmxt-tab-picker-action-target-divider bmxt-tab-picker-group-accent--${dividerColor}`}
                     aria-hidden
                   />
+                ) : null}
+                {showGroupHeader ? (
+                  <div
+                    className={`bmxt-tab-picker-action-target-group${groupAccent}${
+                      idx > 0 ? " bmxt-tab-picker-action-target-group--spaced" : ""
+                    }`}>
+                    {target.groupTitle}
+                  </div>
                 ) : null}
                 <div className="bmxt-tab-picker-action-target-row">
                   <div className="bmxt-tab-picker-tab-title">

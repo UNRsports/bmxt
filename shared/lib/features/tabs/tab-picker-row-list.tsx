@@ -212,11 +212,15 @@ export function TabPickerRowList({
             </div>
           )
         }
-        const markedRow = markedTabSet.has(row.tabId)
+        const markedByTab = markedTabSet.has(row.tabId)
+        const markedByGroup =
+          row.groupId !== null &&
+          markedGroupSet.has(groupRowKey(row.windowId, row.groupId))
+        const markedHighlight = markedByTab || markedByGroup
         const rowClass = `bmxt-tab-picker-row bmxt-tab-picker-row--tab${
           row.groupColor ? " bmxt-tab-picker-row--tab-in-group" : ""
         }${hiRow ? " bmxt-tab-picker-row--hi" : ""}${
-          markedRow ? " bmxt-tab-picker-row--marked" : ""
+          markedHighlight ? " bmxt-tab-picker-row--marked" : ""
         }${moveCursorRow ? " bmxt-tab-picker-row--move-cursor" : ""}${
           moveDestBand ? " bmxt-tab-picker-row--move-dest-band" : ""
         }`
@@ -225,7 +229,6 @@ export function TabPickerRowList({
         const titleShown = displayTitle(liveTitle)
         const faviconSrc = resolveLiveTabFaviconSrc(row.tabId, row.faviconSrc, liveUrl)
         const activeMarker = activeTabId === row.tabId
-        const markedTab = markedTabSet.has(row.tabId)
         return (
           <div key={`tab-${row.tabId}`} className="bmxt-tab-picker-row-block">
             <InsertSlotMarker active={Boolean(slotBefore)} />
@@ -234,7 +237,7 @@ export function TabPickerRowList({
               ref={(el) => setRowRef(i, el)}
               className={rowClass}
               role="option"
-              aria-selected={hiRow || markedRow}>
+              aria-selected={hiRow || markedHighlight}>
               <div className="bmxt-tab-picker-tab-title">
                 <span
                   className={`bmxt-tab-picker-tab-glyph bmxt-tab-picker-tab-glyph--active${
@@ -245,7 +248,7 @@ export function TabPickerRowList({
                 </span>
                 <span
                   className={`bmxt-tab-picker-tab-glyph bmxt-tab-picker-tab-glyph--mark${
-                    markedTab ? " bmxt-tab-picker-tab-glyph--mark-on" : ""
+                    markedByTab ? " bmxt-tab-picker-tab-glyph--mark-on" : ""
                   }`}
                   aria-hidden>
                   #
