@@ -102,7 +102,8 @@ import {
   shouldShowSearchListPatternPlaceholder,
   type SearchListPickerState
 } from "../search/search-list-picker-input"
-import { isJobHandleActive, useSessionJobRunner } from "../job"
+import { isJobHandleActive } from "../job"
+import { useSessionJobRunner } from "../job/use-session-job-runner"
 import { useCommandBusyIndicator } from "./shell/command-busy"
 import { parseDomExitListLine, type DomListPickerState } from "../dom/dom-list-picker-input"
 import { isDomListPickerFollowEnabled } from "../dom/dom-list-follow-enabled"

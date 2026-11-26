@@ -18,7 +18,10 @@ export { JobRunner, disposeJobRunner, getJobRunner } from "./job-runner.ts"
 
 export { mergeJobIntoDispatchContext, type JobProgressHooks } from "./dispatch-context-from-job.ts"
 
-export { useSessionJobRunner } from "./use-session-job-runner.ts"
+// EN: React hook lives in use-session-job-runner.ts — do not re-export here.
+//     Barrel must stay SW-safe (background-services bundles through search-list-command).
+// JA: React hook は use-session-job-runner.ts に置く。ここから再 export しない。
+//     barrel は SW 安全（background-services が search-list-command 経由で取り込む）。
 
 export { yieldToMain } from "./yield-to-main.ts"
 
