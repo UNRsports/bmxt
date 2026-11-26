@@ -45,6 +45,7 @@ import {
   buildTabReloadCommandLine
 } from "../picker/build-picker-command-line.ts"
 import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
+import { isMoveHeaderDestMode } from "./move-dest-navigable"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]
@@ -281,7 +282,10 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     if (visibleRowIndices.length === 0) {
       return
     }
-    const slot = resolveMoveInsertSlot(rows, visibleRowIndices, moveDestHi)
+    const headerDestMode = isMoveHeaderDestMode(markedKind)
+    const slot = resolveMoveInsertSlot(rows, visibleRowIndices, moveDestHi, {
+      headerDestMode
+    })
     if (slot === null) {
       return
     }
@@ -320,10 +324,9 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
         } else {
           const asGroupIds =
-            markedKind === "group" &&
+            headerDestMode &&
             slotForMove.groupId === null &&
-            !slotForMove.ungroup &&
-            slotForMove.beforeTabId === null
+            !slotForMove.ungroup
               ? chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys)
               : []
           const line = buildTabMoveCommandLine(classified.tabIds, {
@@ -631,7 +634,9 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
           await onRefreshRows?.()
           return
         }
-        moveSlot = resolveMoveInsertSlot(rows, visibleRowIndices, snapshot.moveDestHi)
+        moveSlot = resolveMoveInsertSlot(rows, visibleRowIndices, snapshot.moveDestHi, {
+          headerDestMode: isMoveHeaderDestMode(snapshot.markedKind)
+        })
         if (moveSlot === null) {
           setBulkSubMode(null)
           return
@@ -752,10 +757,9 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
               classified.tabIds
             )
             const asGroupIds =
-              snapshot.markedKind === "group" &&
+              isMoveHeaderDestMode(snapshot.markedKind) &&
               moveSlot.groupId === null &&
-              !moveSlot.ungroup &&
-              beforeTabId === null
+              !moveSlot.ungroup
                 ? chromeTabGroupIdsFromMarkedGroupKeys(snapshot.markedGroupKeys)
                 : []
             const line = buildTabMoveCommandLine(classified.tabIds, {

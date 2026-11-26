@@ -35,6 +35,7 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
     hi,
     moveDestHi,
     bulkSubMode,
+    markedKind,
     markedWindowSet,
     markedGroupSet,
     markedTabSet,
@@ -193,6 +194,7 @@ export function TabsUrlListPicker(props: TabPickerViewProps) {
             hi={hi}
             moveDestHi={moveDestHi}
             bulkSubMode={bulkSubMode}
+            markedKind={markedKind}
             markedWindowSet={markedWindowSet}
             markedGroupSet={markedGroupSet}
             markedTabSet={markedTabSet}

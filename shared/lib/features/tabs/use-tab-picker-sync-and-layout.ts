@@ -9,6 +9,10 @@ import { tabPickerVisibleHiIndicesMatching } from "./picker-rows"
 import { tabPickerRowsStructureKey } from "./tab-picker-rows-structure"
 import { pickerMarkedCount } from "./use-tab-picker-derived-state"
 import { scrollPickerListRowIntoView } from "../side-picker/interaction/picker-list-scroll"
+import {
+  isMoveHeaderDestMode,
+  snapMoveDestToHeaderVisibleIndex
+} from "./move-dest-navigable"
 
 type PickerGroupChoice = { id: number; windowId: number; label: string }
 
@@ -244,10 +248,37 @@ export function useTabPickerSyncAndLayoutEffects({
       prevBulkSubModeRef.current !== "move" &&
       visibleRowIndices.length > 0
     ) {
-      setMoveDestHi(Math.min(hi, visibleRowIndices.length - 1))
+      const preferred = Math.min(hi, visibleRowIndices.length - 1)
+      if (isMoveHeaderDestMode(markedKind)) {
+        setMoveDestHi(
+          snapMoveDestToHeaderVisibleIndex(rows, visibleRowIndices, preferred)
+        )
+      } else {
+        setMoveDestHi(preferred)
+      }
     }
     prevBulkSubModeRef.current = bulkSubMode
-  }, [bulkSubMode, hi, visibleRowIndices.length, prevBulkSubModeRef, setMoveDestHi])
+  }, [
+    bulkSubMode,
+    hi,
+    markedKind,
+    prevBulkSubModeRef,
+    rows,
+    setMoveDestHi,
+    visibleRowIndices
+  ])
+
+  useEffect(() => {
+    if (bulkSubMode !== "move" || !isMoveHeaderDestMode(markedKind)) {
+      return
+    }
+    if (visibleRowIndices.length === 0) {
+      return
+    }
+    setMoveDestHi((cur) =>
+      snapMoveDestToHeaderVisibleIndex(rows, visibleRowIndices, cur)
+    )
+  }, [bulkSubMode, markedKind, rows, setMoveDestHi, visibleRowIndices])
 
   useLayoutEffect(() => {
     if (!isHostPaneFocused) {

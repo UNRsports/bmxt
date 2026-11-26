@@ -28,6 +28,8 @@ export type ActionMenuTabTarget = {
   url: string
   faviconSrc: string | null
   groupColor: NewGroupPaletteColor | null
+  /** EN: Picker group-row label when the tab is in a group; null if ungrouped. */
+  groupTitle: string | null
 }
 
 export type ActionMenuPanel = {

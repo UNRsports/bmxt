@@ -5,7 +5,8 @@ import type {
   BookmarkPanel,
   BulkSubMode,
   EditPanel,
-  GroupChoice
+  GroupChoice,
+  SelectKind
 } from "./tab-picker-overlay-types"
 
 export type TabPickerViewProps = {
@@ -19,6 +20,7 @@ export type TabPickerViewProps = {
   hi: number
   moveDestHi: number
   bulkSubMode: BulkSubMode | null
+  markedKind: SelectKind | null
   markedWindowSet: Set<number>
   markedGroupSet: Set<string>
   markedTabSet: Set<number>

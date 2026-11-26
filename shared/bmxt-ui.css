@@ -2152,6 +2152,11 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   outline-offset: -1px;
 }
 
+/* EN: Whole destination group band when group marks target a group (dissolve warning). */
+.bmxt-tab-picker-row--move-dest-band {
+  background: rgba(163, 113, 247, 0.14);
+}
+
 .bmxt-tab-picker-row-block {
   display: block;
 }
@@ -2456,6 +2461,43 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   color: #fcad70;
 }
 
+/* EN: Soft fill for group name chips (action-menu target headers). */
+.bmxt-tab-picker-group-accent-bg--grey {
+  background: rgba(154, 160, 166, 0.22);
+}
+
+.bmxt-tab-picker-group-accent-bg--blue {
+  background: rgba(138, 180, 248, 0.22);
+}
+
+.bmxt-tab-picker-group-accent-bg--red {
+  background: rgba(242, 139, 130, 0.22);
+}
+
+.bmxt-tab-picker-group-accent-bg--yellow {
+  background: rgba(253, 214, 99, 0.22);
+}
+
+.bmxt-tab-picker-group-accent-bg--green {
+  background: rgba(129, 201, 149, 0.22);
+}
+
+.bmxt-tab-picker-group-accent-bg--pink {
+  background: rgba(255, 139, 203, 0.22);
+}
+
+.bmxt-tab-picker-group-accent-bg--purple {
+  background: rgba(215, 174, 251, 0.22);
+}
+
+.bmxt-tab-picker-group-accent-bg--cyan {
+  background: rgba(120, 217, 236, 0.22);
+}
+
+.bmxt-tab-picker-group-accent-bg--orange {
+  background: rgba(252, 173, 112, 0.22);
+}
+
 .bmxt-tab-picker-search-hl {
   background: #f5e942;
   color: #0d1117;
@@ -2758,6 +2800,21 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   margin: 0 0 6px;
   padding: 0 0 4px;
   border-bottom: 1px solid #30363d;
+}
+
+.bmxt-tab-picker-action-target-group {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 3px 8px;
+  margin: 0 -6px;
+  border-radius: 3px;
+  color: currentColor;
+  user-select: none;
+}
+
+.bmxt-tab-picker-action-target-group--spaced {
+  margin-top: 8px;
 }
 
 .bmxt-tab-picker-action-target-row {

@@ -25,6 +25,10 @@ import type { ActionMenuPanel, BulkSubMode, EditPanel, GroupChoice, SelectKind }
 import { resolveTargetWindowIdForWindowBulk } from "./tab-picker-bulk-window"
 import { filterTabPickerCommandCompletions } from "./tab-picker-overlay-constants"
 import { parsePickerCommand } from "./parse-picker-command"
+import {
+  isMoveHeaderDestMode,
+  stepMoveDestVisibleIndex
+} from "./move-dest-navigable"
 
 type ApplyReduced = (ev: PickerReducerEvent) => void
 type ApplyReducedSeq = (events: PickerReducerEvent[]) => void
@@ -67,6 +71,7 @@ export function useTabPickerPlainExtensions({
   applyReducedState,
   applyReducedStateSequence,
   setHi,
+  setMoveDestHi,
   setHlSearchPattern,
   setBulkSubMode,
   setMoveCloseAfter,
@@ -138,6 +143,7 @@ export function useTabPickerPlainExtensions({
   applyReducedState: ApplyReduced
   applyReducedStateSequence: ApplyReducedSeq
   setHi: Dispatch<SetStateAction<number>>
+  setMoveDestHi: Dispatch<SetStateAction<number>>
   setHlSearchPattern: Dispatch<SetStateAction<string>>
   setBulkSubMode: Dispatch<SetStateAction<BulkSubMode | null>>
   setMoveCloseAfter: Dispatch<SetStateAction<boolean>>
@@ -439,6 +445,18 @@ export function useTabPickerPlainExtensions({
         if (visibleRowIndices.length === 0) {
           return true
         }
+        const headerOnly = isMoveHeaderDestMode(markedKind)
+        if (headerOnly) {
+          const nextHi = stepMoveDestVisibleIndex(
+            rows,
+            visibleRowIndices,
+            moveDestHi,
+            navDir === "down" ? 1 : -1,
+            true
+          )
+          setMoveDestHi(nextHi)
+          return true
+        }
         if (navDir === "down") {
           applyReducedState({
             kind: "moveDest",
@@ -583,9 +601,12 @@ export function useTabPickerPlainExtensions({
       groupMetaTitleRef,
       groupNewPhase,
       hi,
+      markedKind,
+      moveDestHi,
       newTabUrlWindowId,
       rows,
       setGroupPickIndex,
+      setMoveDestHi,
       shiftRangeAnchorHiRef,
       visibleRowIndices,
       altKeyHeldRef

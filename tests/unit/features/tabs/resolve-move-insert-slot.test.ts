@@ -107,6 +107,19 @@ describe("resolveMoveInsertSlot", () => {
     assert.equal(slot!.groupId, 7)
     assert.equal(slot!.ungroup, false)
   })
+
+  it("headerDestMode appends after the last tab in the destination group", () => {
+    const slot = resolveMoveInsertSlot(rows, visible, 2, { headerDestMode: true })
+    assert.ok(slot)
+    assert.equal(slot!.groupId, 7)
+    assert.equal(slot!.beforeTabId, 40)
+    assert.equal(slot!.ungroup, false)
+    assert.deepEqual(slot!.marker, { rowIndex: 4, place: "after" })
+  })
+
+  it("headerDestMode rejects tab-row destinations", () => {
+    assert.equal(resolveMoveInsertSlot(rows, visible, 1, { headerDestMode: true }), null)
+  })
 })
 
 describe("resolveBeforeTabIdOutsideMovers", () => {
