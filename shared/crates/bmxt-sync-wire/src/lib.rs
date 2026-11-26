@@ -163,6 +163,67 @@ pub enum SyncBusCommand {
         ok: bool,
         detail: Option<String>,
     },
+    /** EN: Ask peer to run browser capability probe (aboutbmxt -system). */
+    #[serde(rename = "probe_capabilities")]
+    ProbeCapabilities {
+        id: String,
+        from: String,
+        /** EN: Locale hint (`en` / `ja`); peer may ignore. */
+        locale: String,
+    },
+    #[serde(rename = "probe_capabilities_result")]
+    ProbeCapabilitiesResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+        lines: Vec<String>,
+    },
+    /** EN: Capture DOM lines for a peer tab (CLI oneshot / wizard). */
+    #[serde(rename = "dom_list")]
+    DomList {
+        id: String,
+        from: String,
+        #[serde(rename = "tabId")]
+        tab_id: i64,
+        /** EN: `document` | `viewport` */
+        scope: String,
+        /** EN: `--html` | `--react` */
+        flavor: String,
+        #[serde(rename = "showTag")]
+        show_tag: bool,
+        pattern: String,
+    },
+    #[serde(rename = "dom_list_result")]
+    DomListResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+        lines: Vec<String>,
+    },
+    /** EN: Drive peer nav overlay (CLI key loop / arm / disarm). */
+    #[serde(rename = "nav_control")]
+    NavControl {
+        id: String,
+        from: String,
+        #[serde(rename = "tabId")]
+        tab_id: i64,
+        op: SyncNavControlOp,
+    },
+    #[serde(rename = "nav_control_result")]
+    NavControlResult {
+        id: String,
+        #[serde(rename = "replyTo")]
+        reply_to: String,
+        from: String,
+        ok: bool,
+        detail: Option<String>,
+    },
     #[serde(rename = "mesh_peers")]
     MeshPeers {
         id: String,
@@ -352,6 +413,54 @@ pub enum SyncBookmarksOp {
     },
 }
 
+/**
+ * EN: Peer nav overlay control ops (mirrors nav-tab-bridge / run-nav-inject).
+ * JA: ピア nav overlay 制御（nav-tab-bridge / run-nav-inject 相当）。
+ */
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum SyncNavControlOp {
+    #[serde(rename = "start")]
+    Start {
+        #[serde(rename = "useCenter", default)]
+        use_center: bool,
+    },
+    #[serde(rename = "stop")]
+    Stop,
+    #[serde(rename = "move")]
+    Move {
+        dx: i64,
+        dy: i64,
+        #[serde(rename = "freeMove", default)]
+        free_move: bool,
+    },
+    #[serde(rename = "click")]
+    Click,
+    #[serde(rename = "key")]
+    Key {
+        key: String,
+        code: String,
+        #[serde(rename = "ctrlKey", default)]
+        ctrl_key: bool,
+        #[serde(rename = "shiftKey", default)]
+        shift_key: bool,
+        #[serde(rename = "altKey", default)]
+        alt_key: bool,
+        #[serde(rename = "metaKey", default)]
+        meta_key: bool,
+    },
+    #[serde(rename = "jump_query")]
+    JumpQuery {
+        query: String,
+        #[serde(default)]
+        preview: bool,
+    },
+    #[serde(rename = "apply_typing")]
+    ApplyTyping { text: String },
+    #[serde(rename = "clear_typing")]
+    ClearTyping,
+}
+
 impl SyncBusCommand {
     pub fn parse_text(text: &str) -> Result<Self, WireError> {
         if text.is_empty() || text.chars().count() > INBOUND_MESSAGE_MAX_CHARS {
@@ -393,6 +502,12 @@ impl SyncBusCommand {
             | SyncBusCommand::BookmarksImportResult { id, from, .. }
             | SyncBusCommand::BookmarksOps { id, from, .. }
             | SyncBusCommand::BookmarksOpsResult { id, from, .. }
+            | SyncBusCommand::ProbeCapabilities { id, from, .. }
+            | SyncBusCommand::ProbeCapabilitiesResult { id, from, .. }
+            | SyncBusCommand::DomList { id, from, .. }
+            | SyncBusCommand::DomListResult { id, from, .. }
+            | SyncBusCommand::NavControl { id, from, .. }
+            | SyncBusCommand::NavControlResult { id, from, .. }
             | SyncBusCommand::MeshPeers { id, from, .. }
             | SyncBusCommand::MeshSignal { id, from, .. } => {
                 if id.is_empty() || from.is_empty() {
@@ -421,6 +536,12 @@ impl SyncBusCommand {
             | SyncBusCommand::BookmarksImportResult { id, .. }
             | SyncBusCommand::BookmarksOps { id, .. }
             | SyncBusCommand::BookmarksOpsResult { id, .. }
+            | SyncBusCommand::ProbeCapabilities { id, .. }
+            | SyncBusCommand::ProbeCapabilitiesResult { id, .. }
+            | SyncBusCommand::DomList { id, .. }
+            | SyncBusCommand::DomListResult { id, .. }
+            | SyncBusCommand::NavControl { id, .. }
+            | SyncBusCommand::NavControlResult { id, .. }
             | SyncBusCommand::MeshPeers { id, .. }
             | SyncBusCommand::MeshSignal { id, .. } => id,
         }

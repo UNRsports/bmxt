@@ -1423,6 +1423,58 @@
     "ja": "無効な番号です。一覧の番号を入力してください。",
     "en": "Invalid number. Enter a number from the list."
   },
+  "cmd.cli.dom.needDeviceTabOrWizard": {
+    "ja": "`dom -list` には `--device <id> --tab <tabId>` が必要です。対話は `dom -wizard` を使ってください。",
+    "en": "`dom -list` needs `--device <id> --tab <tabId>`. For interactive pick use `dom -wizard`."
+  },
+  "cmd.cli.dom.wizardExtensionHint": {
+    "ja": "`dom -wizard` は CLI（BMXt REPL）向けです。拡張では `dom -list` を使ってください。",
+    "en": "`dom -wizard` is for the CLI (BMXt REPL). In the extension use `dom -list`."
+  },
+  "cmd.cli.dom.noTabs": {
+    "ja": "そのピアにタブがありません。",
+    "en": "No tabs on that peer."
+  },
+  "cmd.cli.dom.pickTab": {
+    "ja": "タブを番号で選んでください:",
+    "en": "Pick a tab by number:"
+  },
+  "cmd.cli.dom.pickScope": {
+    "ja": "取得範囲を選んでください:",
+    "en": "Pick capture scope:"
+  },
+  "cmd.cli.dom.scopeDocument": {
+    "ja": "ページ全体 (document)",
+    "en": "full page (document)"
+  },
+  "cmd.cli.dom.scopeViewport": {
+    "ja": "ビューポート (viewport)",
+    "en": "viewport"
+  },
+  "cmd.cli.dom.pickFlavor": {
+    "ja": "形式を選んでください:",
+    "en": "Pick format:"
+  },
+  "cmd.cli.nav.pickTab": {
+    "ja": "nav 対象タブを番号で選んでください:",
+    "en": "Pick nav target tab by number:"
+  },
+  "cmd.cli.nav.sessionHelp": {
+    "ja": "nav セッション中 · キーを peer へ転送 · q / Esc で終了",
+    "en": "nav session · keys forward to peer · q / Esc to end"
+  },
+  "cmd.cli.nav.sessionEnded": {
+    "ja": "nav セッションを終了しました。",
+    "en": "nav session ended."
+  },
+  "cmd.cli.nav.disarmNoop": {
+    "ja": "nav -exit: CLI 側セッションは既に終了しています（必要なら peer で overlay を閉じてください）。",
+    "en": "nav -exit: no CLI session to end (close overlay on the peer if needed)."
+  },
+  "cmd.cli.nav.windowCloseHint": {
+    "ja": "`nav -windowclose` は CLI では未対応です。`tab -list --device <id> | browse` から閉じるか `close --window <id>` を使ってください。",
+    "en": "`nav -windowclose` is not supported on CLI. Close via `tab -list --device <id> | browse` or `close --window <id>`."
+  },
   "cmd.sync.open.notConnected": {
     "ja": "ピア未接続です。先に sync -connect <deviceId>（または -offer / -answer / -accept）で DataChannel を確立してください。",
     "en": "Peer not connected. Establish a DataChannel with sync -connect <deviceId> (or -offer / -answer / -accept) first."

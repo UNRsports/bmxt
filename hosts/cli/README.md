@@ -56,6 +56,9 @@ Same grammar as the extension (`bmxt-core`):
    - Tab after `-list` offers `| browse`…; after a typed `|`, Tab completes `browse` / `close` / …
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates on the owning peer, stays open until q/Esc; **live refresh** on Family `tabs_changed`)
    - `history -list --device <id>` (oneshot list) · `history -list --device | browse` (number-pick **source** peer, then URL picker; same for `bookmark` / `tab` / `search -list`)
+   - `aboutbmxt` / `aboutbmxt -system` (welcome URL · CLI self-diag + peer `probe_capabilities`)
+   - `dom -list --device <id> --tab <n> [--document|--viewport] [--html|--react]` (oneshot DOM lines) · Interactive `dom -wizard` (peer→tab→scope→flavor)
+   - `nav -enter` (Interactive: pick peer/tab → forward keys to peer overlay) · `nav -exit`
    - URL picker: Space-mark URLs → Enter → **Tab**-mark one or more **destination** peers → Enter open (source ≠ destination OK). Typed: `tab -send <id> …` / `bookmark -send <id> --open|--save|--both …`
    - **`quit` / `exit`** ends the `bmxt` process (peer drop while the REPL stays up only prints a “listener keeps running” notice)
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
@@ -100,7 +103,7 @@ IPC: `POST http://127.0.0.1:17653/v1/exec` with `{ "line": "…" }` → `{ stdou
 
 ## Out of scope (this host)
 
-- `nav` / `dom` page overlays
+- Painting `nav` / `dom` page overlays **inside the terminal** (peer overlay remote-control via `nav -enter` / `dom_*` RPC is in scope — todo §17)
 - `setting -list | browse` picker / FSA / chrome.storage mirror
 - Native messaging / CDP / Playwright
 - Public STUN/TURN on the default path
@@ -205,7 +208,7 @@ IPC: `POST http://127.0.0.1:17653/v1/exec`。CLI の `--close` はローカル�
 
 ## この host の対象外
 
-- `nav` / `dom` のページオーバーレイ
+- **端末内**への `nav` / `dom` ページオーバーレイ描画（peer overlay の遠隔操作は todo §17 の範囲）
 - `setting -list | browse` ピッカー / FSA / chrome.storage ミラー
 - ネイティブメッセージング / CDP / Playwright
 - 既定経路での公開 STUN/TURN

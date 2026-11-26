@@ -8,6 +8,7 @@ import type {
   SyncBusCommand,
   SyncConnectionState,
   SyncDeviceId,
+  SyncNavControlOp,
   SyncRemoteSearchHit,
   SyncRemoteTabRow,
   SyncTabsOp,
@@ -19,6 +20,9 @@ import { applyRemoteTabsList } from "../bus/apply-remote-tabs-list"
 import { applyRemoteSearchQuery } from "../bus/apply-remote-search-query"
 import { applyRemoteTabsOps } from "../bus/apply-remote-tabs-ops.ts"
 import { applyRemoteBookmarksOps } from "../bus/apply-remote-bookmarks-ops.ts"
+import { applyRemoteProbeCapabilities } from "../bus/apply-remote-probe-capabilities.ts"
+import { applyRemoteDomList } from "../bus/apply-remote-dom-list.ts"
+import { applyRemoteNavControl } from "../bus/apply-remote-nav-control.ts"
 import { applyRemoteBookmarksImport } from "../bus/remote-bookmarks-import.ts"
 import {
   FAMILY_SIGNAL_FIRST_DEFAULT_TAB,
@@ -120,6 +124,34 @@ type PendingBookmarksOps = {
   resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
 }
 
+type PendingProbeCapabilities = {
+  kind: "probe_capabilities"
+  at: number
+  resolve: (value: {
+    ok: boolean
+    detail: string | null
+    lines: string[]
+    rttMs: number | null
+  }) => void
+}
+
+type PendingDomList = {
+  kind: "dom_list"
+  at: number
+  resolve: (value: {
+    ok: boolean
+    detail: string | null
+    lines: string[]
+    rttMs: number | null
+  }) => void
+}
+
+type PendingNavControl = {
+  kind: "nav_control"
+  at: number
+  resolve: (value: { ok: boolean; detail: string | null; rttMs: number | null }) => void
+}
+
 type PendingWaiter =
   | PendingOpen
   | PendingAck
@@ -128,6 +160,9 @@ type PendingWaiter =
   | PendingTabsOps
   | PendingBookmarksImport
   | PendingBookmarksOps
+  | PendingProbeCapabilities
+  | PendingDomList
+  | PendingNavControl
 
 export function createWebrtcCommandBusStabilizer(
   peerHost: PeerHostStabilizer,
@@ -541,6 +576,82 @@ export function createWebrtcCommandBusStabilizer(
           rttMs: Math.max(0, Date.now() - waiter.at)
         })
       }
+    } else if (command.type === "probe_capabilities") {
+      const result = await applyRemoteProbeCapabilities(command.locale)
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "probe_capabilities_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail,
+        lines: result.lines
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "probe_capabilities_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "probe_capabilities") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          lines: Array.isArray(command.lines) ? command.lines : [],
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
+    } else if (command.type === "dom_list") {
+      const result = await applyRemoteDomList({
+        tabId: command.tabId,
+        scope: command.scope,
+        flavor: command.flavor,
+        showTag: command.showTag === true,
+        pattern: command.pattern
+      })
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "dom_list_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail,
+        lines: result.lines
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "dom_list_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "dom_list") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          lines: Array.isArray(command.lines) ? command.lines : [],
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
+    } else if (command.type === "nav_control") {
+      const result = await applyRemoteNavControl(command.tabId, command.op)
+      const device = await loadOrCreateDeviceIdentity()
+      const reply: SyncBusCommand = {
+        type: "nav_control_result",
+        id: bytesToBase64Url(randomBytes(8)),
+        replyTo: command.id,
+        from: device.deviceId,
+        ok: result.ok,
+        detail: result.detail
+      }
+      await replyTo(command.from, reply)
+    } else if (command.type === "nav_control_result") {
+      const waiter = pending.get(command.replyTo)
+      if (waiter && waiter.kind === "nav_control") {
+        pending.delete(command.replyTo)
+        waiter.resolve({
+          ok: command.ok,
+          detail: command.detail,
+          rttMs: Math.max(0, Date.now() - waiter.at)
+        })
+      }
     } else if (command.type === "tabs_changed") {
       const signal = buildTabsChangedSignal({
         reason: command.reason,
@@ -595,6 +706,10 @@ export function createWebrtcCommandBusStabilizer(
       }
       if (waiter.kind === "bookmarks_import") {
         waiter.resolve({ ok: false, detail: "timeout", created: 0, rttMs: null })
+        return
+      }
+      if (waiter.kind === "probe_capabilities" || waiter.kind === "dom_list") {
+        waiter.resolve({ ok: false, detail: "timeout", lines: [], rttMs: null })
         return
       }
       waiter.resolve({ ok: false, detail: "timeout", rttMs: null })
@@ -817,6 +932,91 @@ export function createWebrtcCommandBusStabilizer(
       }>((resolve) => {
         pending.set(id, { kind: "bookmarks_ops", resolve, at: Date.now() })
         armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected" }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail }
+    },
+
+    async probeCapabilities(remoteDeviceId, locale: string) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "probe_capabilities",
+        id,
+        from: device.deviceId,
+        locale
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        lines: string[]
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "probe_capabilities", resolve, at: Date.now() })
+        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected", lines: [] }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail, lines: result.lines }
+    },
+
+    async domList(remoteDeviceId, req) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "dom_list",
+        id,
+        from: device.deviceId,
+        tabId: req.tabId,
+        scope: req.scope,
+        flavor: req.flavor,
+        showTag: req.showTag,
+        pattern: req.pattern
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        lines: string[]
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "dom_list", resolve, at: Date.now() })
+        armTimeout(id, SYNC_REMOTE_QUERY_TIMEOUT_MS)
+      })
+      const sent = await peerHost.sendCommand(remoteDeviceId, command)
+      if (!sent) {
+        pending.delete(id)
+        return { ok: false, detail: "not_connected", lines: [] }
+      }
+      const result = await resultPromise
+      return { ok: result.ok, detail: result.detail, lines: result.lines }
+    },
+
+    async navControl(remoteDeviceId, tabId: number, op: SyncNavControlOp) {
+      const device = await loadOrCreateDeviceIdentity()
+      const id = bytesToBase64Url(randomBytes(8))
+      const command: SyncBusCommand = {
+        type: "nav_control",
+        id,
+        from: device.deviceId,
+        tabId,
+        op
+      }
+      const resultPromise = new Promise<{
+        ok: boolean
+        detail: string | null
+        rttMs: number | null
+      }>((resolve) => {
+        pending.set(id, { kind: "nav_control", resolve, at: Date.now() })
+        armTimeout(id, 15_000)
       })
       const sent = await peerHost.sendCommand(remoteDeviceId, command)
       if (!sent) {

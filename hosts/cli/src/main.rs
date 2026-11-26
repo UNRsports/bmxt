@@ -18,6 +18,7 @@ mod posix_io_tests;
 mod repl_log;
 mod shell;
 mod tui;
+mod dom_nav_host;
 mod ui_settings_host;
 
 use std::path::PathBuf;

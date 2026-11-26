@@ -974,14 +974,14 @@ CLI
 
 **実装チェック（段階）**
 
-- [ ] **17.0 契約:** 本節方針を `CONTRACT.md` に追記。§10「overlay 非目標」を **端末描画非目標／遠隔操作は本節** に整合
-- [ ] **17.1 Wire:** TS+Rust に `probe_capabilities` / `dom_list` / `nav_control`（+ result）。必要なら `dom_list` chunk（巨大 HTML 対策）
-- [ ] **17.2 拡張 handlers:** prompt bus で probe · `captureDom*` · `nav-tab-bridge` へディスパッチ
-- [ ] **17.3 `aboutbmxt` CLI:** welcome URL · `-system` = 自己診断 + peer probe。拒否メッセージ撤去
-- [ ] **17.4 `dom` 文法:** manifest / codegen · `-wizard` · `-list` に `--device` / `--tab` / `--document`\|`--viewport`
-- [ ] **17.5 `dom` CLI:** oneshot → stdout · `-wizard` 4 段（番号選択）· NonInteractive で wizard 拒否
-- [ ] **17.6 `nav` CLI:** `-enter` キー転送 · `-exit` · `-windowclose` · NonInteractive 拒否
-- [ ] **17.7 検証:** i18n EN+JA · `check:cli-command-io` · `cargo test -p bmxt-core` · `cargo check -p bmxt-cli` · README / map_command.csv
+- [x] **17.0 契約:** 本節方針を `CONTRACT.md` に追記。§10「overlay 非目標」を **端末描画非目標／遠隔操作は本節** に整合
+- [x] **17.1 Wire:** TS+Rust に `probe_capabilities` / `dom_list` / `nav_control`（+ result）。巨大 HTML は行数 soft-cap（chunk は後続可）
+- [x] **17.2 拡張 handlers:** prompt bus で probe · `captureDom*` · `nav-tab-bridge` へディスパッチ
+- [x] **17.3 `aboutbmxt` CLI:** welcome URL · `-system` = 自己診断 + peer probe。拒否メッセージ撤去
+- [x] **17.4 `dom` 文法:** manifest / codegen · `-wizard` · `-list` に `--device` / `--tab` / `--document`\|`--viewport`
+- [x] **17.5 `dom` CLI:** oneshot → stdout · `-wizard` 4 段（番号選択）· NonInteractive で wizard 拒否
+- [x] **17.6 `nav` CLI:** `-enter` キー転送 · `-exit` · `-windowclose` は hint（misuse）· NonInteractive 拒否
+- [x] **17.7 検証:** i18n EN+JA · `cargo test -p bmxt-core` · `cargo check -p bmxt-cli` · README / map_command.csv（手元スモークは下記）
 
 **手元スモーク**
 

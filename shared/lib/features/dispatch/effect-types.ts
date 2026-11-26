@@ -9,9 +9,9 @@ export type HostEffect =
   | { device_id: string; device_scope: string; dispatch_line: string; kind: "search_list"; peer_dispatch_line: string }
   | { device_id: string; device_scope: string; folder_id: string; kind: "bookmark_list" }
   | { device_id: string; device_scope: string; kind: "tabs_list"; show_url: string }
+  | { device_id: string; flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; scope: string; showTag: string; tab_id: string }
   | { dup_mode: string; kind: "bookmark_create"; parent_id: string; title: string; url: string }
   | { end_ms: string; kind: "history_delete_range"; start_ms: string }
-  | { flavor: string; kind: "dom_list"; pattern: string; pickerMode: string; showTag: string }
   | { group_id: number; kind: "close_group" }
   | { group_id: number; kind: "group_add"; tab_ids: number[] }
   | { group_id: number; kind: "group_rename"; title: string }
@@ -52,6 +52,7 @@ export type DispatchMsg = { key: string; params?: Record<string, string> }
 
 export type UiActionIR =
   | { kind: "show_help" }
+  | { kind: "dom_wizard" }
   | { kind: "nav_arm" }
   | { kind: "nav_disarm" }
   | { kind: "nav_confirm_close"; target: string }

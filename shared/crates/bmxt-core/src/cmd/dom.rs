@@ -13,6 +13,7 @@ const USAGE_KEYS: &[&str] = &[
 ];
 
 const HOST_PAGE_ACTIVE_TOKEN: &str = "__HOST_DOM_PAGE_ACTIVE__";
+const MAX_ID_LEN: usize = 64;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct DomListOptions {
@@ -20,6 +21,37 @@ struct DomListOptions {
     flavor: String,
     show_tag: bool,
     pattern: String,
+    device_id: String,
+    tab_id: String,
+    scope: String,
+}
+
+fn sanitize_device_id(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.len() > MAX_ID_LEN {
+        return None;
+    }
+    if !trimmed
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return None;
+    }
+    Some(trimmed.to_string())
+}
+
+fn sanitize_tab_id(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let Ok(n) = trimmed.parse::<i64>() else {
+        return None;
+    };
+    if n < 0 {
+        return None;
+    }
+    Some(n.to_string())
 }
 
 fn normalize_dom_pattern(raw: &str) -> String {
@@ -71,25 +103,58 @@ fn parse_dom_list_line(trimmed: &str) -> Option<DomListOptions> {
     let mut flavor = "--html".to_string();
     let mut show_tag = false;
     let mut pattern_parts: Vec<String> = Vec::new();
-
-    for raw in parts.iter().skip(2) {
-        let token = normalize_token(raw);
+    let mut device_id = String::new();
+    let mut tab_id = String::new();
+    let mut scope = "document".to_string();
+    let mut i = 2usize;
+    while i < parts.len() {
+        let token = normalize_token(&parts[i]);
         if let Some(mode) = parse_dom_picker_mode(&token) {
             picker_mode = mode.to_string();
+            i += 1;
             continue;
         }
         if let Some(flav) = parse_dom_flavor(&token) {
             flavor = flav.to_string();
+            i += 1;
             continue;
         }
         if token == "--tag" {
             show_tag = true;
+            i += 1;
+            continue;
+        }
+        if token == "--document" {
+            scope = "document".to_string();
+            i += 1;
+            continue;
+        }
+        if token == "--viewport" {
+            scope = "viewport".to_string();
+            i += 1;
+            continue;
+        }
+        if token == "--device" {
+            let Some(id) = parts.get(i + 1).and_then(|s| sanitize_device_id(s)) else {
+                return None;
+            };
+            device_id = id;
+            i += 2;
+            continue;
+        }
+        if token == "--tab" {
+            let Some(id) = parts.get(i + 1).and_then(|s| sanitize_tab_id(s)) else {
+                return None;
+            };
+            tab_id = id;
+            i += 2;
             continue;
         }
         if token.starts_with("--") {
             return None;
         }
-        pattern_parts.push(raw.clone());
+        pattern_parts.push(parts[i].clone());
+        i += 1;
     }
 
     if picker_mode != "with" {
@@ -101,6 +166,9 @@ fn parse_dom_list_line(trimmed: &str) -> Option<DomListOptions> {
         flavor,
         show_tag,
         pattern: normalize_dom_pattern(&pattern_parts.join(" ")),
+        device_id,
+        tab_id,
+        scope,
     })
 }
 
@@ -130,6 +198,9 @@ fn run_list(args: &[String]) -> DispatchBundle {
         } else {
             "false".to_string()
         },
+        device_id: parsed.device_id,
+        tab_id: parsed.tab_id,
+        scope: parsed.scope,
     }])
 }
 
@@ -187,8 +258,15 @@ pub fn run(args: &[String]) -> DispatchBundle {
 
     match first_lc.as_str() {
         "-list" => run_list(args),
+        "-wizard" => {
+            if args.len() != 2 {
+                return usage_msgs(msg_key("cmd.dom.error.listUsage"));
+            }
+            ui(UiAction::DomWizard)
+        }
         "-exit" => {
-            if args.len() != 3 || normalize_token(args.get(2).map(String::as_str).unwrap_or("")) != "-list"
+            if args.len() != 3
+                || normalize_token(args.get(2).map(String::as_str).unwrap_or("")) != "-list"
             {
                 return usage_msgs(msg_key("cmd.dom.error.exitListUsage"));
             }

@@ -5,6 +5,7 @@
 
 export type UiActionIR =
   | { kind: "show_help" }
+  | { kind: "dom_wizard" }
   | { kind: "nav_arm" }
   | { kind: "nav_disarm" }
   | { kind: "nav_confirm_close"; target: string }

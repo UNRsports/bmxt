@@ -30,11 +30,15 @@
       "module": "dom",
       "canonicalName": "dom",
       "aliases": [],
-      "usagePrimary": "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help",
+      "usagePrimary": "dom -list [--device <id>] [--tab <tabId>] [--document|--viewport] [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -wizard | dom -exit -list | dom -setting -page-active | dom help",
       "subcommands": [
         {
           "head": "-list",
           "trailingTokens": [
+            "--device",
+            "--tab",
+            "--document",
+            "--viewport",
             "--normal",
             "--with",
             "--html",
@@ -42,6 +46,10 @@
             "--tag"
           ],
           "tail": "rest"
+        },
+        {
+          "head": "-wizard",
+          "tail": "none"
         },
         {
           "head": "-exit",
@@ -652,7 +660,10 @@
         "flavor": "string",
         "pattern": "string",
         "pickerMode": "string",
-        "showTag": "string"
+        "showTag": "string",
+        "device_id": "string",
+        "tab_id": "string",
+        "scope": "string"
       },
       "tsHandlerFile": "dom-list",
       "tsHandlerExport": "applyDomListEffect"
@@ -1048,6 +1059,11 @@
     {
       "kind": "show_help",
       "rustVariant": "ShowHelp",
+      "shape": "unit"
+    },
+    {
+      "kind": "dom_wizard",
+      "rustVariant": "DomWizard",
       "shape": "unit"
     },
     {

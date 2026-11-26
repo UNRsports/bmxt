@@ -24,7 +24,7 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "dom",
     aliases: [] as const,
-    usagePrimary: "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help"
+    usagePrimary: "dom -list [--device <id>] [--tab <tabId>] [--document|--viewport] [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -wizard | dom -exit -list | dom -setting -page-active | dom help"
   },
   {
     name: "exit",

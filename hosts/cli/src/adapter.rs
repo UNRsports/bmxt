@@ -19,8 +19,9 @@ use crate::bus::{BusClient, PeerTaggedSearchHit, SearchProgress, SearchProgressP
 use crate::command_io::{CommandIo, InteractionMode};
 use crate::config::CliConfig;
 use crate::connect;
+use crate::dom_nav_host;
 use crate::handshake;
-use crate::msgs::{expand_msgs, t_cli};
+use crate::msgs::{expand_msgs, t_cli, resolve_cli_locale};
 use crate::open_payload::parse_open_payload;
 use crate::progress;
 use crate::tui;
@@ -507,9 +508,93 @@ impl<'a> CliHostAdapter<'a> {
                 "history delete is not supported on CLI (peer history delete is out of scope)"
             )),
             HostEffect::ExitPane => Ok(()),
-            HostEffect::OpenWelcomePage => Err(anyhow!(
-                "welcome page is extension-only — open BMXt in the browser"
-            )),
+            HostEffect::OpenWelcomePage => {
+                let locale = resolve_cli_locale(None);
+                let url = format!(
+                    "https://unrsports.github.io/bmxt/welcome.html?lang={locale}"
+                );
+                self.out(url.clone());
+                if self.mode.allows_interactive_ui() {
+                    let _ = std::process::Command::new("xdg-open").arg(&url).spawn();
+                }
+                Ok(())
+            }
+            HostEffect::ProbeCapabilities => {
+                self.out(format!("cli.deviceId\t{}", self.cfg.device_id));
+                self.out(format!("cli.displayName\t{}", self.cfg.display_name));
+                self.out(format!(
+                    "cli.familyId\t{}",
+                    self.cfg.family_id.as_deref().unwrap_or("(none)")
+                ));
+                let client = self.require_client()?;
+                let peers = client.list_connected().await;
+                self.out(format!("cli.connectedPeers\t{}", peers.len()));
+                let locale = resolve_cli_locale(None);
+                for (id, name) in peers {
+                    let label = if name.is_empty() {
+                        id.as_str()
+                    } else {
+                        name.as_str()
+                    };
+                    match client
+                        .probe_capabilities_on(&self.cfg.device_id, &id, &locale)
+                        .await
+                    {
+                        Ok(lines) => {
+                            self.out(format!("--- peer {label} ({id}) ---"));
+                            for line in lines {
+                                self.out(line);
+                            }
+                        }
+                        Err(err) => {
+                            self.err(format!("peer {label} ({id}): {err:#}"));
+                        }
+                    }
+                }
+                Ok(())
+            }
+            HostEffect::DomList {
+                flavor,
+                pattern,
+                show_tag,
+                device_id,
+                tab_id,
+                scope,
+                ..
+            } => {
+                if device_id.trim().is_empty() || tab_id.trim().is_empty() {
+                    return Err(anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])));
+                }
+                let tab_id_n: i64 = tab_id
+                    .trim()
+                    .parse()
+                    .map_err(|_| anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])))?;
+                let remote = self
+                    .require_client()?
+                    .resolve_remote_id(device_id.trim())
+                    .await?;
+                let scope = if scope.trim().is_empty() {
+                    "document"
+                } else {
+                    scope.trim()
+                };
+                let lines = self
+                    .require_client()?
+                    .dom_list_on(
+                        &self.cfg.device_id,
+                        &remote,
+                        tab_id_n,
+                        scope,
+                        &flavor,
+                        show_tag == "true",
+                        &pattern,
+                    )
+                    .await?;
+                for line in lines {
+                    self.out(line);
+                }
+                Ok(())
+            }
             other => Err(anyhow!(
                 "host effect not supported on CLI: {}",
                 effect_kind(&other)
@@ -772,6 +857,45 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::PickerPass => Ok(RunOutcome::status(EXIT_SUCCESS)),
+            UiAction::DomWizard => {
+                if !self.mode.allows_interactive_ui() {
+                    return Ok(self.refuse_interactive("cmd.cli.exec.browseForbidden"));
+                }
+                let client = self.require_client()?;
+                let plan = dom_nav_host::run_dom_wizard(client, &self.cfg.device_id).await?;
+                let lines = client
+                    .dom_list_on(
+                        &self.cfg.device_id,
+                        &plan.remote_id,
+                        plan.tab_id,
+                        &plan.scope,
+                        &plan.flavor,
+                        false,
+                        "",
+                    )
+                    .await?;
+                for line in lines {
+                    self.out(line);
+                }
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            UiAction::NavArm => {
+                if !self.mode.allows_interactive_ui() {
+                    return Ok(self.refuse_interactive("cmd.cli.exec.browseForbidden"));
+                }
+                let client = self.require_client()?;
+                dom_nav_host::run_nav_enter_session(client, &self.cfg.device_id).await?;
+                self.out(t_cli("cmd.cli.nav.sessionEnded", &[]));
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            UiAction::NavDisarm => {
+                self.out(t_cli("cmd.cli.nav.disarmNoop", &[]));
+                Ok(RunOutcome::status(EXIT_SUCCESS))
+            }
+            UiAction::NavConfirmClose { .. } => {
+                self.err(t_cli("cmd.cli.nav.windowCloseHint", &[]));
+                Ok(RunOutcome::status(EXIT_MISUSE))
+            }
             other => {
                 self.err(t_cli(
                     "cmd.cli.error.uiUnsupported",
@@ -1636,6 +1760,7 @@ fn effect_kind(effect: &HostEffect) -> &'static str {
         HostEffect::CloseCurrentWindow => "close_current_window",
         HostEffect::CloseTab { .. } => "close_tab",
         HostEffect::DomList { .. } => "dom_list",
+        HostEffect::ProbeCapabilities => "probe_capabilities",
         HostEffect::ExitPane => "exit_pane",
         HostEffect::GroupAdd { .. } => "group_add",
         HostEffect::GroupNew { .. } => "group_new",
@@ -1708,6 +1833,7 @@ fn ui_kind(action: &UiAction) -> &'static str {
     match action {
         UiAction::ClosePicker { .. } => "close_picker",
         UiAction::ContinuationPrompt { .. } => "continuation_prompt",
+        UiAction::DomWizard => "dom_wizard",
         UiAction::GroupNewFromSelection => "group_new_from_selection",
         UiAction::JumpTarget { .. } => "jump_target",
         UiAction::NavArm => "nav_arm",

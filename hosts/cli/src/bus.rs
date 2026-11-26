@@ -9,8 +9,8 @@ use anyhow::{anyhow, Result};
 use base64::Engine;
 use bmxt_peer_rtc::{PeerSession, PeerSessionEvent};
 use bmxt_sync_wire::{
-    BookmarkImportItem, MeshPeerEntry, SyncBookmarksOp, SyncBusCommand, SyncRemoteTabRow,
-    SyncTabsOp, SYNC_REMOTE_QUERY_TIMEOUT_MS,
+    BookmarkImportItem, MeshPeerEntry, SyncBookmarksOp, SyncBusCommand, SyncNavControlOp,
+    SyncRemoteTabRow, SyncTabsOp, SYNC_REMOTE_QUERY_TIMEOUT_MS,
 };
 use rand::RngCore;
 use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
@@ -611,6 +611,126 @@ impl BusClient {
         self.bookmarks_ops_on(from, &remote, op).await
     }
 
+    pub async fn probe_capabilities_on(
+        &self,
+        from: &str,
+        remote: &str,
+        locale: &str,
+    ) -> Result<Vec<String>> {
+        let remote = remote.trim();
+        if remote.is_empty() {
+            return Err(anyhow!("probe_capabilities: empty remote device id"));
+        }
+        let id = new_id("probe");
+        let resp = self
+            .request_on(
+                remote,
+                SyncBusCommand::ProbeCapabilities {
+                    id,
+                    from: from.to_string(),
+                    locale: locale.to_string(),
+                },
+            )
+            .await?;
+        match resp {
+            SyncBusCommand::ProbeCapabilitiesResult {
+                ok,
+                detail,
+                lines,
+                ..
+            } => {
+                if !ok {
+                    return Err(anyhow!(
+                        detail.unwrap_or_else(|| "probe_capabilities failed".into())
+                    ));
+                }
+                Ok(lines)
+            }
+            other => Err(anyhow!("unexpected reply: {other:?}")),
+        }
+    }
+
+    pub async fn dom_list_on(
+        &self,
+        from: &str,
+        remote: &str,
+        tab_id: i64,
+        scope: &str,
+        flavor: &str,
+        show_tag: bool,
+        pattern: &str,
+    ) -> Result<Vec<String>> {
+        let remote = remote.trim();
+        if remote.is_empty() {
+            return Err(anyhow!("dom_list: empty remote device id"));
+        }
+        let id = new_id("dom");
+        let resp = self
+            .request_on(
+                remote,
+                SyncBusCommand::DomList {
+                    id,
+                    from: from.to_string(),
+                    tab_id,
+                    scope: scope.to_string(),
+                    flavor: flavor.to_string(),
+                    show_tag,
+                    pattern: pattern.to_string(),
+                },
+            )
+            .await?;
+        match resp {
+            SyncBusCommand::DomListResult {
+                ok,
+                detail,
+                lines,
+                ..
+            } => {
+                if !ok {
+                    return Err(anyhow!(detail.unwrap_or_else(|| "dom_list failed".into())));
+                }
+                Ok(lines)
+            }
+            other => Err(anyhow!("unexpected reply: {other:?}")),
+        }
+    }
+
+    pub async fn nav_control_on(
+        &self,
+        from: &str,
+        remote: &str,
+        tab_id: i64,
+        op: SyncNavControlOp,
+    ) -> Result<()> {
+        let remote = remote.trim();
+        if remote.is_empty() {
+            return Err(anyhow!("nav_control: empty remote device id"));
+        }
+        let id = new_id("nav");
+        let resp = self
+            .request_on(
+                remote,
+                SyncBusCommand::NavControl {
+                    id,
+                    from: from.to_string(),
+                    tab_id,
+                    op,
+                },
+            )
+            .await?;
+        match resp {
+            SyncBusCommand::NavControlResult { ok, detail, .. } => {
+                if !ok {
+                    return Err(anyhow!(
+                        detail.unwrap_or_else(|| "nav_control failed".into())
+                    ));
+                }
+                Ok(())
+            }
+            other => Err(anyhow!("unexpected reply: {other:?}")),
+        }
+    }
+
     /**
      * EN: Peer search with optional progress callback (chunk / peer boundaries).
      *     `remote_filter`: `None` = all connected; `Some(ids)` = those remotes only.
@@ -996,6 +1116,15 @@ async fn handle_command(inner: Arc<Mutex<HubInner>>, via_remote: &str, cmd: Sync
         SyncBusCommand::BookmarksOps { id, .. } => {
             reply_fail_bookmarks_ops(inner, via_remote, id).await;
         }
+        SyncBusCommand::ProbeCapabilities { id, .. } => {
+            reply_fail_probe(inner, via_remote, id).await;
+        }
+        SyncBusCommand::DomList { id, .. } => {
+            reply_fail_dom_list(inner, via_remote, id).await;
+        }
+        SyncBusCommand::NavControl { id, .. } => {
+            reply_fail_nav_control(inner, via_remote, id).await;
+        }
         SyncBusCommand::SearchQuery { id, .. } => {
             reply_fail_search(inner, via_remote, id).await;
         }
@@ -1104,6 +1233,71 @@ async fn reply_fail_bookmarks_ops(inner: Arc<Mutex<HubInner>>, via_remote: &str,
     };
     let reply = SyncBusCommand::BookmarksOpsResult {
         id: new_id("bmops-r"),
+        reply_to: id,
+        from: self_id,
+        ok: false,
+        detail: Some(CLI_NO_BROWSER.into()),
+    };
+    let _ = session.send_command(&reply).await;
+}
+
+async fn reply_fail_probe(inner: Arc<Mutex<HubInner>>, via_remote: &str, id: String) {
+    let (self_id, session) = {
+        let guard = inner.lock().await;
+        (
+            guard.self_id.clone(),
+            guard.by_remote.get(via_remote).cloned(),
+        )
+    };
+    let Some(session) = session else {
+        return;
+    };
+    let reply = SyncBusCommand::ProbeCapabilitiesResult {
+        id: new_id("probe-r"),
+        reply_to: id,
+        from: self_id,
+        ok: false,
+        detail: Some(CLI_NO_BROWSER.into()),
+        lines: Vec::new(),
+    };
+    let _ = session.send_command(&reply).await;
+}
+
+async fn reply_fail_dom_list(inner: Arc<Mutex<HubInner>>, via_remote: &str, id: String) {
+    let (self_id, session) = {
+        let guard = inner.lock().await;
+        (
+            guard.self_id.clone(),
+            guard.by_remote.get(via_remote).cloned(),
+        )
+    };
+    let Some(session) = session else {
+        return;
+    };
+    let reply = SyncBusCommand::DomListResult {
+        id: new_id("dom-r"),
+        reply_to: id,
+        from: self_id,
+        ok: false,
+        detail: Some(CLI_NO_BROWSER.into()),
+        lines: Vec::new(),
+    };
+    let _ = session.send_command(&reply).await;
+}
+
+async fn reply_fail_nav_control(inner: Arc<Mutex<HubInner>>, via_remote: &str, id: String) {
+    let (self_id, session) = {
+        let guard = inner.lock().await;
+        (
+            guard.self_id.clone(),
+            guard.by_remote.get(via_remote).cloned(),
+        )
+    };
+    let Some(session) = session else {
+        return;
+    };
+    let reply = SyncBusCommand::NavControlResult {
+        id: new_id("nav-r"),
         reply_to: id,
         from: self_id,
         ok: false,
@@ -1539,7 +1733,10 @@ fn reply_to_of(cmd: &SyncBusCommand) -> Option<&str> {
         | SyncBusCommand::SearchQueryChunk { reply_to, .. }
         | SyncBusCommand::TabsOpsResult { reply_to, .. }
         | SyncBusCommand::BookmarksImportResult { reply_to, .. }
-        | SyncBusCommand::BookmarksOpsResult { reply_to, .. } => Some(reply_to),
+        | SyncBusCommand::BookmarksOpsResult { reply_to, .. }
+        | SyncBusCommand::ProbeCapabilitiesResult { reply_to, .. }
+        | SyncBusCommand::DomListResult { reply_to, .. }
+        | SyncBusCommand::NavControlResult { reply_to, .. } => Some(reply_to),
         _ => None,
     }
 }

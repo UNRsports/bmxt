@@ -349,6 +349,61 @@ export type SyncBusCommand =
       detail: string | null
     }
   | {
+      /** EN: Ask peer to run browser capability probe (`aboutbmxt -system`). */
+      type: "probe_capabilities"
+      id: string
+      from: SyncDeviceId
+      /** EN: Locale hint (`en` / `ja`). */
+      locale: string
+    }
+  | {
+      type: "probe_capabilities_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      lines: string[]
+    }
+  | {
+      /** EN: Capture DOM lines for a peer tab (CLI oneshot / wizard). */
+      type: "dom_list"
+      id: string
+      from: SyncDeviceId
+      tabId: number
+      /** EN: `document` | `viewport` */
+      scope: string
+      /** EN: `--html` | `--react` */
+      flavor: string
+      showTag: boolean
+      pattern: string
+    }
+  | {
+      type: "dom_list_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+      lines: string[]
+    }
+  | {
+      /** EN: Drive peer nav overlay (CLI key loop / arm / disarm). */
+      type: "nav_control"
+      id: string
+      from: SyncDeviceId
+      tabId: number
+      op: SyncNavControlOp
+    }
+  | {
+      type: "nav_control_result"
+      id: string
+      replyTo: string
+      from: SyncDeviceId
+      ok: boolean
+      detail: string | null
+    }
+  | {
       /** EN: Announce other live DataChannel peers so the receiver can mesh. */
       type: "mesh_peers"
       id: string
@@ -434,6 +489,25 @@ export type SyncTabsOp =
       kind: "focus_window"
       windowId: number
     }
+
+/** EN: Peer nav overlay control ops (CLI remote drive). */
+export type SyncNavControlOp =
+  | { kind: "start"; useCenter: boolean }
+  | { kind: "stop" }
+  | { kind: "move"; dx: number; dy: number; freeMove: boolean }
+  | { kind: "click" }
+  | {
+      kind: "key"
+      key: string
+      code: string
+      ctrlKey: boolean
+      shiftKey: boolean
+      altKey: boolean
+      metaKey: boolean
+    }
+  | { kind: "jump_query"; query: string; preview: boolean }
+  | { kind: "apply_typing"; text: string }
+  | { kind: "clear_typing" }
 
 export type SyncInviteV1 = {
   version: 1

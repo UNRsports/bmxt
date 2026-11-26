@@ -20,6 +20,8 @@ pub enum UiAction {
     ContinuationPrompt {
     prefix: String,
     },
+    #[serde(rename = "dom_wizard")]
+    DomWizard,
     #[serde(rename = "group_new_from_selection")]
     GroupNewFromSelection,
     #[serde(rename = "history_backup")]

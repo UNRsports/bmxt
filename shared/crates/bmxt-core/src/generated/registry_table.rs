@@ -33,7 +33,7 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "dom",
         aliases: &[],
-        usage_primary: "dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list | dom -setting -page-active | dom help",
+        usage_primary: "dom -list [--device <id>] [--tab <tabId>] [--document|--viewport] [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -wizard | dom -exit -list | dom -setting -page-active | dom help",
     },
     CmdMeta {
         name: "exit",
@@ -155,7 +155,11 @@ pub const COMMANDS: &[CmdMeta] = &[
 static BRANCHES_DOM: &[SubcommandBranch] = &[
     SubcommandBranch {
         head: "-list",
-        trailing_tokens: &["--normal", "--with", "--html", "--react", "--tag"],
+        trailing_tokens: &["--device", "--tab", "--document", "--viewport", "--normal", "--with", "--html", "--react", "--tag"],
+    },
+    SubcommandBranch {
+        head: "-wizard",
+        trailing_tokens: &[],
     },
     SubcommandBranch {
         head: "-exit",
@@ -546,7 +550,7 @@ pub fn is_second_token(canonical: &str, token: &str) -> bool {
         "clear" => false,
         "back" => false,
         "close" => false,
-        "dom" => matches!(lower.as_str(), "-list" | "-exit" | "-setting" | "help"),
+        "dom" => matches!(lower.as_str(), "-list" | "-wizard" | "-exit" | "-setting" | "help"),
         "exit" => false,
         "search" => matches!(lower.as_str(), "-list" | "-exit" | "help"),
         "group" => matches!(lower.as_str(), "new" | "add" | "rename" | "ungroup"),

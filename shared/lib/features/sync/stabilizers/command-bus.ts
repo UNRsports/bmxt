@@ -3,6 +3,7 @@ import type {
   SyncBusCommand,
   SyncConnectionState,
   SyncDeviceId,
+  SyncNavControlOp,
   SyncRemoteSearchHit,
   SyncRemoteTabRow,
   SyncTabsOp,
@@ -46,6 +47,25 @@ export type CommandBusStabilizer = {
   bookmarksOps(
     remoteDeviceId: SyncDeviceId,
     op: SyncBookmarksOp
+  ): Promise<{ ok: boolean; detail: string | null }>
+  probeCapabilities(
+    remoteDeviceId: SyncDeviceId,
+    locale: string
+  ): Promise<{ ok: boolean; detail: string | null; lines: string[] }>
+  domList(
+    remoteDeviceId: SyncDeviceId,
+    req: {
+      tabId: number
+      scope: string
+      flavor: string
+      showTag: boolean
+      pattern: string
+    }
+  ): Promise<{ ok: boolean; detail: string | null; lines: string[] }>
+  navControl(
+    remoteDeviceId: SyncDeviceId,
+    tabId: number,
+    op: SyncNavControlOp
   ): Promise<{ ok: boolean; detail: string | null }>
   /**
    * EN: Broadcast tabs_changed to all connected Family peers and notify local subscribers.
