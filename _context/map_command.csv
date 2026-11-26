@@ -12,17 +12,12 @@ forward,,,,,forward | … | forward,引数なし=操作先即時。Effect `tab_g
 reload,,,,,reload | … | reload,引数なし=操作先即時。Effect `tab_reload`。パイプ `… | reload`。旧 `#t:` チップ候補は廃止。,独立 first。0.8.0
 （ホスト）,tab:,,,,tab: | tab:{needle} | tab::{needle} | Space後継続 | #t:… Enter,ライブタブ候補。選択→`#t:<id>` のみ（候補閉じる）。Enter=最後のチップをアクティブ。Space=候補再表示で複数選択。パイプ: `#t:… | back` 等。,`tab-chip-token.ts` + `tab-chip-producer.ts` + `tab-chip-activate.ts`。`tab` コマンドとは別トークン。0.8.0
 dom,,,,,dom …,単独 `dom` + Enter: msgs + promptPrefix `dom `（require_second_token）。第二候補に `help`。,
-dom,-list,,rest,,dom -list [--device <id>] [--tab <tabId>] [--document|--viewport] [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -wizard | dom -exit -list,**プレーン（既定）:** Effect `dom_list` → ListResult。CLI: `--device`/`--tab` で peer RPC `dom_list` → stdout。ピッカーは `dom -list … | browse`。,語彙: ListResult→bmxtRule · §17
-dom,-list,--device,rest,,（同上）,trailingTokens。peer device id（CLI oneshot）。,
-dom,-list,--tab,rest,,（同上）,trailingTokens。peer-local tabId（CLI oneshot）。,
-dom,-list,--document,rest,,（同上）,trailingTokens。scope=document（既定）。,
-dom,-list,--viewport,rest,,（同上）,trailingTokens。scope=viewport。,
+dom,-list,,rest,,dom -list [--normal|--with] [--html|--react] [--tag] [<pattern>] | dom -exit -list,**プレーン（既定）:** Effect `dom_list` → ListResult。ピッカーは `dom -list … | browse`。**CLI host のみ（共有文法外）:** `dom -list --device/--tab …` · `dom -wizard` → peer RPC。,語彙: ListResult→bmxtRule · §17 CLI host
 dom,-list,--normal,rest,,（同上）,trailingTokens。mode `--normal`。`--with` と排他。,
 dom,-list,--with,rest,,（同上）,trailingTokens。mode `--with`。`--normal` と排他。,
 dom,-list,--html,rest,,（同上）,trailingTokens。flavor `--html`。`--react` と排他。,
 dom,-list,--react,rest,,（同上）,trailingTokens。flavor `--react`。`--html` と排他。,
 dom,-list,--tag,rest,,（同上）,trailingTokens。`--with` 時のみ。,
-dom,-wizard,,none,,dom -wizard,UiAction `dom_wizard`。CLI Interactive: peer→tab→scope→flavor → `dom_list` RPC。拡張は案内のみ。,§17
 dom,-exit,-list,none,,dom -exit -list,UiAction `close_picker` slot=dom。,
 dom,-setting,,none,,dom -setting | dom -setting -page-active --auto\|--manual,不完全: msgs + promptPrefix。完了: UiAction `dom_setting` { mode }（適用のみ）。ホストセンチネル `__HOST_DOM_PAGE_ACTIVE__`。,
 dom,-setting,-page-active,none,,dom -setting -page-active --auto | --manual,不完全: msgs + promptPrefix `dom -setting -page-active `。,

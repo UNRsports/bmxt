@@ -190,7 +190,16 @@ impl<'a> CliHostAdapter<'a> {
             return Ok(RunOutcome::status(EXIT_MISUSE));
         }
         if segments.len() == 1 {
-            return self.apply_bundle(run_line(&segments[0])).await;
+            let line = segments[0].as_str();
+            // EN: `dom -wizard` / peer `dom -list` are CLI-host only (not shared core grammar).
+            // JA: `dom -wizard` / peer `dom -list` は CLI host 専用（共有コア文法ではない）。
+            if dom_nav_host::is_cli_dom_wizard_line(line) {
+                return self.run_cli_dom_wizard().await;
+            }
+            if dom_nav_host::is_cli_dom_list_line(line) {
+                return self.run_cli_dom_list(line).await;
+            }
+            return self.apply_bundle(run_line(line)).await;
         }
 
         let producer = &segments[0];
@@ -553,53 +562,65 @@ impl<'a> CliHostAdapter<'a> {
                 }
                 Ok(())
             }
-            HostEffect::DomList {
-                flavor,
-                pattern,
-                show_tag,
-                device_id,
-                tab_id,
-                scope,
-                ..
-            } => {
-                if device_id.trim().is_empty() || tab_id.trim().is_empty() {
-                    return Err(anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])));
-                }
-                let tab_id_n: i64 = tab_id
-                    .trim()
-                    .parse()
-                    .map_err(|_| anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])))?;
-                let remote = self
-                    .require_client()?
-                    .resolve_remote_id(device_id.trim())
-                    .await?;
-                let scope = if scope.trim().is_empty() {
-                    "document"
-                } else {
-                    scope.trim()
-                };
-                let lines = self
-                    .require_client()?
-                    .dom_list_on(
-                        &self.cfg.device_id,
-                        &remote,
-                        tab_id_n,
-                        scope,
-                        &flavor,
-                        show_tag == "true",
-                        &pattern,
-                    )
-                    .await?;
-                for line in lines {
-                    self.out(line);
-                }
-                Ok(())
-            }
+            HostEffect::DomList { .. } => Err(anyhow!(t_cli(
+                "cmd.cli.dom.needDeviceTabOrWizard",
+                &[]
+            ))),
             other => Err(anyhow!(
                 "host effect not supported on CLI: {}",
                 effect_kind(&other)
             )),
         }
+    }
+
+    async fn run_cli_dom_wizard(&mut self) -> Result<RunOutcome> {
+        if !self.mode.allows_interactive_ui() {
+            return Ok(self.refuse_interactive("cmd.cli.exec.browseForbidden"));
+        }
+        let client = self.require_client()?;
+        let plan = dom_nav_host::run_dom_wizard(client, &self.cfg.device_id).await?;
+        let lines = client
+            .dom_list_on(
+                &self.cfg.device_id,
+                &plan.remote_id,
+                plan.tab_id,
+                &plan.scope,
+                &plan.flavor,
+                plan.show_tag,
+                &plan.pattern,
+            )
+            .await?;
+        for line in lines {
+            self.out(line);
+        }
+        Ok(RunOutcome::status(EXIT_SUCCESS))
+    }
+
+    async fn run_cli_dom_list(&mut self, line: &str) -> Result<RunOutcome> {
+        let plan = match dom_nav_host::parse_cli_dom_list_line(line) {
+            Ok(p) => p,
+            Err(err) => {
+                self.err(format!("{err:#}"));
+                return Ok(RunOutcome::status(EXIT_MISUSE));
+            }
+        };
+        let client = self.require_client()?;
+        let remote = client.resolve_remote_id(&plan.remote_id).await?;
+        let lines = client
+            .dom_list_on(
+                &self.cfg.device_id,
+                &remote,
+                plan.tab_id,
+                &plan.scope,
+                &plan.flavor,
+                plan.show_tag,
+                &plan.pattern,
+            )
+            .await?;
+        for line in lines {
+            self.out(line);
+        }
+        Ok(RunOutcome::status(EXIT_SUCCESS))
     }
 
     async fn apply_ui(&mut self, action: UiAction) -> Result<RunOutcome> {
@@ -857,28 +878,6 @@ impl<'a> CliHostAdapter<'a> {
                 Ok(RunOutcome::status(EXIT_SUCCESS))
             }
             UiAction::PickerPass => Ok(RunOutcome::status(EXIT_SUCCESS)),
-            UiAction::DomWizard => {
-                if !self.mode.allows_interactive_ui() {
-                    return Ok(self.refuse_interactive("cmd.cli.exec.browseForbidden"));
-                }
-                let client = self.require_client()?;
-                let plan = dom_nav_host::run_dom_wizard(client, &self.cfg.device_id).await?;
-                let lines = client
-                    .dom_list_on(
-                        &self.cfg.device_id,
-                        &plan.remote_id,
-                        plan.tab_id,
-                        &plan.scope,
-                        &plan.flavor,
-                        false,
-                        "",
-                    )
-                    .await?;
-                for line in lines {
-                    self.out(line);
-                }
-                Ok(RunOutcome::status(EXIT_SUCCESS))
-            }
             UiAction::NavArm => {
                 if !self.mode.allows_interactive_ui() {
                     return Ok(self.refuse_interactive("cmd.cli.exec.browseForbidden"));
@@ -1833,7 +1832,6 @@ fn ui_kind(action: &UiAction) -> &'static str {
     match action {
         UiAction::ClosePicker { .. } => "close_picker",
         UiAction::ContinuationPrompt { .. } => "continuation_prompt",
-        UiAction::DomWizard => "dom_wizard",
         UiAction::GroupNewFromSelection => "group_new_from_selection",
         UiAction::JumpTarget { .. } => "jump_target",
         UiAction::NavArm => "nav_arm",

@@ -1,5 +1,8 @@
-//! EN: Interactive `dom -wizard` and `nav -enter` key-forward loop.
-//! JA: `dom -wizard` 対話と `nav -enter` キー転送ループ。
+//! EN: CLI-only `dom -list` / `dom -wizard` and `nav -enter` key-forward loop.
+//! JA: CLI 専用の `dom -list` / `dom -wizard` と `nav -enter` キー転送。
+//!
+//! EN: These entry points stay in the CLI host — they are not shared bmxt-core grammar.
+//! JA: 入口は CLI host に閉じる（共有 bmxt-core 文法には載せない）。
 
 use std::io::{self, Write};
 
@@ -12,11 +15,160 @@ use crate::bus::BusClient;
 use crate::msgs::t_cli;
 use crate::tui;
 
+const MAX_ID_LEN: usize = 64;
+
 pub struct DomCapturePlan {
     pub remote_id: String,
     pub tab_id: i64,
     pub scope: String,
     pub flavor: String,
+    pub show_tag: bool,
+    pub pattern: String,
+}
+
+/**
+ * EN: True when the line is CLI-owned `dom -wizard` (exact second token).
+ * JA: CLI 専用 `dom -wizard`（第二トークン一致）かどうか。
+ */
+pub fn is_cli_dom_wizard_line(line: &str) -> bool {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    parts.len() == 2
+        && parts[0].eq_ignore_ascii_case("dom")
+        && parts[1].eq_ignore_ascii_case("-wizard")
+}
+
+/**
+ * EN: True when the line is CLI-owned `dom -list` (peer capture; not extension picker grammar).
+ * JA: CLI 専用 `dom -list`（peer 取得。拡張ピッカー文法ではない）かどうか。
+ */
+pub fn is_cli_dom_list_line(line: &str) -> bool {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    parts.len() >= 2
+        && parts[0].eq_ignore_ascii_case("dom")
+        && parts[1].eq_ignore_ascii_case("-list")
+}
+
+/**
+ * EN: Parse CLI `dom -list --device <id> --tab <n> …` (host-local; not bmxt-core).
+ * JA: CLI の `dom -list --device <id> --tab <n> …` を解釈（host 局所。bmxt-core ではない）。
+ */
+pub fn parse_cli_dom_list_line(line: &str) -> Result<DomCapturePlan> {
+    let parts: Vec<String> = line
+        .split_whitespace()
+        .filter(|p| !p.is_empty())
+        .map(|p| p.to_string())
+        .collect();
+    if parts.len() < 2
+        || !parts[0].eq_ignore_ascii_case("dom")
+        || !parts[1].eq_ignore_ascii_case("-list")
+    {
+        return Err(anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])));
+    }
+
+    let mut device_id = String::new();
+    let mut tab_id = String::new();
+    let mut scope = "document".to_string();
+    let mut flavor = "--html".to_string();
+    let mut show_tag = false;
+    let mut pattern_parts: Vec<String> = Vec::new();
+    let mut i = 2usize;
+    while i < parts.len() {
+        let token = parts[i].to_ascii_lowercase();
+        if token == "--device" {
+            let Some(raw) = parts.get(i + 1) else {
+                return Err(anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])));
+            };
+            let id = sanitize_device_id(raw)
+                .ok_or_else(|| anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])))?;
+            device_id = id;
+            i += 2;
+            continue;
+        }
+        if token == "--tab" {
+            let Some(raw) = parts.get(i + 1) else {
+                return Err(anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])));
+            };
+            let id = sanitize_tab_id(raw)
+                .ok_or_else(|| anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])))?;
+            tab_id = id;
+            i += 2;
+            continue;
+        }
+        if token == "--document" {
+            scope = "document".to_string();
+            i += 1;
+            continue;
+        }
+        if token == "--viewport" {
+            scope = "viewport".to_string();
+            i += 1;
+            continue;
+        }
+        if token == "--html" || token == "--react" {
+            flavor = token;
+            i += 1;
+            continue;
+        }
+        if token == "--tag" {
+            show_tag = true;
+            i += 1;
+            continue;
+        }
+        if token == "--normal" || token == "--with" {
+            // EN: Extension picker modes are ignored on CLI oneshot (stdout dump only).
+            i += 1;
+            continue;
+        }
+        if token.starts_with("--") {
+            return Err(anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])));
+        }
+        pattern_parts.push(parts[i].clone());
+        i += 1;
+    }
+
+    if device_id.is_empty() || tab_id.is_empty() {
+        return Err(anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])));
+    }
+    let tab_id_n: i64 = tab_id
+        .parse()
+        .map_err(|_| anyhow!(t_cli("cmd.cli.dom.needDeviceTabOrWizard", &[])))?;
+
+    Ok(DomCapturePlan {
+        remote_id: device_id,
+        tab_id: tab_id_n,
+        scope,
+        flavor,
+        show_tag,
+        pattern: pattern_parts.join(" "),
+    })
+}
+
+fn sanitize_device_id(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.len() > MAX_ID_LEN {
+        return None;
+    }
+    if !trimmed
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return None;
+    }
+    Some(trimmed.to_string())
+}
+
+fn sanitize_tab_id(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let Ok(n) = trimmed.parse::<i64>() else {
+        return None;
+    };
+    if n < 0 {
+        return None;
+    }
+    Some(n.to_string())
 }
 
 /**
@@ -91,6 +243,8 @@ pub async fn run_dom_wizard(client: &BusClient, self_device_id: &str) -> Result<
         tab_id,
         scope,
         flavor,
+        show_tag: false,
+        pattern: String::new(),
     })
 }
 

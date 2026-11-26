@@ -54,17 +54,14 @@ pub enum HostEffect {
     },
     #[serde(rename = "dom_list")]
     DomList {
-    device_id: String,
     flavor: String,
     pattern: String,
 
     #[serde(rename = "pickerMode")]
     picker_mode: String,
-    scope: String,
 
     #[serde(rename = "showTag")]
     show_tag: String,
-    tab_id: String,
     },
     #[serde(rename = "exit_pane")]
     ExitPane,

@@ -968,7 +968,7 @@ CLI
 |--------------|------|
 | `shared/crates/bmxt-sync-wire` · `shared/lib/features/sync/types.ts` | `probe_capabilities` · `dom_list` · `nav_control` (+ result) |
 | 拡張 UI bus ハンドラ | prompt 宿主で上記 RPC を実行 |
-| `shared/crates/bmxt-core/src/cmd/dom.rs` + codegen | `-wizard` · `DomList` に `device_id` / `tab_id` / `scope` |
+| `hosts/cli/src/dom_nav_host.rs` · `adapter.rs` | **CLI 専用** `dom -list --device/--tab` · `dom -wizard`（共有コア文法には載せない） |
 | `hosts/cli/src/adapter.rs` · `bus.rs` · `tui.rs` | about / dom oneshot+wizard / nav キー転送 |
 | `_context/cli-peer/CONTRACT.md` | 新 RPC · 「端末 overlay 非描画 / 遠隔 nav 可」 |
 
@@ -978,7 +978,7 @@ CLI
 - [x] **17.1 Wire:** TS+Rust に `probe_capabilities` / `dom_list` / `nav_control`（+ result）。巨大 HTML は行数 soft-cap（chunk は後続可）
 - [x] **17.2 拡張 handlers:** prompt bus で probe · `captureDom*` · `nav-tab-bridge` へディスパッチ
 - [x] **17.3 `aboutbmxt` CLI:** welcome URL · `-system` = 自己診断 + peer probe。拒否メッセージ撤去
-- [x] **17.4 `dom` 文法:** manifest / codegen · `-wizard` · `-list` に `--device` / `--tab` / `--document`\|`--viewport`
+- [x] **17.4 `dom` CLI 入口:** 共有コアは拡張どおり据え置き。CLI host が `dom -list --device/--tab` · `dom -wizard` を横取り（peer RPC）
 - [x] **17.5 `dom` CLI:** oneshot → stdout · `-wizard` 4 段（番号選択）· NonInteractive で wizard 拒否
 - [x] **17.6 `nav` CLI:** `-enter` キー転送 · `-exit` · `-windowclose` は hint（misuse）· NonInteractive 拒否
 - [x] **17.7 検証:** i18n EN+JA · `cargo test -p bmxt-core` · `cargo check -p bmxt-cli` · README / map_command.csv（手元スモークは下記）

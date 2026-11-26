@@ -293,8 +293,6 @@ export function applyUiAction(action: UiActionIR, ctx: CommandDispatchContext): 
       return false
     case "show_help":
       return applyShowHelp(ctx)
-    case "dom_wizard":
-      return applyDomWizardExtensionHint(ctx)
     case "nav_arm":
       return applyNavArm(ctx)
     case "nav_disarm":
@@ -398,8 +396,6 @@ export async function applyUiActionForSegment(
   switch (action.kind) {
     case "show_help":
       return segmentSuccess(buildHelpLines(ctx.deps.uiSettings.locale))
-    case "dom_wizard":
-      return segmentFailure("usage", [tCmd("cmd.cli.dom.wizardExtensionHint", ctx.locale)])
     case "nav_arm":
       return applyNavArmSegment(ctx)
     case "nav_disarm":
@@ -940,13 +936,6 @@ function applySyncOpen(
 function applySyncPing(ctx: CommandDispatchContext, deviceId: string): boolean {
   finishCommand(ctx)
   void applySyncUiLog(syncSink(ctx), ctx.trimmed, () => runSyncPing(deviceId))
-  return true
-}
-
-function applyDomWizardExtensionHint(ctx: CommandDispatchContext): boolean {
-  finishCommand(ctx)
-  void ctx.deps.appendLogLines([tCmd("cmd.cli.dom.wizardExtensionHint", ctx.locale)])
-  ctx.deps.focusPrompt()
   return true
 }
 

@@ -1427,10 +1427,6 @@
     "ja": "`dom -list` には `--device <id> --tab <tabId>` が必要です。対話は `dom -wizard` を使ってください。",
     "en": "`dom -list` needs `--device <id> --tab <tabId>`. For interactive pick use `dom -wizard`."
   },
-  "cmd.cli.dom.wizardExtensionHint": {
-    "ja": "`dom -wizard` は CLI（BMXt REPL）向けです。拡張では `dom -list` を使ってください。",
-    "en": "`dom -wizard` is for the CLI (BMXt REPL). In the extension use `dom -list`."
-  },
   "cmd.cli.dom.noTabs": {
     "ja": "そのピアにタブがありません。",
     "en": "No tabs on that peer."

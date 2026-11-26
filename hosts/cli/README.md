@@ -57,7 +57,7 @@ Same grammar as the extension (`bmxt-core`):
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker: ↑↓ `/` Enter activates on the owning peer, stays open until q/Esc; **live refresh** on Family `tabs_changed`)
    - `history -list --device <id>` (oneshot list) · `history -list --device | browse` (number-pick **source** peer, then URL picker; same for `bookmark` / `tab` / `search -list`)
    - `aboutbmxt` / `aboutbmxt -system` (welcome URL · CLI self-diag + peer `probe_capabilities`)
-   - `dom -list --device <id> --tab <n> [--document|--viewport] [--html|--react]` (oneshot DOM lines) · Interactive `dom -wizard` (peer→tab→scope→flavor)
+   - **CLI-only** (not shared extension grammar): `dom -list --device <id> --tab <n> [--document|--viewport] [--html|--react]` (oneshot DOM lines) · Interactive `dom -wizard` (peer→tab→scope→flavor)
    - `nav -enter` (Interactive: pick peer/tab → forward keys to peer overlay) · `nav -exit`
    - URL picker: Space-mark URLs → Enter → **Tab**-mark one or more **destination** peers → Enter open (source ≠ destination OK). Typed: `tab -send <id> …` / `bookmark -send <id> --open|--save|--both …`
    - **`quit` / `exit`** ends the `bmxt` process (peer drop while the REPL stays up only prints a “listener keeps running” notice)
@@ -170,6 +170,7 @@ cargo test -p bmxt-family -p bmxt-sync-wire
    - `-list` 後の Tab で `| browse` 等、既に `|` を打った右辺では `browse` / `close` 等を補完
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（ピッカー: ↑↓ `/` Enter で所有 peer へ activate、q/Esc まで開いたまま。Family `tabs_changed` で**ライブ更新**）
    - `history -list --device <id>`（ワンショット一覧）· `history -list --device | browse`（番号で**取得元**ピア選択→URL picker。`bookmark` / `tab` / `search -list` も同様）
+   - **CLI 専用**（拡張の共有文法には載せない）: `dom -list --device <id> --tab <n> …`（ワンショット DOM）· Interactive `dom -wizard`（peer→tab→scope→flavor）
    - URL picker: Space で URL マーク → Enter → **Tab** で**送信先**ピアを1台以上マーク → Enter で開く（取得元≠送信先可）。typed: `tab -send <id> …` / `bookmark -send <id> --open|--save|--both …`
    - **`quit` / `exit`** で `bmxt` プロセス終了（REPL 継続中のピア切断時のみ「待ち受け継続」案内）
    - `sync -setup` · `sync -pair [invite]` · `sync -status` · `sync -members` · `sync -ping <deviceId>`
