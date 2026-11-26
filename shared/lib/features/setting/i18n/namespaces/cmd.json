@@ -1471,6 +1471,14 @@
     "ja": "形式を選んでください:",
     "en": "Pick format:"
   },
+  "cmd.cli.dom.planSummary": {
+    "ja": "取得: scope={scope} · flavor={flavor} · tab={tabId}",
+    "en": "capture: scope={scope} · flavor={flavor} · tab={tabId}"
+  },
+  "cmd.cli.dom.viewportEmptyHint": {
+    "ja": "ヒント: ビューポート内に列挙要素がありませんでした。wizard で「ページ全体 (document)」を選ぶか、ページをスクロールしてから再実行してください。ヘッダの `dom -list --with` は viewport 取得の表示名です。",
+    "en": "Hint: no viewport elements were listed. In the wizard pick full page (document), or scroll the page and retry. The `dom -list --with` header is the viewport capture label."
+  },
   "cmd.cli.nav.pickTab": {
     "ja": "nav 対象タブを番号で選んでください:",
     "en": "Pick nav target tab by number:"

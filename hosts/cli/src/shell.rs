@@ -160,7 +160,8 @@ fn completion_remainder_hint(line: &str, pos: usize) -> Option<BmxtHint> {
         return None;
     }
     let hit = complete_line(line, pos)?;
-    let candidate = pick_primary_candidate(&hit.candidates)?;
+    let merged = merge_cli_host_candidates(line, hit.token_start, hit.candidates.clone());
+    let candidate = pick_primary_candidate(&merged)?;
     let replacement = completion_replacement(line, hit.token_start, candidate);
     let typed = &line[hit.token_start..pos];
     let typed_lower = typed.to_ascii_lowercase();
@@ -271,6 +272,54 @@ fn word_bounds(line: &str, pos: usize) -> (usize, usize) {
 }
 
 /**
+ * EN: CLI-host-only second tokens (not in shared bmxt-core grammar).
+ *     Merge into Tab / remainder hints when completing after that first command.
+ * JA: 共有コアに無い CLI 専用第二トークン。該当 first の直後スロットへ候補マージ。
+ */
+fn cli_host_second_tokens(first_canonical: &str) -> &'static [&'static str] {
+    if first_canonical.eq_ignore_ascii_case("dom") {
+        &["-wizard"]
+    } else {
+        &[]
+    }
+}
+
+/**
+ * EN: Tokens strictly before byte `token_start` (whitespace-split).
+ * JA: `token_start` より前のトークン列（空白区切り）。
+ */
+fn tokens_before_byte(line: &str, token_start: usize) -> Vec<&str> {
+    let left = match line.get(..token_start) {
+        Some(s) => s,
+        None => return Vec::new(),
+    };
+    if left.trim().is_empty() {
+        return Vec::new();
+    }
+    left.trim().split_whitespace().collect()
+}
+
+/**
+ * EN: Append CLI-host-only candidates when the slot is that command's second token.
+ * JA: 当該コマンドの第二トークンスロットなら CLI 専用候補を追加する。
+ */
+fn merge_cli_host_candidates(line: &str, token_start: usize, mut candidates: Vec<String>) -> Vec<String> {
+    let before = tokens_before_byte(line, token_start);
+    if before.len() != 1 {
+        return candidates;
+    }
+    for extra in cli_host_second_tokens(before[0]) {
+        let already = candidates
+            .iter()
+            .any(|c| c.eq_ignore_ascii_case(extra));
+        if !already {
+            candidates.push((*extra).to_string());
+        }
+    }
+    sort_candidates(candidates)
+}
+
+/**
  * EN: Full tier candidate list for the token under `cursor`.
  *     Mirrors extension Tab + `emptyFirstPrefixShowsAll`: empty / first-token
  *     slot uses `all_completion_tokens` when core returns None for empty prefix.
@@ -299,6 +348,7 @@ fn complete_full_slot(
         } else {
             sort_candidates(hit.candidates)
         };
+        let full = merge_cli_host_candidates(line, token_start, full);
         if full.is_empty() {
             return None;
         }
@@ -332,7 +382,11 @@ fn complete_full_slot(
     emptied.push_str(line.get(..token_start)?);
     emptied.push_str(line.get(token_end..)?);
     let full_hit = complete_line(&emptied, token_start)?;
-    let full = sort_candidates(full_hit.candidates);
+    let full = merge_cli_host_candidates(
+        line,
+        token_start,
+        sort_candidates(full_hit.candidates),
+    );
     if full.is_empty() {
         return None;
     }
@@ -1080,6 +1134,34 @@ mod tests {
         ];
         let hit = match_candidates(&all, "iz", CandidateMatchMode::Contains);
         assert_eq!(hit, vec!["-wizard".to_string()]);
+    }
+
+    #[test]
+    fn dom_second_slot_offers_cli_wizard() {
+        let line = "dom ";
+        let (start, end, typed, full) =
+            complete_full_slot(line, line.len()).expect("dom second slot");
+        assert_eq!(start, 4);
+        assert_eq!(end, 4);
+        assert_eq!(typed, "");
+        assert!(
+            full.iter().any(|c| c == "-wizard"),
+            "expected -wizard in {full:?}"
+        );
+        assert!(
+            full.iter().any(|c| c == "-list"),
+            "expected shared -list in {full:?}"
+        );
+    }
+
+    #[test]
+    fn dom_partial_wizard_filters() {
+        let line = "dom -wiz";
+        let (_s, _e, typed, full) =
+            complete_full_slot(line, line.len()).expect("partial wizard");
+        assert_eq!(typed, "-wiz");
+        let prefixed = match_candidates(&full, &typed, CandidateMatchMode::Prefix);
+        assert_eq!(prefixed, vec!["-wizard".to_string()]);
     }
 
     #[test]

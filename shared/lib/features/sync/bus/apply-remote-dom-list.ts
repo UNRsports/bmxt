@@ -3,7 +3,7 @@
  * JA: peer `dom_list` — タブの DOM 行を取得（document / viewport）。
  */
 
-import { captureDomDocumentEntriesForTab } from "../../dom/dom-document-capture.ts"
+import { captureDomListForTab } from "../../dom/dom-list-capture.ts"
 import { captureDomViewportForTab } from "../../dom/dom-viewport-capture.ts"
 import type { DomListFlavor } from "../../dom/dom-picker-mode.ts"
 import { DEFAULT_UI_LOCALE } from "../../setting/locale.ts"
@@ -20,14 +20,6 @@ export type RemoteDomListRequest = {
 
 function normalizeFlavor(raw: string): DomListFlavor {
   return raw.trim() === "--react" ? "--react" : "--html"
-}
-
-function filterByPattern(lines: string[], pattern: string): string[] {
-  const needle = pattern.trim().toLowerCase()
-  if (needle.length === 0) {
-    return lines
-  }
-  return lines.filter((line) => line.toLowerCase().includes(needle))
 }
 
 export async function applyRemoteDomList(req: RemoteDomListRequest): Promise<{
@@ -53,6 +45,8 @@ export async function applyRemoteDomList(req: RemoteDomListRequest): Promise<{
   try {
     let lines: string[]
     if (scope === "viewport") {
+      // EN: Same rows as extension `dom -list --with` (header includes that label).
+      // JA: 拡張の `dom -list --with` と同じ行（ヘッダにその表示名が入る）。
       const capture = await captureDomViewportForTab(
         tab,
         flavor,
@@ -62,17 +56,17 @@ export async function applyRemoteDomList(req: RemoteDomListRequest): Promise<{
       )
       lines = capture.lines
     } else {
-      const { entries, truncated } = await captureDomDocumentEntriesForTab(
+      // EN: Full-page tree like extension `dom -list --normal` (not flat --with store).
+      // JA: 拡張の `dom -list --normal` と同じツリー（--with 用 flat ではない）。
+      const capture = await captureDomListForTab(
         tab,
         flavor,
+        req.pattern,
         locale,
+        "normal",
         req.showTag
       )
-      lines = entries.map((e) => e.line)
-      if (truncated) {
-        lines.push("(truncated)")
-      }
-      lines = filterByPattern(lines, req.pattern)
+      lines = capture.lines
     }
     let detail: string | null = null
     if (lines.length > MAX_DOM_LIST_LINES) {

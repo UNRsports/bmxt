@@ -611,6 +611,14 @@ impl<'a> CliHostAdapter<'a> {
         }
         let client = self.require_client()?;
         let plan = dom_nav_host::run_dom_wizard(client, &self.cfg.device_id).await?;
+        self.err(t_cli(
+            "cmd.cli.dom.planSummary",
+            &[
+                ("scope", plan.scope.as_str()),
+                ("flavor", plan.flavor.as_str()),
+                ("tabId", &plan.tab_id.to_string()),
+            ],
+        ));
         let lines = client
             .dom_list_on(
                 &self.cfg.device_id,
@@ -622,8 +630,20 @@ impl<'a> CliHostAdapter<'a> {
                 &plan.pattern,
             )
             .await?;
+        // EN: Viewport capture header is 4 lines (mode · title · url · blank); ≤1 body ⇒ empty.
+        // JA: viewport ヘッダは 4 行。本文が 1 行以下なら空とみなす。
+        let viewport_empty = plan.scope.eq_ignore_ascii_case("viewport")
+            && lines
+                .iter()
+                .skip(4)
+                .filter(|line| !line.trim().is_empty())
+                .count()
+                <= 1;
         for line in lines {
             self.out(line);
+        }
+        if viewport_empty {
+            self.err(t_cli("cmd.cli.dom.viewportEmptyHint", &[]));
         }
         Ok(RunOutcome::status(EXIT_SUCCESS))
     }
