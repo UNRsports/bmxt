@@ -1,20 +1,19 @@
-//! EN: Interactive prompt — history (↑↓), grey remainder hints, Tab list + apply.
-//! JA: 対話プロンプト。履歴・灰色ヒント・Tab で候補一覧＋適用。
+//! EN: Interactive prompt — history, grey remainder hints, Tab candidate menu (extension-like).
+//! JA: 対話プロンプト。履歴・灰色ヒント・Tab 候補メニュー（拡張に近い操作感）。
 
-use std::borrow::Cow;
+use std::io::{stdout, Write};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use anyhow::{Context, Result};
 use bmxt_core::{complete_line, is_pipe_continuation_token};
-use rustyline::completion::{Completer, Pair};
-use rustyline::error::ReadlineError;
-use rustyline::highlight::{Highlighter, MatchingBracketHighlighter};
-use rustyline::hint::{Hint, Hinter};
-use rustyline::history::DefaultHistory;
-use rustyline::validate::Validator;
-use rustyline::{
-    ColorMode, CompletionType, Config, Context as RlContext, Editor, Helper,
-};
+use crossterm::cursor::{self, MoveTo};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
+use crossterm::{execute, queue};
+use unicode_width::UnicodeWidthStr;
 
 pub enum ReadOutcome {
     Line(String),
@@ -26,30 +25,45 @@ pub enum ReadOutcome {
  * EN: Inline hint — grey remainder after the typed prefix; same text is inserted on apply.
  * JA: インラインヒント。入力済み接頭辞の後ろに灰色の残りを表示し、適用時も同じ残りを挿入。
  */
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct BmxtHint {
     display: String,
     completion: String,
 }
 
-impl Hint for BmxtHint {
-    fn display(&self) -> &str {
-        &self.display
-    }
-
-    fn completion(&self) -> Option<&str> {
-        Some(&self.completion)
-    }
+/** EN: Open candidate menu state (Tab-triggered; mirrors extension IME list). */
+struct CandidateMenu {
+    token_start: usize,
+    token_end: usize,
+    candidates: Vec<String>,
+    highlight: usize,
 }
 
-struct BmxtHelper {
-    highlighter: MatchingBracketHighlighter,
+/** EN: Mutable line-edit + menu state for one `read_line` call. */
+struct LineEditState {
+    line: String,
+    cursor_byte: usize,
+    menu: Option<CandidateMenu>,
+    suppressed_until_tab: bool,
+    hist_index: Option<usize>,
+    hist_stash: Option<String>,
 }
 
-impl BmxtHelper {
+impl LineEditState {
     fn new() -> Self {
         Self {
-            highlighter: MatchingBracketHighlighter::new(),
+            line: String::new(),
+            cursor_byte: 0,
+            menu: None,
+            suppressed_until_tab: false,
+            hist_index: None,
+            hist_stash: None,
         }
+    }
+
+    fn clear_hist_browse(&mut self) {
+        self.hist_index = None;
+        self.hist_stash = None;
     }
 }
 
@@ -98,6 +112,34 @@ fn completion_replacement(line: &str, token_start: usize, candidate: &str) -> St
 }
 
 /**
+ * EN: Apply one candidate into the line (Enter on menu). Trailing space at EOL
+ *     matches extension commit; mid-line replace keeps no trailing space.
+ * JA: メニュー Enter で候補を行へ確定。行末では拡張と同様に末尾空白を付ける。
+ */
+fn apply_candidate(
+    line: &str,
+    token_start: usize,
+    token_end: usize,
+    candidate: &str,
+) -> (String, usize) {
+    let token_start = token_start.min(line.len());
+    let token_end = token_end.min(line.len()).max(token_start);
+    let replacement = completion_replacement(line, token_start, candidate);
+    let at_eol = token_end >= line.len();
+    let body = if at_eol {
+        format!("{replacement} ")
+    } else {
+        replacement
+    };
+    let mut next = String::with_capacity(line.len() + body.len());
+    next.push_str(&line[..token_start]);
+    next.push_str(&body);
+    next.push_str(&line[token_end..]);
+    let next_pos = token_start + body.len();
+    (next, next_pos)
+}
+
+/**
  * EN: Build grey remainder hint from `complete_line` when the cursor is at EOL.
  *     Example: line `sync -se` → display/completion `tup` (shown grey after typed text).
  *     Example: line `nav` → display/completion ` -exit` (leading space for grammar).
@@ -134,106 +176,86 @@ fn completion_remainder_hint(line: &str, pos: usize) -> Option<BmxtHint> {
     })
 }
 
-impl Completer for BmxtHelper {
-    type Candidate = Pair;
-
-    fn complete(
-        &self,
-        line: &str,
-        pos: usize,
-        _ctx: &RlContext<'_>,
-    ) -> rustyline::Result<(usize, Vec<Pair>)> {
-        let Some(hit) = complete_line(line, pos) else {
-            return Ok((pos, Vec::new()));
-        };
-        let mut candidates = hit.candidates;
-        let has_pipe = candidates.iter().any(|c| is_pipe_continuation_token(c));
-        // EN: Preserve options-before-pipe order when continuations are present.
-        if !has_pipe {
-            candidates.sort_by(|a, b| {
-                a.len()
-                    .cmp(&b.len())
-                    .then_with(|| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()))
-            });
-        }
-        let pairs = candidates
-            .into_iter()
-            .map(|token| {
-                let replacement = completion_replacement(line, hit.token_start, &token);
-                Pair {
-                    display: token,
-                    replacement,
-                }
-            })
-            .collect();
-        Ok((hit.token_start, pairs))
+/** EN: Sort candidates like the previous Completer (pipes keep order). */
+fn sort_candidates(mut candidates: Vec<String>) -> Vec<String> {
+    let has_pipe = candidates.iter().any(|c| is_pipe_continuation_token(c));
+    if !has_pipe {
+        candidates.sort_by(|a, b| {
+            a.len()
+                .cmp(&b.len())
+                .then_with(|| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()))
+        });
     }
+    candidates
 }
 
-impl Hinter for BmxtHelper {
-    type Hint = BmxtHint;
-
-    fn hint(&self, line: &str, pos: usize, _ctx: &RlContext<'_>) -> Option<BmxtHint> {
-        completion_remainder_hint(line, pos)
-    }
+fn display_width(s: &str) -> usize {
+    UnicodeWidthStr::width(s)
 }
 
-impl Highlighter for BmxtHelper {
-    fn highlight_hint<'h>(&self, hint: &'h str) -> Cow<'h, str> {
-        // EN: Bright black (grey) so the remainder stays visually secondary.
-        Cow::Owned(format!("\x1b[90m{hint}\x1b[39m"))
+fn prev_char_boundary(s: &str, pos: usize) -> usize {
+    if pos == 0 {
+        return 0;
     }
-
-    fn highlight<'l>(&self, line: &'l str, pos: usize) -> Cow<'l, str> {
-        self.highlighter.highlight(line, pos)
+    let mut p = pos - 1;
+    while p > 0 && !s.is_char_boundary(p) {
+        p -= 1;
     }
-
-    fn highlight_char(&self, line: &str, pos: usize, forced: bool) -> bool {
-        self.highlighter.highlight_char(line, pos, forced)
-    }
+    p
 }
 
-impl Validator for BmxtHelper {}
+fn next_char_boundary(s: &str, pos: usize) -> usize {
+    if pos >= s.len() {
+        return s.len();
+    }
+    let mut p = pos + 1;
+    while p < s.len() && !s.is_char_boundary(p) {
+        p += 1;
+    }
+    p
+}
 
-impl Helper for BmxtHelper {}
+const MENU_MAX_ROWS: usize = 8;
 
 pub struct PromptShell {
-    editor: Editor<BmxtHelper, DefaultHistory>,
+    history: Vec<String>,
     history_path: PathBuf,
+    pending_logs: Arc<Mutex<Vec<String>>>,
 }
 
 impl PromptShell {
     pub fn open() -> Result<Self> {
-        let config = Config::builder()
-            .history_ignore_space(true)
-            // EN: Tab lists candidates on the next line (no extension-style dropdown).
-            .completion_type(CompletionType::List)
-            .color_mode(ColorMode::Enabled)
-            .auto_add_history(false)
-            .build();
-        let mut editor = Editor::with_config(config).context("rustyline Editor")?;
-        editor.set_helper(Some(BmxtHelper::new()));
-
         let dir = crate::config::CliConfig::config_dir()?;
         std::fs::create_dir_all(&dir)?;
         let history_path = dir.join("history");
+        let mut history = Vec::new();
         if history_path.is_file() {
-            let _ = editor.load_history(&history_path);
+            let text = std::fs::read_to_string(&history_path).unwrap_or_default();
+            for line in text.lines() {
+                let trimmed = line.trim();
+                if !trimmed.is_empty() {
+                    history.push(trimmed.to_string());
+                }
+            }
         }
-
         Ok(Self {
-            editor,
+            history,
             history_path,
+            pending_logs: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
-    pub fn read_line(&mut self, prompt: &str) -> Result<ReadOutcome> {
-        match self.editor.readline(prompt) {
-            Ok(line) => Ok(ReadOutcome::Line(line)),
-            Err(ReadlineError::Interrupted) => Ok(ReadOutcome::Interrupt),
-            Err(ReadlineError::Eof) => Ok(ReadOutcome::Eof),
-            Err(err) => Err(err.into()),
-        }
+    /**
+     * EN: Queue async bus/door logs; drained while the prompt owns the TTY so
+     *     `BMXt>` and the candidate menu redraw after each line.
+     */
+    pub fn install_repl_log_printer(&mut self) -> Result<()> {
+        let pending = Arc::clone(&self.pending_logs);
+        crate::repl_log::install(move |msg: String| {
+            let mut guard = pending.lock().unwrap_or_else(|e| e.into_inner());
+            guard.push(msg);
+        });
+        Ok(())
     }
 
     pub fn remember(&mut self, line: &str) {
@@ -241,22 +263,426 @@ impl PromptShell {
         if trimmed.is_empty() {
             return;
         }
-        let _ = self.editor.add_history_entry(trimmed);
-        let _ = self.editor.append_history(&self.history_path);
+        if self.history.last().map(String::as_str) == Some(trimmed) {
+            return;
+        }
+        self.history.push(trimmed.to_string());
+        let _ = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&self.history_path)
+            .and_then(|mut f| writeln!(f, "{trimmed}"));
     }
 
-    /**
-     * EN: Printer for async bus/door logs while readline owns the TTY.
-     *     After each print, rustyline redraws `BMXt>` so the caret stays visible.
-     */
-    pub fn install_repl_log_printer(&mut self) -> Result<()> {
-        let printer = self
-            .editor
-            .create_external_printer()
-            .context("rustyline external printer")?;
-        crate::repl_log::install(printer);
+    pub fn read_line(&mut self, prompt: &str) -> Result<ReadOutcome> {
+        enable_raw_mode().context("enable raw mode")?;
+        let result = self.read_line_raw(prompt);
+        let _ = disable_raw_mode();
+        // EN: Ensure the next println starts on a fresh row after raw-mode editing.
+        let _ = execute!(stdout(), Print("\r\n"));
+        result
+    }
+
+    fn read_line_raw(&mut self, prompt: &str) -> Result<ReadOutcome> {
+        let mut out = stdout();
+        let (_col, mut prompt_row) = cursor::position().context("cursor position")?;
+        let mut state = LineEditState::new();
+
+        self.draw(&mut out, prompt, &state, prompt_row)?;
+
+        loop {
+            self.drain_logs(&mut out, prompt, &state, &mut prompt_row)?;
+
+            if !event::poll(Duration::from_millis(100)).context("event poll")? {
+                continue;
+            }
+            let Event::Key(key) = event::read().context("event read")? else {
+                continue;
+            };
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
+
+            match self.handle_key(key, &mut state)? {
+                KeyAction::Continue => {
+                    self.draw(&mut out, prompt, &state, prompt_row)?;
+                }
+                KeyAction::Submit => {
+                    self.erase_ui(&mut out, prompt_row)?;
+                    return Ok(ReadOutcome::Line(state.line));
+                }
+                KeyAction::Interrupt => {
+                    self.erase_ui(&mut out, prompt_row)?;
+                    return Ok(ReadOutcome::Interrupt);
+                }
+                KeyAction::Eof => {
+                    self.erase_ui(&mut out, prompt_row)?;
+                    return Ok(ReadOutcome::Eof);
+                }
+            }
+        }
+    }
+
+    fn drain_logs(
+        &self,
+        out: &mut impl Write,
+        prompt: &str,
+        state: &LineEditState,
+        prompt_row: &mut u16,
+    ) -> Result<()> {
+        let messages: Vec<String> = {
+            let mut guard = self
+                .pending_logs
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            if guard.is_empty() {
+                return Ok(());
+            }
+            guard.drain(..).collect()
+        };
+        self.erase_ui(out, *prompt_row)?;
+        for msg in messages {
+            let text = msg.trim_end_matches('\n');
+            queue!(out, Print(text), Print("\r\n"))?;
+        }
+        out.flush()?;
+        let (_c, row) = cursor::position().context("cursor after logs")?;
+        *prompt_row = row;
+        self.draw(out, prompt, state, *prompt_row)?;
         Ok(())
     }
+
+    fn erase_ui(&self, out: &mut impl Write, prompt_row: u16) -> Result<()> {
+        queue!(
+            out,
+            MoveTo(0, prompt_row),
+            Clear(ClearType::FromCursorDown)
+        )?;
+        out.flush()?;
+        Ok(())
+    }
+
+    fn draw(
+        &self,
+        out: &mut impl Write,
+        prompt: &str,
+        state: &LineEditState,
+        prompt_row: u16,
+    ) -> Result<()> {
+        queue!(
+            out,
+            MoveTo(0, prompt_row),
+            Clear(ClearType::FromCursorDown)
+        )?;
+        queue!(out, Print(prompt), Print(&state.line))?;
+
+        if state.menu.is_none() {
+            if let Some(hint) = completion_remainder_hint(&state.line, state.cursor_byte) {
+                queue!(
+                    out,
+                    SetForegroundColor(Color::DarkGrey),
+                    Print(&hint.display),
+                    ResetColor
+                )?;
+            }
+        }
+
+        if let Some(m) = state.menu.as_ref() {
+            let (_cols, rows) = crossterm::terminal::size().unwrap_or((80, 24));
+            let room = rows.saturating_sub(prompt_row.saturating_add(1)) as usize;
+            let max_rows = MENU_MAX_ROWS.min(room).max(1);
+            let total = m.candidates.len();
+            let hi = m.highlight.min(total.saturating_sub(1));
+            let start = if total <= max_rows {
+                0
+            } else if hi < max_rows / 2 {
+                0
+            } else if hi + (max_rows - max_rows / 2) >= total {
+                total - max_rows
+            } else {
+                hi - max_rows / 2
+            };
+            let end = (start + max_rows).min(total);
+            for idx in start..end {
+                let cand = &m.candidates[idx];
+                queue!(out, Print("\r\n"))?;
+                if idx == hi {
+                    queue!(
+                        out,
+                        SetForegroundColor(Color::Green),
+                        Print("▶ "),
+                        Print(cand),
+                        ResetColor
+                    )?;
+                } else {
+                    queue!(out, Print("  "), Print(cand))?;
+                }
+            }
+        }
+
+        let end = state.cursor_byte.min(state.line.len());
+        let cursor_cols = display_width(prompt) + display_width(&state.line[..end]);
+        let cursor_col = u16::try_from(cursor_cols).unwrap_or(u16::MAX);
+        queue!(out, MoveTo(cursor_col, prompt_row))?;
+        out.flush()?;
+        Ok(())
+    }
+
+    fn handle_key(&self, key: KeyEvent, state: &mut LineEditState) -> Result<KeyAction> {
+        if state.menu.is_some() {
+            return self.handle_key_menu_open(key, state);
+        }
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        match key.code {
+            KeyCode::Enter => Ok(KeyAction::Submit),
+            KeyCode::Char('c') if ctrl => Ok(KeyAction::Interrupt),
+            KeyCode::Char('d') if ctrl => {
+                if state.line.is_empty() {
+                    Ok(KeyAction::Eof)
+                } else {
+                    Ok(KeyAction::Continue)
+                }
+            }
+            KeyCode::Char('a') if ctrl => {
+                state.cursor_byte = 0;
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Char('e') if ctrl => {
+                state.cursor_byte = state.line.len();
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Char('u') if ctrl => {
+                state.line.clear();
+                state.cursor_byte = 0;
+                state.clear_hist_browse();
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Tab => {
+                state.suppressed_until_tab = false;
+                self.open_or_refresh_menu(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Esc => {
+                // EN: Closed menu — ignore (extension only suppresses while open).
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Backspace => {
+                if state.cursor_byte > 0 {
+                    let prev = prev_char_boundary(&state.line, state.cursor_byte);
+                    state.line.drain(prev..state.cursor_byte);
+                    state.cursor_byte = prev;
+                    state.clear_hist_browse();
+                }
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Delete => {
+                if state.cursor_byte < state.line.len() {
+                    let next = next_char_boundary(&state.line, state.cursor_byte);
+                    state.line.drain(state.cursor_byte..next);
+                    state.clear_hist_browse();
+                }
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Left => {
+                state.cursor_byte = prev_char_boundary(&state.line, state.cursor_byte);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Right => {
+                if state.cursor_byte >= state.line.len() {
+                    if let Some(hint) =
+                        completion_remainder_hint(&state.line, state.cursor_byte)
+                    {
+                        state.line.push_str(&hint.completion);
+                        state.cursor_byte = state.line.len();
+                        state.clear_hist_browse();
+                    }
+                } else {
+                    state.cursor_byte = next_char_boundary(&state.line, state.cursor_byte);
+                }
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Home => {
+                state.cursor_byte = 0;
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::End => {
+                state.cursor_byte = state.line.len();
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Up => {
+                self.history_up(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Down => {
+                self.history_down(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Char(ch) if !ctrl && !key.modifiers.contains(KeyModifiers::ALT) => {
+                state.line.insert(state.cursor_byte, ch);
+                state.cursor_byte += ch.len_utf8();
+                state.clear_hist_browse();
+                Ok(KeyAction::Continue)
+            }
+            _ => Ok(KeyAction::Continue),
+        }
+    }
+
+    fn handle_key_menu_open(
+        &self,
+        key: KeyEvent,
+        state: &mut LineEditState,
+    ) -> Result<KeyAction> {
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        match key.code {
+            KeyCode::Esc => {
+                state.menu = None;
+                state.suppressed_until_tab = true;
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Enter => {
+                if let Some(m) = state.menu.as_ref() {
+                    if let Some(cand) = m.candidates.get(m.highlight) {
+                        let (next, next_pos) =
+                            apply_candidate(&state.line, m.token_start, m.token_end, cand);
+                        state.line = next;
+                        state.cursor_byte = next_pos;
+                    }
+                }
+                state.menu = None;
+                state.clear_hist_browse();
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Up => {
+                if let Some(m) = state.menu.as_mut() {
+                    if m.highlight == 0 {
+                        state.menu = None;
+                    } else {
+                        m.highlight -= 1;
+                    }
+                }
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Down | KeyCode::Tab => {
+                if let Some(m) = state.menu.as_mut() {
+                    if !m.candidates.is_empty() {
+                        m.highlight = (m.highlight + 1) % m.candidates.len();
+                    }
+                }
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Char('c') if ctrl => {
+                state.menu = None;
+                Ok(KeyAction::Interrupt)
+            }
+            KeyCode::Backspace => {
+                if state.cursor_byte > 0 {
+                    let prev = prev_char_boundary(&state.line, state.cursor_byte);
+                    state.line.drain(prev..state.cursor_byte);
+                    state.cursor_byte = prev;
+                    state.clear_hist_browse();
+                }
+                self.open_or_refresh_menu(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Delete => {
+                if state.cursor_byte < state.line.len() {
+                    let next = next_char_boundary(&state.line, state.cursor_byte);
+                    state.line.drain(state.cursor_byte..next);
+                    state.clear_hist_browse();
+                }
+                self.open_or_refresh_menu(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Left => {
+                state.cursor_byte = prev_char_boundary(&state.line, state.cursor_byte);
+                self.open_or_refresh_menu(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Right => {
+                state.cursor_byte = next_char_boundary(&state.line, state.cursor_byte);
+                self.open_or_refresh_menu(state);
+                Ok(KeyAction::Continue)
+            }
+            KeyCode::Char(ch) if !ctrl && !key.modifiers.contains(KeyModifiers::ALT) => {
+                state.line.insert(state.cursor_byte, ch);
+                state.cursor_byte += ch.len_utf8();
+                state.clear_hist_browse();
+                self.open_or_refresh_menu(state);
+                Ok(KeyAction::Continue)
+            }
+            _ => Ok(KeyAction::Continue),
+        }
+    }
+
+    fn open_or_refresh_menu(&self, state: &mut LineEditState) {
+        let Some(hit) = complete_line(&state.line, state.cursor_byte) else {
+            state.menu = None;
+            return;
+        };
+        let candidates = sort_candidates(hit.candidates);
+        if candidates.is_empty() {
+            state.menu = None;
+            return;
+        }
+        let prev_hi_token = state
+            .menu
+            .as_ref()
+            .and_then(|m| m.candidates.get(m.highlight).cloned());
+        let highlight = prev_hi_token
+            .and_then(|tok| candidates.iter().position(|c| c == &tok))
+            .unwrap_or(0);
+        state.menu = Some(CandidateMenu {
+            token_start: hit.token_start,
+            token_end: hit.token_end,
+            candidates,
+            highlight,
+        });
+    }
+
+    fn history_up(&self, state: &mut LineEditState) {
+        if self.history.is_empty() {
+            return;
+        }
+        match state.hist_index {
+            None => {
+                state.hist_stash = Some(state.line.clone());
+                let idx = self.history.len() - 1;
+                state.hist_index = Some(idx);
+                state.line = self.history[idx].clone();
+                state.cursor_byte = state.line.len();
+            }
+            Some(0) => {}
+            Some(i) => {
+                let idx = i - 1;
+                state.hist_index = Some(idx);
+                state.line = self.history[idx].clone();
+                state.cursor_byte = state.line.len();
+            }
+        }
+    }
+
+    fn history_down(&self, state: &mut LineEditState) {
+        let Some(i) = state.hist_index else {
+            return;
+        };
+        if i + 1 >= self.history.len() {
+            state.hist_index = None;
+            state.line = state.hist_stash.take().unwrap_or_default();
+            state.cursor_byte = state.line.len();
+            return;
+        }
+        let idx = i + 1;
+        state.hist_index = Some(idx);
+        state.line = self.history[idx].clone();
+        state.cursor_byte = state.line.len();
+    }
+}
+
+enum KeyAction {
+    Continue,
+    Submit,
+    Interrupt,
+    Eof,
 }
 
 #[cfg(test)]
@@ -328,5 +754,30 @@ mod tests {
         let line = "tab -list --peers ";
         let hit = complete_line(line, line.len()).expect("hit");
         assert!(hit.candidates.iter().any(|c| c == "| browse"));
+    }
+
+    #[test]
+    fn apply_candidate_appends_trailing_space_at_eol() {
+        let line = "nav";
+        let (next, pos) = apply_candidate(line, 3, 3, "-exit");
+        assert_eq!(next, "nav -exit ");
+        assert_eq!(pos, next.len());
+    }
+
+    #[test]
+    fn apply_candidate_replaces_partial_token() {
+        let line = "sync -se";
+        let hit = complete_line(line, line.len()).expect("hit");
+        let candidate = pick_primary_candidate(&hit.candidates).expect("candidate");
+        let (next, pos) = apply_candidate(line, hit.token_start, hit.token_end, candidate);
+        assert_eq!(next, "sync -setup ");
+        assert_eq!(pos, next.len());
+    }
+
+    #[test]
+    fn apply_candidate_pipe_after_list() {
+        let line = "tab -list";
+        let (next, _) = apply_candidate(line, line.len(), line.len(), "| browse");
+        assert_eq!(next, "tab -list | browse ");
     }
 }

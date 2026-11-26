@@ -1156,6 +1156,43 @@ tab -list | browse
 
 ---
 
+### 20. CLI 候補メニュー（拡張 IME に近い操作感）
+
+**目標:** Interactive `BMXt>` のコマンド記入補助を、拡張の Tab 起点候補メニューに寄せる。データ SoT は従来どおり `bmxt_core::complete_line`。提示面だけを bash List から選択式オーバーレイへ置き換える。
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| トリガ | **Tab** で開く（入力だけでは自動オープンしない） |
+| 操作 | ↑↓ / Tab で移動 · Enter でトークン挿入（実行しない）· Esc で閉じて Tab まで抑制 |
+| 再フィルタ | メニュー開中の編集は `complete_line` を呼び直す |
+| 灰色ヒント | メニュー**閉**かつ行末のみ（Right で適用） |
+| 挿入文法 | `completion_replacement`（先頭空白）+ 行末は末尾空白（拡張 append と同方針） |
+| 非目標（本節） | Mozc 風ヘルプ列 · favicon 行 · rustyline 互換 · alternate-screen 候補 UI |
+| ドメイン picker | `hosts/cli/src/picker/` は従来どおり alternate-screen モーダル |
+
+**実装チェック**
+
+- [x] **20.0 契約:** CONTRACT / README に候補メニュー契約を追記
+- [x] **20.1 プロンプト:** rustyline Editor を廃止しメイン画面 crossterm ループへ
+- [x] **20.2 メニュー:** Tab 起点の選択式リスト + Esc suppress + 履歴↑↓（閉時）
+- [x] **20.3 挿入 / ヒント:** `apply_candidate` · grey remainder · pipe / second-tier 空白
+- [x] **20.4 ログ:** `repl_log` をプロンプトキュー sink に切替（ExternalPrinter 撤廃）
+- [x] **20.5 検証:** `cargo test -p bmxt-cli`
+
+**手元スモーク**
+
+- [ ] 空行 Tab → first-tier 一覧 · ↑↓ · Enter で挿入 · 再 Enter で実行
+- [ ] `sync -se` 灰色 `tup` · Tab メニューから `-setup` 確定
+- [ ] `tab -list` Tab → `| browse` を選んで挿入
+- [ ] Esc 後は Tab までメニューが開かない
+- [ ] 接続ログが `BMXt>` 待ち中にプロンプトを壊さない
+
+**参照:** plan `cli_candidate_menu` · `hosts/cli/src/shell.rs` · `_context/cli-peer/CONTRACT.md`
+
+---
+
 ## Archive（ポインタのみ）
 
 | 旧節 | 要約 |

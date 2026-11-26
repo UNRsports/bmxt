@@ -289,7 +289,7 @@ async fn command_repl(cfg: &mut CliConfig, seed: Option<Arc<BusClient>>) -> Resu
                 }
             }
         };
-        // EN: rustyline is sync; multi-thread runtime allows blocking here.
+        // EN: Prompt loop is sync (crossterm); multi-thread runtime allows blocking here.
         let outcome = tokio::task::block_in_place(|| shell.read_line(&prompt))?;
         let typed = match outcome {
             ReadOutcome::Line(s) => s,

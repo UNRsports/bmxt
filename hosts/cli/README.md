@@ -50,9 +50,11 @@ Same grammar as the extension (`bmxt-core`):
 3. **Direct start:** `bmxt` or `bmxt repl` → when Family is joined, CLI opens a **localhost HTTP listener** on `http://127.0.0.1:17653/` (loopback only, Family-authenticated). Open the BMXt prompt in each browser — Family-authenticated **auto-reconnect** runs in the background.
 4. **Fallback handshake** (clipboard / file) still works: `sync -offer` / `sync -accept` (Enter/`:pick`), or `bmxt sync-connect [--offer]`. Prefer ticket files under `~/.config/bmxt/`.
 5. With Family joined the prompt is **`BMXt>`** (accepting commands; peers may still be connecting). Extra browsers mesh automatically after the first CLI link. Unjoined Family uses `BMXt*>`.
-6. Connection events print as normal log lines; while `BMXt>` is waiting, logs use rustyline’s external printer so the prompt and caret redraw afterward.
-7. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a Rust line editor:
-   - **↑↓** command history · **grey remainder hint** (e.g. typed `sync -se` + grey `tup`; `nav` + grey ` -exit`) · **Tab** lists candidates on the next line and applies with a token-separating space · **Enter** runs
+6. Connection events print as normal log lines; while `BMXt>` is waiting, logs are queued and drained above the prompt so the caret redraws afterward.
+7. REPL uses the **same command grammar as the extension** (via `bmxt-core`), with a main-screen line editor (crossterm; not rustyline):
+   - **↑↓** command history · **grey remainder hint** when the menu is closed (e.g. `sync -se` + grey `tup`; `nav` + grey ` -exit`; **Right** at EOL applies the hint)
+   - **Tab** opens a selectable candidate menu under the prompt (extension-like): **↑↓** / **Tab** move · **Enter** inserts the token (does **not** run) · **Esc** dismisses until Tab · typing while open refilters via `complete_line`
+   - Prompt **Enter** (menu closed) runs the line
    - Tab after `-list` offers `| browse`…; after a typed `|`, Tab completes `browse` / `close` / …
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse` (picker assembles `tab -activate … --device …` [+`--focus` after y/N]; ↑↓ `/` Enter; stays open until q/Esc; live `tabs_changed`)
    - `tab -activate <tabId> --device <id> [--focus]` (oneshot; `--focus` brings the peer browser window forward)
@@ -165,9 +167,11 @@ cargo test -p bmxt-family -p bmxt-sync-wire
 3. **直接起動:** `bmxt` または `bmxt repl` → Family 参加済みなら **localhost HTTP 待ち受け** `http://127.0.0.1:17653/`（loopback のみ・Family 認証付き）。各ブラウザで BMXt プロンプトを開くと **自動再接続**が走る。
 4. **フォールバック握手**（コピペ／ファイル）も従来どおり: `sync -offer` / `sync -accept`（Enter / `:pick`）、または `bmxt sync-connect [--offer]`。`~/.config/bmxt/` のチケット推奨。
 5. Family 参加済みならプロンプトは **`BMXt>`**（コマンド受付中。peer 接続は並行しうる）。追加ブラウザは CLI 経由の mesh で自動直結。未参加時は `BMXt*>`。
-6. 接続イベントは通常のログ行として流す。`BMXt>` 待ち中は rustyline の external printer 経由で出し、ログ後にプロンプトとキャレットを描き直す。
-7. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ Rust 行編集:
-   - **↑↓** 履歴 · **灰色の残りヒント**（例: `sync -se` ＋ 灰色 `tup`、`nav` ＋ 灰色 ` -exit`）· **Tab** で次行に候補一覧＋トークン間スペース付き適用 · **Enter** で実行
+6. 接続イベントは通常のログ行として流す。`BMXt>` 待ち中はキュー経由でプロンプト上に出し、ログ後にプロンプトとキャレットを描き直す。
+7. REPL は拡張と **同じコマンド文法**（`bmxt-core`）+ メイン画面の行編集（crossterm · rustyline 不使用）:
+   - **↑↓** 履歴 · メニュー閉時の **灰色の残りヒント**（例: `sync -se` ＋ 灰色 `tup`、`nav` ＋ 灰色 ` -exit` · 行末 **Right** で適用）
+   - **Tab** でプロンプト下に選択式候補メニュー（拡張に近い操作）: **↑↓** / **Tab** 移動 · **Enter** でトークン挿入（**実行しない**）· **Esc** で閉じて Tab まで抑制 · 開いたままの入力は `complete_line` で再フィルタ
+   - メニュー閉時の **Enter** で行を実行
    - `-list` 後の Tab で `| browse` 等、既に `|` を打った右辺では `browse` / `close` 等を補完
    - `tab -list` · `tab -list -url --peers` · `tab -list --peers | browse`（picker は `tab -activate … --device …` を組み立て [開始時 y/N で `--focus`]；↑↓ `/` Enter；q/Esc まで開いたまま；`tabs_changed` ライブ更新）
    - `tab -activate <tabId> --device <id> [--focus]`（ワンショット。`--focus` で peer ブラウザを前面化）
