@@ -782,7 +782,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **6c** | Same PC (protocol can extend later) | **Copy-paste / file handshake** (`bmxt-rtc1.`) + **WebRTC DataChannel** (host ICE only); sleep → in-memory queue only |
 | **§11 (CLI localhost listener)** | Same PC · CLI running | **Localhost HTTP listener** `http://127.0.0.1:17653/` (loopback only, Family-authenticated hello + offer/answer). Extension auto-retries when the BMXt prompt opens. Clipboard / file stay full fallbacks. |
 
-**Current capability after connect:** `sync -ping` on the peer; cross-browser **`tab -list` / `search -list`** (and **`bookmark -list` / `history -list`** via the same search scopes) with `--device <id>` / `--peers` (DataChannel RPC); send URLs with `tab -send` / `tab -list | tab -send <deviceId>` (group titles preserved) and optional **`--close`**; send bookmarks with **`bookmark -send <deviceId> [--open|--save|--both]`** (open tabs and/or **`bookmarks_import`** on the peer); peer bookmark mutate via **`bookmarks_ops`** (create / create_folder / remove / move — extension + CLI); tab picker **`:move`** to a **remote window/tab/group row** copies to that peer (default; **`move --close`** for copy-then-close); **`tab -list --peers | browse`** can also **move / close / Enter-activate / reload** remote rows over **`tabs_ops`** within the same peer (group create / new-window on remote rows are still local-only). The **Terminal CLI peer** can list from one browser and open/send to another with **independent source / destination** picks (see **[Terminal CLI peer](#terminal-cli-peer)**). While a DataChannel is up, a vim-like status strip under the prompt lists connected peer display names; during final ICE/tunnel bring-up both sides show **Connecting...** and lock command input. **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
+**Current capability after connect:** `sync -ping` on the peer; cross-browser **`tab -list` / `search -list`** (and **`bookmark -list` / `history -list`** via the same search scopes) with `--device <id>` / `--peers` (DataChannel RPC); send URLs with `tab -send` / `tab -list | tab -send <deviceId>` (group titles preserved) and optional **`--close`**; send bookmarks with **`bookmark -send <deviceId> [--open|--save|--both]`** (open tabs and/or **`bookmarks_import`** on the peer); peer bookmark mutate via **`bookmarks_ops`** (create / create_folder / remove / move — extension + CLI); tab picker **`:move`** to a **remote window/tab/group row** copies to that peer (default; **`move --close`** for copy-then-close); **`tab -list --peers | browse`** can also **move / close / Enter-activate / reload** remote rows over **`tabs_ops`** within the same peer (group create / new-window on remote rows are still local-only). The **Terminal CLI peer** can list from one browser and open/send to another with **independent source / destination** picks, and can remote-drive peer **`nav`** / **`dom`** via **`nav_control`** / **`dom_list`** / **`probe_capabilities`** (see **[Terminal CLI peer](#terminal-cli-peer)**). While a DataChannel is up, a vim-like status strip under the prompt lists connected peer display names; during final ICE/tunnel bring-up both sides show **Connecting...** and lock command input. **Cross-PC** DataChannel would need extra reachability (roughly: signaling such as Firebase + WebRTC STUN, TURN when needed). **Drive / FSA workdirs are not the sync mainline.**
 
 **Family list refresh (`tabs_changed`):** After a successful Family tab mutation (`open_tabs` / `tabs_ops`, and local `--close` when used), BMXt broadcasts a lightweight **`tabs_changed`** signal to **all currently connected** Family peers (including notifying the sender). The payload carries **`first`** — a **first-command selection code** (today always **`tab`**; missing `first` from an older peer is treated as **`tab`**). A peer refreshes an open picker only when that code matches (tab picker reacts to **`first: "tab"`** only). Disconnected peers are not notified; they re-pull on the next `--peers` / `--device` list.
 
@@ -790,7 +790,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 **UX:** First Family join: **`sync -setup`** (or `-pair`). Handshake UI is a dedicated **wizard** under **`shared/lib/features/sync/wizard/`** (not a long terminal dump): **COPY** puts the Family invite (`bmxt1.…`) or handshake (`bmxt-rtc1.…`) on the clipboard; the peer pastes the code body in the wizard paste field. When the handshake completes, the wizard closes automatically. After disconnect: both sides **`sync -connect <peerDeviceId>`** with the same wizard flow, **or** reopen the BMXt prompt while the CLI localhost listener is up for Family-authenticated auto-reconnect. The setting picker sync panel only shows a setup guide and display-name edit.
 
-**Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`, **`sync_bookmark_send`**) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`bookmarks_ops`** / **`tabs_ops`** / **`tabs_changed`** (`first` + `reason`).
+**Module layout:** **`shared/lib/features/sync/`** (wizard · link status · bus RPCs). Host UI applies Wasm **`UiAction`** kinds (`sync_setup` … `sync_open`, **`sync_bookmark_send`**) via a thin facade. I/O goes through **stabilizers** (discovery / peer host / command bus / memory queue). Bus RPCs include `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`bookmarks_ops`** / **`tabs_ops`** / **`tabs_changed`** (`first` + `reason`) / **`probe_capabilities`** / **`dom_list`** / **`nav_control`**.
 
 **Peer host** is the **BMXt prompt window** (`bmxt.html`) only — no offscreen document and no dedicated peer tab. The DataChannel lasts while that window stays open (and until an explicit re-handshake replaces the session). ICE uses **host candidates only** (no public STUN/TURN on the local path).
 
@@ -800,7 +800,7 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 
 ### Terminal CLI peer (`hosts/cli`)
 
-**Status (todo §10–§16):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP. Shares the **BMXt POSIX Profile** I/O contract with the extension (todo §13); oneshot **`bmxt exec`** (todo §14); Profile gates when adding commands (todo §15); bookmark / history / cross-browser send parity (todo §16).
+**Status (todo §10–§20):** A Rust-only Family peer binary **`bmxt`** under **[`hosts/cli/`](hosts/cli/README.md)** talks to the browser extension over the **same WebRTC DataChannel bus** (host ICE, `bmxt-rtc1.`). No native messaging / CDP. Shares the **BMXt POSIX Profile** I/O contract with the extension (todo §13); oneshot **`bmxt exec`** (todo §14); Profile gates when adding commands (todo §15); bookmark / history / cross-browser send parity (todo §16); peer **`aboutbmxt` / `dom` / `nav`** over RPC (todo §17); independent ratatui pickers (todo §18); command-base pickers + optional **`--focus`** (todo §19); main-screen candidate menu (todo §20).
 
 | Topic | Current behavior |
 |-------|------------------|
@@ -808,17 +808,18 @@ Persistence while the BMXt window is open is **in the UI page** (React): **`useT
 | **One-shot (`exec`)** | With a resident REPL listening, `bmxt exec -- 'sync -status'` / `bmxt exec -- 'tab -list --peers'` runs **NonInteractive** on the resident (`POST /v1/exec`), prints **stdout/stderr**, and exits with the Profile status (LLM / scripts). No `| browse` / handshake ask / zenity. No resident → clear error, exit **1**, no hang. |
 | **Auto-connect** | Open the BMXt prompt in each browser — Family-authenticated connection setup to the CLI localhost listener retries in the background (todo §11). Unrelated localhost services that fail Family membership verification are ignored. Clipboard / file remain full fallbacks. |
 | **Prompt** | Family ready → **`BMXt>`** (accepting commands). Not in a Family → **`BMXt*>`**. |
-| **Connection logs** | Normal scrollback lines (`connection` / `datachannel` / `connected: …`). While `BMXt>` is waiting, async logs go through rustyline’s **ExternalPrinter** so the prompt and caret redraw afterward. ICE `checking` noise is suppressed. |
+| **Connection logs** | Normal scrollback lines (`connection` / `datachannel` / `connected: …`). While `BMXt>` is waiting, async logs are **queued and drained above the prompt** (crossterm main-screen redraw; not rustyline). ICE `checking` noise is suppressed. |
 | **Peer drop vs exit** | Last peer tunnel closes while the REPL stays up → i18n “peer closed; listener keeps running” (`LANG=ja*` → Japanese). **`quit` / `exit` / EOF** ends the **`bmxt` process** (no “still listening” claim). |
 | **Connect (fallback)** | `bmxt sync-connect [--offer]`, or REPL `sync -offer` / `sync -accept` (Enter / `:pick` via `zenity` / `kdialog`). |
 | **Handshake files** | Offer/answer JSON under `~/.config/bmxt/`; OSC-8 `file://` when supported. Prefer `@path.json` over bare `bmxt-rtc1.` paste. |
 | **UI settings / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json` (export v2 layout). Locale: committed → env → `en`. REPL: `setting -list` / `-set` (immediate save); `-save` / `-cancel` close aliases (todo §12). `| browse` for settings is CLI-only unsupported. |
-| **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `bookmark -list --device <id>`, `history -list --device \| browse`, `tab -send <deviceId> …`, `bookmark -send <deviceId> --open\|--save\|--both …`, `sync -ping <deviceId>`. |
-| **Line editor / Tab** | rustyline history (`↑↓`, `~/.config/bmxt/history`); **grey remainder hints**; **Tab** applies; **Enter** runs. After a list producer `-list`, Tab offers **`\| browse`** (and other pipe consumers). After a typed **`\|`**, Tab completes bare consumer names (`browse`, `close`, …). |
+| **Command grammar** | Same as the extension via **`bmxt-core`** (`default-features = false`, no WASM in the CLI link). Examples: `tab -list --peers \| browse`, `bookmark -list --device <id>`, `history -list --device \| browse`, `tab -send <deviceId> …`, `bookmark -send <deviceId> --open\|--save\|--both …`, `sync -ping <deviceId>`, `aboutbmxt` / `aboutbmxt -system`. |
+| **Line editor / Tab** | Main-screen line editor (**crossterm**; not rustyline). History (`↑↓`, `~/.config/bmxt/history`). **Grey remainder hint** is visual only while the candidate menu is closed (**Right** moves the caret only — never commits, same as the extension). **Tab** opens a candidate **overlay** from the **first command** (empty line → all first tokens): **↑↓** / **Tab** move · **Enter** rewrites that same base `BMXt>` line and may offer the next tier (**does not run**) · **Esc** dismisses until Tab · open **prefix** / open-while **contains** · replace span **reverse-video**. Prompt **Enter** (menu closed) runs the line. After a list producer `-list`, Tab offers **`\| browse`** (and other pipe consumers). After a typed **`\|`**, Tab completes bare consumer names (`browse`, `close`, …). |
 | **No local browser inventory** | CLI has no Chrome/Firefox APIs. Bare `bookmark -list` / `history -list` **fan out** to connected peers via **`search_query`** (flat hits). `bookmark -add` / `-folder` / `-remove` / `-move` go through peer **`bookmarks_ops`**. `history -delete*` is **unsupported** on CLI (peer history delete is out of scope). Backup/restore stay extension-only. |
 | **Source peer (`--device`)** | **`--device <id>`** lists that peer only (oneshot stdout). Bare **`--device`** (no id) is a valid plan: plain run → exit **2**; Interactive **`… --device \| browse`** → numbered connected-peer pick (auto-select when only one peer), then the existing URL/tab picker. Same for **`tab`** / **`bookmark`** / **`history`** / **`search -list`**. |
 | **Destination peer (open / send)** | Flat URL browse (`bookmark` / `history` / peer `search`): **Space** marks URLs → **Enter** → destination-peer list → **Tab** marks one or more peers → **Enter** opens on all marked (or the highlighted peer if none marked). **Source and destination are independent** (list from browser A, open/send to browser B). Typed CUI still uses **`tab -send <deviceId>`** / **`bookmark -send <deviceId> [--open\|--save\|--both]`** (and pipes). CLI **`--close`** is skipped (no local tabs). |
-| **Tab picker** | `tab -list --peers \| browse` opens a ratatui picker. **Enter** activates on the owning peer (ids are per-browser); picker **stays open** until **q** / **Esc**. Open picker **follows Family `tabs_changed`** (same `first: "tab"` rule as the extension) and re-fetches the list while preserving selection when possible. |
+| **Tab picker / `--focus`** | `tab -list --peers \| browse` opens a ratatui picker under **`hosts/cli/src/picker/`**. Pickers **assemble** typed lines (`tab -activate <tabId> --device <peerId> [--focus]`) and run them through **`run_line` / `DispatchBundle`** — no direct `tabs_ops` from Enter. One-time **y/N** before browse can add **`--focus`** (bring the peer browser window forward); oneshot `tab -activate … --focus` does the same. **Enter** activates on the owning peer (ids are per-browser); picker **stays open** until **q** / **Esc**. Open picker **follows Family `tabs_changed`** (same `first: "tab"` rule as the extension) and re-fetches the list while preserving selection when possible. |
+| **`aboutbmxt` / `dom` / `nav` (CLI)** | Shared grammar: **`aboutbmxt`** / **`aboutbmxt -system`** (welcome URL · CLI self-diag + peer **`probe_capabilities`**). **CLI-host only** (not shared extension grammar): oneshot **`dom -list --device <id> --tab <n> […]`** → stdout via **`dom_list`**; Interactive **`dom -wizard`** / **`nav -enter`** use peer→tab one-shot pickers, then drive the peer page overlay with **`nav_control`** (arrows = 24px free-move · Alt+arrows = 72px · Enter = `click` · **keeps terminal focus**; avoid Shift+arrows — many terminals steal them for scrollback). **`nav -exit`** disarms. Extension `dom` / `nav` display & local logic stay unchanged. |
 | **Mesh** | First peer via localhost listener or manual connection setup; additional Family peers join over in-band mesh (CLI acts as introducer; tab ops are not hub-relayed). |
 | **Build** | `cargo build -p bmxt-cli` → `target/debug/bmxt` (release: `cargo build --release -p bmxt-cli`). |
 | **Prebuilt** | GitHub Releases tagged **`cli-v*`** — see **[BMXtCLI GitHub Releases](#bmxt-cli-releases)** (binaries + `SHA256SUMS.txt`). |
@@ -873,7 +874,7 @@ echo $?   # Profile exit: 0 success · 1 failure · 2 misuse · 127 unknown
 
 **Tool-definition hint for agents (copy-paste):** “Resident `bmxt` is already listening on 127.0.0.1:17653. For each browser/Family action, run exactly one shell command of the form `./path/to/bmxt exec -- '<grammar line>'` via your normal shell tool. This is the BMXt oneshot client (HTTP POST), **not** the shell builtin `exec`, and it does **not** attach to the resident process stdin. Never start `bmxt` or `bmxt repl`. Never use bare `exec`.”
 
-**Out of scope for this host:** `nav` / `dom` page overlays, settings picker browse / FSA, peer history delete, CLI `bookmark|history -backup/-restore`, native messaging, public STUN/TURN on the default path, local CA / HTTPS CLI, true incremental chunk delivery over exec IPC, folder/date tree TUI on CLI (flat `search_query` only until todo §16.7). Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§16.
+**Out of scope for this host:** Painting `nav` / `dom` page overlays **inside the terminal** (peer overlay remote-control via `nav -enter` / `dom_*` RPC is in scope — todo §17); settings picker browse / FSA; peer history delete; CLI `bookmark|history -backup/-restore`; native messaging; public STUN/TURN on the default path; local CA / HTTPS CLI; true incremental chunk delivery over exec IPC; folder/date tree TUI on CLI (flat `search_query` only until todo §16.7). Contract: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · checklist: `_context/todo.md` §11–§20.
 
 <a id="bmxt-cli-releases"></a>
 
@@ -1409,6 +1410,8 @@ Canonical catalog: **`manifest/bmxt-rule.json`** (and **`LIST_KIND_TO_BMXT_RULE_
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** registry (`runCommand`), null-sink redirects, plain-list composition
 - **`lib/features/command-line/command-output.ts`** — stdout/stderr channels and session-log encoding (Rust mirror: **`bmxt_core::CommandOutput`**)
 - **`hosts/cli/src/command_io.rs`** — CLI aggregated sink + **`InteractionMode`** (Interactive REPL / NonInteractive `exec`)
+- **`hosts/cli/src/shell.rs`** / **`picker/`** / **`dom_nav_host.rs`** — CLI REPL candidate overlay · ratatui pickers · peer `dom`/`nav` RPC (todo §17–§20)
+- **`lib/features/sync/bus/apply-remote-dom-list.ts`** / **`apply-remote-nav-control.ts`** / **`apply-remote-probe-capabilities.ts`** — peer handlers for CLI remote `dom` / `nav` / probe
 - **`lib/features/command-line/pipe/`** — **`|`** pipe chains (`run-pipe-chain.ts`, **`pipe/consumers/`** registry · closed vocabulary)
 - **`lib/features/command-line/compound/`** — list operators **`&&` / `||` / `;`**, exit status (`EXIT_*`), sequential execution
 - **`lib/features/nav/`** — nav overlay (`nav -enter` / Alt toggle); see **[Nav mode](#nav-mode)**
@@ -1667,6 +1670,10 @@ Shared specs under **`tests/e2e/`** run on both Chrome and Firefox: command smok
 - `lib/features/command-line/commands/` — `CommandEntry` registry (`runCommand`), null-sink redirects
 - `lib/features/command-line/command-output.ts` — stdout/stderr channels and session-log encoding (Rust: `bmxt_core::CommandOutput`)
 - `hosts/cli/src/command_io.rs` — CLI `CommandIo` + `InteractionMode` (Interactive / NonInteractive `exec`)
+- `hosts/cli/src/shell.rs` — CLI REPL main-screen line editor + candidate overlay (todo §20)
+- `hosts/cli/src/picker/` — CLI ratatui pickers (tab / URL / peer / oneshot; mirrors extension `features/picker/` independently)
+- `hosts/cli/src/dom_nav_host.rs` — CLI peer `dom_list` / `nav_control` / `probe_capabilities` host
+- `lib/features/sync/bus/apply-remote-dom-list.ts` / `apply-remote-nav-control.ts` / `apply-remote-probe-capabilities.ts` — peer RPC handlers for CLI §17
 - `lib/features/command-line/pipe/` — pipe (`|`) chains and closed consumer registry
 - `lib/features/command-line/compound/` — list operators (`&&` / `||` / `;`), exit status (`EXIT_*`), sequential execution
 - `lib/features/job/` — Per-scope **`JobRunner`**, cancel handles, optional in-memory audit log (`job-audit-memory`)
@@ -1786,7 +1793,7 @@ This project is licensed under [Apache License 2.0](./LICENSE).
 3. ~~Add history and bookmark operations~~ — **done** (`bookmark` / `history` commands, Family `--open|--save|--both`, ZIP backup; see **[`bookmark`](#bookmark-command)** · **[`history`](#history-command)** · todo §9)
 4. Improve multi-terminal behavior
 5. Support pure command-line operation and additional automation flows
-6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer + localhost auto-connect + **`bmxt exec`** oneshot + Profile I/O gates + bookmark/history / cross-browser send (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10–§16); polish packaging / same-PC smoke
+6. **Terminal CLI peer (`hosts/cli`)** — Family DataChannel peer + localhost auto-connect + **`bmxt exec`** oneshot + Profile I/O gates + bookmark/history / cross-browser send + peer **`aboutbmxt`/`dom`/`nav`** + command-base pickers / **`--focus`** + main-screen candidate menu (see **[Terminal CLI peer](#terminal-cli-peer)** · todo §10–§20); polish packaging / same-PC smoke
 
 ---
 
@@ -2481,7 +2488,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 | **6c** | 同一 PC（プロトコルは後から拡張可） | **コピペ／ファイル握手**（`bmxt-rtc1.`）+ **WebRTC DataChannel**（host ICE のみ）。休眠時はメモリキューのみ |
 | **§11（CLI localhost 待ち受け）** | 同一 PC · CLI 起動時 | **localhost HTTP 待ち受け** `http://127.0.0.1:17653/`（loopback のみ・Family 認証付き hello + offer/answer）。BMXt プロンプト起動で拡張が自動リトライ。コピペ／ファイルはフォールバックとして存続 |
 
-**接続後の現状:** ピアへの `sync -ping`。横断 **`tab -list` / `search -list`**（および同じ search スコープ経由の **`bookmark -list` / `history -list`**）を `--device` / `--peers` で。URL 送信は **`tab -send`** / `tab -list | tab -send <deviceId>`（`--close` 可）。ブックマーク送信は **`bookmark -send <deviceId> [--open|--save|--both]`**（タブ open および／またはピア側 **`bookmarks_import`**）。ピア側ブックマーク変更は **`bookmarks_ops`**（create / create_folder / remove / move — 拡張 + CLI）。tab picker の **`:move`** で **リモート窓／タブ／グループ行** を宛先にするとコピー送信（**`move --close`** で移動相当）。同一ピア内のリモート行操作は **`tabs_ops`**（リモートのグループ作成／新窓は未対応）。**端末 CLI peer** は取得元／送信先ブラウザを独立して選べる（**[端末 CLI peer](#terminal-cli-peer-ja)**）。DataChannel 接続中はプロンプト下に接続ピア名の vim 風ステータス行を常時表示。最終の ICE／トンネル開通中は双方が **接続中...** を出しコマンド入力をロックする。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
+**接続後の現状:** ピアへの `sync -ping`。横断 **`tab -list` / `search -list`**（および同じ search スコープ経由の **`bookmark -list` / `history -list`**）を `--device` / `--peers` で。URL 送信は **`tab -send`** / `tab -list | tab -send <deviceId>`（`--close` 可）。ブックマーク送信は **`bookmark -send <deviceId> [--open|--save|--both]`**（タブ open および／またはピア側 **`bookmarks_import`**）。ピア側ブックマーク変更は **`bookmarks_ops`**（create / create_folder / remove / move — 拡張 + CLI）。tab picker の **`:move`** で **リモート窓／タブ／グループ行** を宛先にするとコピー送信（**`move --close`** で移動相当）。同一ピア内のリモート行操作は **`tabs_ops`**（リモートのグループ作成／新窓は未対応）。**端末 CLI peer** は取得元／送信先ブラウザを独立して選べ、**`nav_control`** / **`dom_list`** / **`probe_capabilities`** で peer の **`nav`** / **`dom`** を遠隔駆動できる（**[端末 CLI peer](#terminal-cli-peer-ja)**）。DataChannel 接続中はプロンプト下に接続ピア名の vim 風ステータス行を常時表示。最終の ICE／トンネル開通中は双方が **接続中...** を出しコマンド入力をロックする。**別 PC** で DataChannel 本線を維持するなら大枠はシグナリング（Firebase 等）+ WebRTC（STUN、不通時 TURN）。**Drive / FSA 作業ディレクトリは同期本線ではない。**
 
 **Family 一覧追従（`tabs_changed`）:** Family 経由のタブ変更（`open_tabs` / `tabs_ops`、および `--close` によるローカル閉じ）が成功すると、**いま接続中の全 Family ピア**へ軽量シグナル **`tabs_changed`** を广播する（送信元自身の購読者にも通知）。ペイロードの **`first`** は **第一コマンド選別符号**（現状は常に **`tab`**。旧ピアが欠落させたら **`tab`** 扱い）。受信側は符号が一致する開中 picker だけを再取得する（tab picker は **`first: "tab"`** のみ反応）。未接続ピアには届かない（次の `--peers` / `--device` 一覧で再取得）。
 
@@ -2489,7 +2496,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 **UX:** 初回 Family 参加は **`sync -setup`**（または `-pair`）。握手 UI は **`shared/lib/features/sync/wizard/`** の専用ウィザード（長いログダンプは本線にしない）。**COPY** で Family 招待（`bmxt1.…`）または握手（`bmxt-rtc1.…`）をクリップボードへ。相手はウィザードの貼付欄へコード本体を入れる。握手完了でウィザードは自動で閉じる。切断後は両側 **`sync -connect <peerDeviceId>`** のウィザード往復、**または** CLI localhost 待ち受け起動中に BMXt プロンプトを開き直して Family 認証付き自動再接続。setting picker の sync は案内と表示名編集のみ。
 
-**配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`、**`sync_bookmark_send`**）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`bookmarks_ops`** / **`tabs_ops`** / **`tabs_changed`**（`first` + `reason`）など。
+**配置:** **`shared/lib/features/sync/`**（wizard · link status · bus RPC）。Wasm **`UiAction`**（`sync_setup` … `sync_open`、**`sync_bookmark_send`**）を薄い facade 経由で適用。I/O は **スタビライザー**（discovery / peer / bus / memory queue）経由。バス RPC は `tabs_list` / `search_query` / `open_tabs` / **`bookmarks_import`** / **`bookmarks_ops`** / **`tabs_ops`** / **`tabs_changed`**（`first` + `reason`）/ **`probe_capabilities`** / **`dom_list`** / **`nav_control`** など。
 
 **peer 宿主**は **BMXt プロンプト窓**（`bmxt.html`）のみ（offscreen / 専用 peer タブなし）。DataChannel はその窓が開いている間（および明示的再握手で差し替えるまで）維持する。ICE は **ホスト候補のみ**（ローカル経路に公開 STUN/TURN なし）。
 
@@ -2499,7 +2506,7 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 
 ### 端末 CLI peer（`hosts/cli`）
 
-**現状（todo §10–§16）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。拡張と同一の **BMXt POSIX Profile** I/O（todo §13）· **`bmxt exec`** ワンショット（todo §14）· 追加時ゲート（todo §15）· bookmark / history / ブラウザ間送信パリティ（todo §16）。
+**現状（todo §10–§20）:** **[`hosts/cli/`](hosts/cli/README.md)** の Rust 専用 Family peer バイナリ **`bmxt`** が、拡張と同じ **WebRTC DataChannel バス**（host ICE · `bmxt-rtc1.`）でつながる。ネイティブメッセージング / CDP は使わない。拡張と同一の **BMXt POSIX Profile** I/O（todo §13）· **`bmxt exec`** ワンショット（todo §14）· 追加時ゲート（todo §15）· bookmark / history / ブラウザ間送信パリティ（todo §16）· peer **`aboutbmxt` / `dom` / `nav`** の RPC（todo §17）· 独立 ratatui picker（todo §18）· コマンド正本 + 任意 **`--focus`**（todo §19）· メイン画面候補メニュー（todo §20）。
 
 | 項目 | 現状 |
 |------|------|
@@ -2507,17 +2514,18 @@ BMXt ウィンドウが開いている間の保持は **UI ページ**（React�
 | **ワンショット（exec）** | 常駐 REPL 待ち受け中に `bmxt exec -- 'sync -status'` 等。常駐側 **NonInteractive**（`POST /v1/exec`）で実行し **stdout/stderr** を印刷、Profile の exit で終了。`| browse` / 握手 ask / zenity は禁止。未常駐は明確なエラー + exit **1**（ハングしない）。 |
 | **自動接続** | 各ブラウザで BMXt プロンプトを開くと、Family 認証付きで CLI 待ち受けへバックグラウンド再接続（todo §11）。Family 参加情報による認証に失敗した無関係な localhost サービスは無視。コピペ／ファイルはフォールバックとして存続。 |
 | **プロンプト** | Family 準備済み → **`BMXt>`**（コマンド受付）。未参加 → **`BMXt*>`**。 |
-| **接続ログ** | 通常のスクロール行（`connection` / `datachannel` / `connected: …`）。`BMXt>` 待ち中の非同期ログは rustyline の **ExternalPrinter** 経由で出し、プロンプトとキャレットを描き直す。ICE `checking` は抑制。 |
+| **接続ログ** | 通常のスクロール行（`connection` / `datachannel` / `connected: …`）。`BMXt>` 待ち中の非同期ログは **キュー経由でプロンプト上に排出し描き直し**（crossterm メイン画面。rustyline 不使用）。ICE `checking` は抑制。 |
 | **ピア切断と終了** | REPL 継続中に最後のピアが切れたときのみ「ピア切断・待ち受け継続」案内（`LANG=ja*` なら日本語）。**`quit` / `exit` / EOF** で **`bmxt` プロセス自体が終了**（「待ち受け継続」は出さない）。 |
 | **接続（フォールバック）** | `bmxt sync-connect [--offer]`、または REPL の `sync -offer` / `sync -accept`（Enter / `:pick`）。 |
 | **握手ファイル** | `~/.config/bmxt/` の offer/answer JSON。OSC-8 `file://` 対応時あり。`@path.json` 推奨。 |
 | **UI 設定 / i18n** | `~/.config/bmxt/bmxt-cli-ui-settings/settings.json`（export v2 同形）。locale: committed → env → `en`。REPL: `setting -list` / `-set`（即保存）；`-save` / `-cancel` は閉じる互換エイリアス（todo §12）。設定の `| browse` は CLI 非対応。 |
-| **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `bookmark -list --device <id>` · `history -list --device \| browse` · `tab -send <deviceId> …` · `bookmark -send <deviceId> --open\|--save\|--both …` · `sync -ping`。 |
-| **行編集 / Tab** | rustyline · 灰色ヒント · Tab / Enter。list プロデューサーの `-list` 後は **`\| browse`** 等を候補化。既に **`\|`** を打った右辺では `browse` / `close` など consumer 名を補完。 |
+| **コマンド文法** | 拡張と同じ（**`bmxt-core`** · CLI は WASM なし）。例: `tab -list --peers \| browse` · `bookmark -list --device <id>` · `history -list --device \| browse` · `tab -send <deviceId> …` · `bookmark -send <deviceId> --open\|--save\|--both …` · `sync -ping` · `aboutbmxt` / `aboutbmxt -system`。 |
+| **行編集 / Tab** | メイン画面の行編集（**crossterm** · rustyline 不使用）。履歴（`↑↓` · `~/.config/bmxt/history`）。候補メニュー閉時の **灰色ヒント**は表示のみ（**Right は確定しない** · キャレット移動のみ＝拡張同期）。**Tab** で**第一コマンドから**候補オーバーレイ（空行→第一全件）: **↑↓** / **Tab** 移動 · **Enter** で同じベース `BMXt>` 行を書き換え＋次ティア再表示可（**実行しない**）· **Esc** で Tab まで抑制 · 開時 **prefix** / 開中 **contains** · 置換対象は反転。メニュー閉時の **Enter** で行を実行。list プロデューサーの `-list` 後は **`\| browse`** 等を候補化。既に **`\|`** を打った右辺では `browse` / `close` など consumer 名を補完。 |
 | **ローカル在庫なし** | CLI に Chrome/Firefox API は無い。裸の `bookmark -list` / `history -list` は接続 peer へ **`search_query`** で fan-out（flat）。`bookmark -add` / `-folder` / `-remove` / `-move` は peer **`bookmarks_ops`**。`history -delete*` は CLI **非対応**（ピア履歴削除は対象外）。backup/restore は拡張のみ。 |
 | **取得元ピア（`--device`）** | **`--device <id>`** はその1台のみ一覧（ワンショット stdout）。ID なしの裸 **`--device`** はプランとして有効: 単独実行 → exit **2**；Interactive の **`… --device \| browse`** → 接続 peer を番号選択（1台なら自動）→ 既存の URL/タブ picker。**`tab`** / **`bookmark`** / **`history`** / **`search -list`** で同じ。 |
 | **送信先ピア（open / send）** | flat URL browse（`bookmark` / `history` / peer `search`）: **Space** で URL マーク → **Enter** → 送信先ピア一覧 → **Tab** で1台以上マーク → **Enter** で開く（未マーク時はハイライト peer）。**取得元と送信先は独立**（ブラウザ A から一覧し B へ開く／送る）。typed CUI は従来どおり **`tab -send <deviceId>`** / **`bookmark -send <deviceId> [--open\|--save\|--both]`**（パイプ可）。CLI の **`--close`** はローカルタブがないため無視。 |
-| **タブ picker** | `tab -list --peers \| browse` で ratatui picker。**Enter** で所有 peer へ activate（tab id はブラウザごと）。**q** / **Esc** まで開いたまま。開中は Family **`tabs_changed`**（拡張と同じ `first: "tab"`）で一覧を再取得し、可能なら選択位置を維持。 |
+| **タブ picker / `--focus`** | `tab -list --peers \| browse` で **`hosts/cli/src/picker/`** 配下の ratatui picker。picker は typed 行（`tab -activate <tabId> --device <peerId> [--focus]`）を**組み立て**、**`run_line` / `DispatchBundle`** 経由で実行（Enter から直接 `tabs_ops` しない）。browse 開始時の **y/N** で **`--focus`**（peer ブラウザ前面化）を付けられる。oneshot `tab -activate … --focus` も同様。**Enter** で所有 peer へ activate（tab id はブラウザごと）。**q** / **Esc** まで開いたまま。開中は Family **`tabs_changed`**（拡張と同じ `first: "tab"`）で一覧を再取得し、可能なら選択位置を維持。 |
+| **`aboutbmxt` / `dom` / `nav`（CLI）** | 共有文法: **`aboutbmxt`** / **`aboutbmxt -system`**（welcome URL · CLI 自己診断 + peer **`probe_capabilities`**）。**CLI host 専用**（拡張の共有文法には載せない）: ワンショット **`dom -list --device <id> --tab <n> […]`** → **`dom_list`** 経由で stdout。Interactive の **`dom -wizard`** / **`nav -enter`** は peer→tab ワンショット picker のあと、peer ページオーバーレイを **`nav_control`** で駆動（矢印=24px 移動 · Alt+矢印=72px · Enter=`click` · **端末フォーカス維持** · Shift+矢印は端末スクロールのため非使用）。**`nav -exit`** で解除。拡張側の `dom` / `nav` 表示・ローカル仕様は変えない。 |
 | **メッシュ** | 最初の peer は待ち受けまたは手動握手。以降は in-band メッシュ（CLI は紹介役。タブ操作のハブ中継はしない）。 |
 | **ビルド** | `cargo build -p bmxt-cli` → `target/debug/bmxt`。 |
 | **プレビルド** | GitHub Releases の **`cli-v*`** — **[BMXtCLI GitHub Releases](#bmxt-cli-releases-ja)**（バイナリ + `SHA256SUMS.txt`）。 |
@@ -2572,7 +2580,7 @@ echo $?   # Profile exit: 0 成功 · 1 失敗 · 2 misuse · 127 不明コマ�
 
 **エージェント向けツール定義のヒント（コピー用）:** 「常駐 `bmxt` は 127.0.0.1:17653 で待ち受け済み。ブラウザ／Family 操作のたびに、通常のシェルツールで `./path/to/bmxt exec -- '<文法行>'` をちょうど1回実行せよ。これは BMXt ワンショットクライアント（HTTP POST）であり、**シェル組み込みの `exec` ではない**。常駐プロセスの stdin にアタッチする必要もない。`bmxt` / `bmxt repl` は起動するな。裸の `exec` は使うな。」
 
-**この host の対象外:** `nav` / `dom` のページオーバーレイ、設定ピッカー browse / FSA、ピア履歴削除、CLI の `bookmark|history -backup/-restore`、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI、exec IPC の真のインクリメンタル配信、CLI 上のフォルダ／日付ツリー TUI（flat `search_query` のみ · todo §16.7 まで）。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§16。
+**この host の対象外:** **端末内**への `nav` / `dom` ページオーバーレイ描画（peer overlay の遠隔操作は todo §17 の範囲）、設定ピッカー browse / FSA、ピア履歴削除、CLI の `bookmark|history -backup/-restore`、ネイティブメッセージング、既定経路での公開 STUN/TURN、ローカル CA / HTTPS CLI、exec IPC の真のインクリメンタル配信、CLI 上のフォルダ／日付ツリー TUI（flat `search_query` のみ · todo §16.7 まで）。契約: [`_context/cli-peer/CONTRACT.md`](_context/cli-peer/CONTRACT.md) · チェックリスト: `_context/todo.md` §11–§20。
 
 <a id="bmxt-cli-releases-ja"></a>
 
@@ -3172,6 +3180,8 @@ WASM 予算: **`bmxt_core_bg.wasm` ≤ 400 KiB**。
 - **`lib/features/command-line/commands/`** — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト、plain-list 合成
 - **`lib/features/command-line/command-output.ts`** — stdout/stderr チャネルとセッションログ符号化（Rust: **`bmxt_core::CommandOutput`**）
 - **`hosts/cli/src/command_io.rs`** — CLI 集約シンク + **`InteractionMode`**（Interactive REPL / NonInteractive `exec`）
+- **`hosts/cli/src/shell.rs`** / **`picker/`** / **`dom_nav_host.rs`** — CLI REPL 候補オーバーレイ · ratatui picker · peer `dom`/`nav` RPC（todo §17–§20）
+- **`lib/features/sync/bus/apply-remote-dom-list.ts`** / **`apply-remote-nav-control.ts`** / **`apply-remote-probe-capabilities.ts`** — CLI 遠隔 `dom` / `nav` / probe 用 peer ハンドラ
 - **`lib/features/command-line/pipe/`** — パイプ（`|`）チェーン（**`pipe/consumers/`** レジストリ · 閉じた語彙）
 - **`lib/features/command-line/compound/`** — リスト演算子 **`&&` / `||` / `;`**、exit status（`EXIT_*`）、逐次実行
 - **`lib/features/nav/`** — nav オーバーレイ（**[Nav モード](#nav-mode-ja)**）
@@ -3414,6 +3424,10 @@ pnpm run dev
 - `lib/features/command-line/commands/` — **`CommandEntry`** レジストリ（`runCommand`）、null シンクリダイレクト
 - `lib/features/command-line/command-output.ts` — stdout/stderr チャネルとセッションログ符号化（Rust: `bmxt_core::CommandOutput`）
 - `hosts/cli/src/command_io.rs` — CLI `CommandIo` + `InteractionMode`（Interactive / NonInteractive `exec`）
+- `hosts/cli/src/shell.rs` — CLI REPL メイン画面行編集 + 候補オーバーレイ（todo §20）
+- `hosts/cli/src/picker/` — CLI ratatui picker（tab / URL / peer / oneshot。拡張 `features/picker/` を独立ミラー）
+- `hosts/cli/src/dom_nav_host.rs` — CLI peer の `dom_list` / `nav_control` / `probe_capabilities` host
+- `lib/features/sync/bus/apply-remote-dom-list.ts` / `apply-remote-nav-control.ts` / `apply-remote-probe-capabilities.ts` — CLI §17 向け peer RPC ハンドラ
 - `lib/features/command-line/pipe/` — パイプ（`|`）チェーンと閉じた consumer レジストリ
 - `lib/features/command-line/compound/` — リスト演算子（`&&` / `||` / `;`）、exit status（`EXIT_*`）、逐次実行
 - `lib/features/job/` — スコープ別 **`JobRunner`**、キャンセルハンドル、任意のメモリ内監査ログ（`job-audit-memory`）
@@ -3509,4 +3523,4 @@ pnpm run package:chrome   # .output/bmxt-<version>-chrome.zip を出力
 3. ~~履歴、ブックマーク操作~~ — **完了**（`bookmark` / `history` コマンド、Family `--open|--save|--both`、ZIP バックアップ。**[`bookmark`](#bookmark-command-ja)** · **[`history`](#history-command-ja)** · todo §9）
 4. 複数ターミナルでの動作
 5. 純粋なコマンドラインでの動作や各種自動処理系への対応など
-6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer + localhost 自動接続 + **`bmxt exec`** ワンショット + Profile I/O ゲート + bookmark/history／ブラウザ間送信（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10–§16）。配布／同一 PC スモークの磨き込み
+6. **端末 CLI peer（`hosts/cli`）** — Family DataChannel peer + localhost 自動接続 + **`bmxt exec`** ワンショット + Profile I/O ゲート + bookmark/history／ブラウザ間送信 + peer **`aboutbmxt`/`dom`/`nav`** + コマンド正本 picker / **`--focus`** + メイン画面候補メニュー（**[端末 CLI peer](#terminal-cli-peer-ja)** · todo §10–§20）。配布／同一 PC スモークの磨き込み
