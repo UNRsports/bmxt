@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: November 20, 2026</p>
+          <p class="muted">Last updated: November 26, 2026</p>
         </div>
       </header>
 
@@ -273,7 +273,9 @@
             <strong>UI settings</strong> — display locale, <strong>host-ui</strong> form factor
             (<code>auto</code> / <code>desktop</code> / <code>mobile</code>; Android defaults to mobile layout),
             terminal and picker appearance (colors, fonts,
-            sizes), and optional background images you import (<code>bmxt_ui_settings_v1</code>). Imported
+            sizes), optional <strong>prompt-fire</strong> typing/delete FX preference
+            (<code>on</code> / <code>off</code>), and optional background images you import
+            (<code>bmxt_ui_settings_v1</code>). Imported
             images are stored on your device as data URLs in this storage. Storage mode preference (internal
             extension storage vs. an external folder you pick with the File System Access API;
             <code>bmxt_ui_settings_storage_v1</code>). When external mode is on, <code>&gt; save setting</code>
@@ -586,6 +588,13 @@
           upload browsing data to UNRsports servers as part of showing welcome content.
         </p>
         <p>
+          On install or update, and when you run <code>aboutbmxt -system</code>, the Extension may
+          <strong>probe locally</strong> whether browser APIs BMXt relies on (for example tabs, windows,
+          tabGroups, bookmarks, history, scripting/host access, WebRTC, File System Access, and Translator)
+          are available, then print OK/NG lines in the BMXt terminal. That check stays on your device; results
+          are not uploaded to UNRsports servers.
+        </p>
+        <p>
           When the BMXt prompt shows <strong>support links</strong> (empty session log, or with the in-window
           upgrade notice), clicking a label opens a <strong>normal browser tab</strong> to an allowlisted
           destination only: the official product site (<code>https://bmxt.diozy.net/</code>) or a fixed
@@ -778,7 +787,8 @@
           <li>
             <strong>UI 設定</strong> — 表示言語、<strong>host-ui</strong>（PC／スマホ表示:
             <code>auto</code> / <code>desktop</code> / <code>mobile</code>。Android では mobile が既定）、
-            ターミナル／ピッカー外観（色・フォント・サイズ）、ユーザーが import
+            ターミナル／ピッカー外観（色・フォント・サイズ）、任意の <strong>prompt-fire</strong>
+            （入力／削除エフェクトの <code>on</code> / <code>off</code>）、ユーザーが import
             した背景画像（<code>bmxt_ui_settings_v1</code>）。import した画像は data URL として端末内 storage に保存。
             保存先モード（拡張機能内 storage か、File System Access API で選んだ外部フォルダか；
             <code>bmxt_ui_settings_storage_v1</code>）。外部モード時は <code>&gt; save setting</code> で
@@ -1060,6 +1070,12 @@
           ウェルカムページ（<code>https://unrsports.github.io/bmxt/welcome.html</code>。UI 言語と拡張機能バージョンの
           クエリ付き）を開くことがあります。これは通常のタブ閲覧と同様に GitHub Pages を経由します。ウェルカム表示の
           ために閲覧データを UNRsports のサーバーへアップロードする設計にはしていません。
+        </p>
+        <p>
+          インストール／更新時、および <code>aboutbmxt -system</code> 実行時には、BMXt が依存するブラウザ API
+          （tabs / windows / tabGroups / bookmarks / history / scripting+host / WebRTC / File System Access /
+          Translator 等）の可否を<strong>端末内で検査</strong>し、ターミナルに OK/NG 行を出すことがあります。
+          検査結果を UNRsports のサーバーへ送信する設計にはしていません。
         </p>
         <p>
           プロンプト上の<strong>サポートリンク</strong>（セッションログが空のとき、またはウィンドウ内アップグレード案内と併記）を

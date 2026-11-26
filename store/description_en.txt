@@ -33,6 +33,16 @@ This program is an experimental / trial build and may contain bugs. UNRsports (t
 Launch with the `launch-bmxt` shortcut (default Shift+Alt+C), then try `tutorial` or `tab -list | browse`.
 
 ◆Version history
+0.9.6:
+- Improved search command processing
+- Removed obsolete code
+- Added a setting to show effects while typing text
+- Improved the setting command implementation
+- Implemented a system check feature
+- Implemented pickers for the bookmark and history commands
+- Generalized the picker and reviewed its operating scope
+- Miscellaneous detail fixes across the board
+
 0.9.5:
 - Reviewed UI detail behavior and internal command and collaboration processing specifications
 
