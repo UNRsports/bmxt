@@ -112,32 +112,32 @@
     "en": "Non-interactive: group new <tabId>… [--title …] [--color …] | group add <groupId> <tabId…> | group rename <groupId> <title> | group ungroup <groupId>"
   },
   "cmd.move.usage.line1": {
-    "ja": "usage: move --window <windowId> [--before-tab <tabId>] [tabId…] | move --group <groupId> --window <windowId> [--before-tab <tabId>] [tabId…]",
-    "en": "usage: move --window <windowId> [--before-tab <tabId>] [tabId…] | move --group <groupId> --window <windowId> [--before-tab <tabId>] [tabId…]"
+    "ja": "usage: move --window <windowId> [--before-tab <tabId>] [--as-group <groupId>…] [tabId…] | move --group <groupId> --window <windowId> [--before-tab <tabId>] [tabId…]",
+    "en": "usage: move --window <windowId> [--before-tab <tabId>] [--as-group <groupId>…] [tabId…] | move --group <groupId> --window <windowId> [--before-tab <tabId>] [tabId…]"
   },
   "cmd.move.usage.line2": {
-    "ja": "  または move --ungroup --window <windowId> [tabId…] · `#t:… | move --window … [--before-tab …]`",
-    "en": "  Or move --ungroup --window <windowId> [tabId…] · `#t:… | move --window … [--before-tab …]`"
+    "ja": "  または move --ungroup --window <windowId> [tabId…] · `#t:… | move --window … [--as-group …]`",
+    "en": "  Or move --ungroup --window <windowId> [tabId…] · `#t:… | move --window … [--as-group …]`"
   },
   "cmd.move.usage.line3": {
-    "ja": "  例: move --window 1 --before-tab 50 12 34 · #t:12 #t:34 | move --group 5 --window 1",
-    "en": "  Examples: move --window 1 --before-tab 50 12 34 · #t:12 #t:34 | move --group 5 --window 1"
+    "ja": "  例: move --window 1 --as-group 10 --as-group 11 12 34 · #t:12 #t:34 | move --group 5 --window 1",
+    "en": "  Examples: move --window 1 --as-group 10 --as-group 11 12 34 · #t:12 #t:34 | move --group 5 --window 1"
   },
   "cmd.move.usage.line4": {
-    "ja": "  パイプ右辺は page.open のタブ ID をまとめて移動します。`--before-tab` はそのタブの直前へ挿入します。",
-    "en": "  As a pipe consumer, moves every page.open tab id from stdin. `--before-tab` inserts immediately before that tab."
+    "ja": "  パイプ右辺は page.open のタブ ID をまとめて移動します。`--as-group` はタブグループを単位のまま移します（1 グループずつ）。",
+    "en": "  As a pipe consumer, moves every page.open tab id from stdin. `--as-group` moves each tab group as a unit (one group at a time)."
   },
   "cmd.newWindow.usage.line1": {
-    "ja": "usage: new-window <tabId> [tabId…] | … | new-window",
-    "en": "usage: new-window <tabId> [tabId…] | … | new-window"
+    "ja": "usage: new-window [--as-group <groupId>…] <tabId> [tabId…] | … | new-window [--as-group …]",
+    "en": "usage: new-window [--as-group <groupId>…] <tabId> [tabId…] | … | new-window [--as-group …]"
   },
   "cmd.newWindow.usage.line2": {
-    "ja": "  例: new-window 12 34 · #t:12 #t:34 | new-window",
-    "en": "  Examples: new-window 12 34 · #t:12 #t:34 | new-window"
+    "ja": "  例: new-window --as-group 10 --as-group 11 12 34 · #t:12 #t:34 | new-window --as-group 10",
+    "en": "  Examples: new-window --as-group 10 --as-group 11 12 34 · #t:12 #t:34 | new-window --as-group 10"
   },
   "cmd.newWindow.usage.line3": {
-    "ja": "  パイプ右辺は page.open のタブを新しいウィンドウへ移します。",
-    "en": "  As a pipe consumer, moves page.open tabs into a new window."
+    "ja": "  パイプ右辺は page.open のタブを新しいウィンドウへ移します。`--as-group` はグループを維持したまま移します。",
+    "en": "  As a pipe consumer, moves page.open tabs into a new window. `--as-group` preserves those tab groups."
   },
   "cmd.nav.enter.detail": {
     "ja": "BMXt プロンプトで `nav -enter` を実行し、コマンドライン上で Alt でページカーソルを切り替えます。",

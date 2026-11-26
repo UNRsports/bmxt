@@ -11,20 +11,30 @@ before(() => {
 })
 
 describe("move pipe match", () => {
-  it("parses window / before-tab / ungroup flags", () => {
+  it("parses window / before-tab / ungroup / as-group flags", () => {
     assert.deepEqual(parseMovePipeSegment("move --window 1"), {
       windowId: 1,
       groupId: -1,
       ungroup: false,
-      beforeTabId: -1
+      beforeTabId: -1,
+      asGroupIds: []
     })
     assert.deepEqual(parseMovePipeSegment("move --window 1 --before-tab 42"), {
       windowId: 1,
       groupId: -1,
       ungroup: false,
-      beforeTabId: 42
+      beforeTabId: 42,
+      asGroupIds: []
+    })
+    assert.deepEqual(parseMovePipeSegment("move --window 1 --as-group 10 --as-group 11"), {
+      windowId: 1,
+      groupId: -1,
+      ungroup: false,
+      beforeTabId: -1,
+      asGroupIds: [10, 11]
     })
     assert.equal(isMovePipeConsumer("move --ungroup --group 1 --window 2"), false)
+    assert.equal(isMovePipeConsumer("move --group 1 --window 2 --as-group 9"), false)
   })
 
   it("accepts Firefox tab group ids that exceed i32::MAX", () => {
@@ -35,7 +45,8 @@ describe("move pipe match", () => {
       windowId: 1,
       groupId: 1_795_167_899_435_072,
       ungroup: false,
-      beforeTabId: 1
+      beforeTabId: 1,
+      asGroupIds: []
     })
     assert.equal(isMovePipeConsumer("move --group 1795167899435072 --window 1"), true)
   })

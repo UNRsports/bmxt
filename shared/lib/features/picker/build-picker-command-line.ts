@@ -59,11 +59,28 @@ export function buildSearchOpenCommandLine(
   return `open ${quoted}`
 }
 
+function formatAsGroupFlags(asGroupIds: readonly number[] | undefined): string {
+  if (asGroupIds === undefined || asGroupIds.length === 0) {
+    return ""
+  }
+  const parts: string[] = []
+  for (const gid of asGroupIds) {
+    if (Number.isFinite(gid) && gid >= 0) {
+      parts.push(`--as-group ${gid}`)
+    }
+  }
+  if (parts.length === 0) {
+    return ""
+  }
+  return ` ${parts.join(" ")}`
+}
+
 /**
- * EN: `#t:… | move --window <id> [--before-tab <id>]` / `--group` / `--ungroup`.
+ * EN: `#t:… | move --window <id> [--before-tab <id>] [--as-group <gid>…]` / `--group` / `--ungroup`.
  *     Picker MOVE uses insert *slots*: `--before-tab` = gap above that tab;
  *     omit = end of window (window-row slot).
  * JA: ピッカー MOVE は挿入スロット。`--before-tab`＝そのタブ直前、省略＝ウィンドウ末尾。
+ *     `--as-group` は移動元グループ単位（ウィンドウ宛のみ）。
  */
 export function buildTabMoveCommandLine(
   tabIds: readonly number[],
@@ -73,32 +90,49 @@ export function buildTabMoveCommandLine(
     ungroup?: boolean
     /** EN: Insert immediately before this tab; omit for end-of-window/group. */
     beforeTabId?: number
+    /** EN: Source Chrome tab group ids to move as units (window destination only). */
+    asGroupIds?: readonly number[]
   }
 ): string | null {
-  if (tabIds.length === 0 || opts.windowId < 0) {
+  if ((tabIds.length === 0 && (opts.asGroupIds?.length ?? 0) === 0) || opts.windowId < 0) {
     return null
   }
-  const chips = tabIds.map((id) => `#t:${id}`).join(" ")
+  const chips =
+    tabIds.length > 0
+      ? tabIds.map((id) => `#t:${id}`).join(" ")
+      : ""
   const before =
     opts.beforeTabId !== undefined &&
     Number.isFinite(opts.beforeTabId) &&
     opts.beforeTabId >= 0
       ? ` --before-tab ${opts.beforeTabId}`
       : ""
+  const pipePrefix = chips.length > 0 ? `${chips} | ` : ""
   if (opts.ungroup) {
-    return `${chips} | move --ungroup --window ${opts.windowId}${before}`
+    return `${pipePrefix}move --ungroup --window ${opts.windowId}${before}`
   }
   if (opts.groupId !== undefined && opts.groupId >= 0) {
-    return `${chips} | move --group ${opts.groupId} --window ${opts.windowId}${before}`
+    return `${pipePrefix}move --group ${opts.groupId} --window ${opts.windowId}${before}`
   }
-  return `${chips} | move --window ${opts.windowId}${before}`
+  const asGroups = formatAsGroupFlags(opts.asGroupIds)
+  return `${pipePrefix}move --window ${opts.windowId}${before}${asGroups}`
 }
 
-export function buildTabNewWindowCommandLine(tabIds: readonly number[]): string | null {
-  if (tabIds.length === 0) {
+/**
+ * EN: `#t:… | new-window [--as-group <gid>…]`.
+ * JA: `--as-group` で複数タブグループを一括指定（実行側は逐次 tabGroups.move）。
+ */
+export function buildTabNewWindowCommandLine(
+  tabIds: readonly number[],
+  opts?: { asGroupIds?: readonly number[] }
+): string | null {
+  const asGroups = formatAsGroupFlags(opts?.asGroupIds)
+  if (tabIds.length === 0 && asGroups.length === 0) {
     return null
   }
-  return `${tabIds.map((id) => `#t:${id}`).join(" ")} | new-window`
+  const chips =
+    tabIds.length > 0 ? `${tabIds.map((id) => `#t:${id}`).join(" ")} | ` : ""
+  return `${chips}new-window${asGroups}`
 }
 
 export function buildTabGroupAddCommandLine(

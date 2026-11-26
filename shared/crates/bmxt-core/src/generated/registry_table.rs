@@ -138,12 +138,12 @@ pub const COMMANDS: &[CmdMeta] = &[
     CmdMeta {
         name: "move",
         aliases: &[],
-        usage_primary: "move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>",
+        usage_primary: "move --window <id> [--before-tab <tabId>] [--as-group <gid>…] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>",
     },
     CmdMeta {
         name: "new-window",
         aliases: &[],
-        usage_primary: "new-window <tabId…> | … | new-window",
+        usage_primary: "new-window [--as-group <gid>…] <tabId…> | … | new-window [--as-group <gid>…]",
     },
     CmdMeta {
         name: "window",

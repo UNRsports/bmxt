@@ -14,16 +14,14 @@ import { tabIdsFromBmxtRuleStream } from "./stream-accepts-kinds.ts"
 import {
   isMovePipeConsumer,
   MOVE_ACCEPTS_BMXT_RULE_KINDS,
-  parseMovePipeSegment
+  parseMovePipeSegment,
+  type MovePipeFlags
 } from "./move-match.ts"
 import type { PipeConsumerEntry } from "./types.ts"
 
 export { isMovePipeConsumer, MOVE_ACCEPTS_BMXT_RULE_KINDS } from "./move-match.ts"
 
-function formatMoveSegment(
-  flags: { windowId: number; groupId: number; ungroup: boolean; beforeTabId: number },
-  tabIds: number[]
-): string {
+function formatMoveSegment(flags: MovePipeFlags, tabIds: number[]): string {
   const parts = ["move"]
   if (flags.ungroup) {
     parts.push("--ungroup")
@@ -33,6 +31,11 @@ function formatMoveSegment(
   parts.push("--window", String(flags.windowId))
   if (Number.isFinite(flags.beforeTabId) && flags.beforeTabId >= 0) {
     parts.push("--before-tab", String(flags.beforeTabId))
+  }
+  for (const gid of flags.asGroupIds) {
+    if (Number.isFinite(gid) && gid >= 0) {
+      parts.push("--as-group", String(gid))
+    }
   }
   for (const id of tabIds) {
     parts.push(String(id))
@@ -53,7 +56,7 @@ export async function runMoveFromBmxtRuleStream(
     ])
   }
   const tabIds = tabIdsFromBmxtRuleStream(stream)
-  if (tabIds.length === 0) {
+  if (tabIds.length === 0 && flags.asGroupIds.length === 0) {
     return segmentFailure("runtime", [tPipe("pipe.move.noTabs", locale)])
   }
   const outcome = await runBackgroundSegment(

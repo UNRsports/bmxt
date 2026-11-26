@@ -16,7 +16,7 @@ export type PipeConsumerClass =
   | { id: "forward" }
   | { id: "reload" }
   | { id: "jump" }
-  | { id: "new-window" }
+  | { id: "new-window"; asGroupIds: number[] }
   | { id: "tab-send"; deviceId: string; closeAfter: boolean }
   | {
       id: "open"
@@ -24,7 +24,14 @@ export type PipeConsumerClass =
       windowId?: number
       groupId?: number
     }
-  | { id: "move"; windowId: number; groupId: number; ungroup: boolean; beforeTabId: number }
+  | {
+      id: "move"
+      windowId: number
+      groupId: number
+      ungroup: boolean
+      beforeTabId: number
+      asGroupIds: number[]
+    }
   | { id: "bookmark-remove" }
   | { id: "bookmark-add"; parentId: string | null; dupMode: string }
   | { id: "bookmark-move"; parentId: string; index: number | null }
@@ -58,6 +65,19 @@ function isOpenMode(value: unknown): value is OpenPipeMode {
   )
 }
 
+function parseAsGroupIds(value: unknown): number[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  const out: number[] = []
+  for (const item of value) {
+    if (typeof item === "number" && Number.isFinite(item) && item >= 0) {
+      out.push(item)
+    }
+  }
+  return out
+}
+
 function parseClass(raw: unknown): PipeConsumerClass | null {
   if (raw === null || typeof raw !== "object") {
     return null
@@ -74,8 +94,11 @@ function parseClass(raw: unknown): PipeConsumerClass | null {
     case "forward":
     case "reload":
     case "jump":
-    case "new-window":
       return { id }
+    case "new-window": {
+      const asGroupIds = parseAsGroupIds(o.asGroupIds)
+      return { id: "new-window", asGroupIds }
+    }
     case "tab-send": {
       if (typeof o.deviceId !== "string" || typeof o.closeAfter !== "boolean") {
         return null
@@ -110,7 +133,8 @@ function parseClass(raw: unknown): PipeConsumerClass | null {
         windowId: o.windowId,
         groupId: o.groupId,
         ungroup: o.ungroup,
-        beforeTabId
+        beforeTabId,
+        asGroupIds: parseAsGroupIds(o.asGroupIds)
       }
     }
     case "bookmark-remove":

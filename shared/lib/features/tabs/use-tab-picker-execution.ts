@@ -44,6 +44,7 @@ import {
   buildTabNewWindowCommandLine,
   buildTabReloadCommandLine
 } from "../picker/build-picker-command-line.ts"
+import { chromeTabGroupIdsFromMarkedGroupKeys } from "./tab-picker-keyboard"
 
 export type TabPickerExecutionParams = {
   rows: TabPickerRow[]
@@ -318,11 +319,19 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
         if (!submitLine) {
           await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
         } else {
+          const asGroupIds =
+            markedKind === "group" &&
+            slotForMove.groupId === null &&
+            !slotForMove.ungroup &&
+            slotForMove.beforeTabId === null
+              ? chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys)
+              : []
           const line = buildTabMoveCommandLine(classified.tabIds, {
             windowId: slotForMove.windowId,
             groupId: slotForMove.groupId !== null ? slotForMove.groupId : undefined,
             ungroup: slotForMove.ungroup,
-            beforeTabId: slotForMove.beforeTabId !== null ? slotForMove.beforeTabId : undefined
+            beforeTabId: slotForMove.beforeTabId !== null ? slotForMove.beforeTabId : undefined,
+            asGroupIds: asGroupIds.length > 0 ? asGroupIds : undefined
           })
           if (line !== null) {
             clearMarkedViaReducer()
@@ -343,6 +352,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
     clearMarkedViaReducer,
     executeFamilySendAtDest,
     locale,
+    markedGroupKeys,
+    markedKind,
     moveCloseAfter,
     moveDestHi,
     onAppendLog,
@@ -416,7 +427,13 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
       await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
       return
     }
-    const line = buildTabNewWindowCommandLine(selectedTabIds)
+    const asGroupIds =
+      markedKind === "group"
+        ? chromeTabGroupIdsFromMarkedGroupKeys(markedGroupKeys)
+        : []
+    const line = buildTabNewWindowCommandLine(selectedTabIds, {
+      asGroupIds: asGroupIds.length > 0 ? asGroupIds : undefined
+    })
     if (line === null) {
       await onAppendLog?.([tTabs("tabs.picker.error.executeFailed", locale)])
       return
@@ -426,6 +443,8 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
   }, [
     clearMarkedViaReducer,
     locale,
+    markedGroupKeys,
+    markedKind,
     onAppendLog,
     selectedTabIds,
     submitLine
@@ -732,11 +751,19 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
               moveSlot.beforeTabId,
               classified.tabIds
             )
+            const asGroupIds =
+              snapshot.markedKind === "group" &&
+              moveSlot.groupId === null &&
+              !moveSlot.ungroup &&
+              beforeTabId === null
+                ? chromeTabGroupIdsFromMarkedGroupKeys(snapshot.markedGroupKeys)
+                : []
             const line = buildTabMoveCommandLine(classified.tabIds, {
               windowId: moveSlot.windowId,
               groupId: moveSlot.groupId !== null ? moveSlot.groupId : undefined,
               ungroup: moveSlot.ungroup,
-              beforeTabId: beforeTabId !== null ? beforeTabId : undefined
+              beforeTabId: beforeTabId !== null ? beforeTabId : undefined,
+              asGroupIds: asGroupIds.length > 0 ? asGroupIds : undefined
             })
             if (line !== null) {
               clearMarkedViaReducer()
@@ -761,7 +788,13 @@ export function useTabPickerExecution(p: TabPickerExecutionParams) {
             }
           }
           if (intent === "executeNewWindow" && classified.tabIds.length > 0) {
-            const line = buildTabNewWindowCommandLine(classified.tabIds)
+            const asGroupIds =
+              snapshot.markedKind === "group"
+                ? chromeTabGroupIdsFromMarkedGroupKeys(snapshot.markedGroupKeys)
+                : []
+            const line = buildTabNewWindowCommandLine(classified.tabIds, {
+              asGroupIds: asGroupIds.length > 0 ? asGroupIds : undefined
+            })
             if (line !== null) {
               clearMarkedViaReducer()
               setBulkSubMode(null)

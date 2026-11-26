@@ -1,4 +1,8 @@
 import { moveTabsContiguous } from "./move-tabs-contiguous"
+import {
+  filterTabIdsNotInSet,
+  moveTabGroupsAsUnits
+} from "./move-tab-groups-as-units"
 
 type MovePlan = {
   targetKind: "tab" | "window" | "group"
@@ -83,17 +87,12 @@ export async function executeMoveAction(params: {
     const winId = plan.targetWindowId
     const groupIds = plan.tabGroupIdsToMoveAsUnits ?? []
     if (groupIds.length > 0) {
-      const movedTabIds = new Set<number>()
-      for (const gid of groupIds) {
-        const tabsInGroup = await chrome.tabs.query({ groupId: gid })
-        for (const t of tabsInGroup) {
-          if (t.id !== undefined) {
-            movedTabIds.add(t.id)
-          }
-        }
-        await chrome.tabGroups.move(gid, { windowId: winId, index: -1 })
-      }
-      const rest = toMove.filter((id) => !movedTabIds.has(id))
+      const { movedTabIds } = await moveTabGroupsAsUnits({
+        groupIds,
+        windowId: winId,
+        index: -1
+      })
+      const rest = filterTabIdsNotInSet(toMove, movedTabIds)
       if (rest.length > 0) {
         await moveTabsContiguous(rest, winId, -1)
       }
@@ -148,17 +147,15 @@ export async function executeNewWindowAction(params: {
       return
     }
     const keepIds = new Set(selectedTabIds)
-    const movedTabIds = new Set<number>()
-    for (const gid of groupIds) {
-      const tabsInGroup = await chrome.tabs.query({ groupId: gid })
-      for (const t of tabsInGroup) {
-        if (t.id !== undefined) {
-          movedTabIds.add(t.id)
-        }
-      }
-      await chrome.tabGroups.move(gid, { windowId: newWinId, index: -1 })
+    const { movedTabIds } = await moveTabGroupsAsUnits({
+      groupIds,
+      windowId: newWinId,
+      index: -1
+    })
+    for (const id of movedTabIds) {
+      keepIds.add(id)
     }
-    const rest = orderedIds.filter((id) => !movedTabIds.has(id))
+    const rest = filterTabIdsNotInSet(orderedIds, movedTabIds)
     if (rest.length > 0) {
       await chrome.tabs.move(rest, { windowId: newWinId, index: -1 })
     }

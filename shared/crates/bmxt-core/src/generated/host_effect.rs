@@ -180,6 +180,7 @@ pub enum HostEffect {
     TabsMove {
     before_tab_id: i64,
     group_id: i64,
+    group_ids: Vec<i64>,
     tab_ids: Vec<i64>,
     window_id: i64,
     },
@@ -189,6 +190,7 @@ pub enum HostEffect {
     },
     #[serde(rename = "tabs_new_window")]
     TabsNewWindow {
+    group_ids: Vec<i64>,
     tab_ids: Vec<i64>,
     },
     #[serde(rename = "tabs_nu")]

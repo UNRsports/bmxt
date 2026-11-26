@@ -30,7 +30,11 @@ pub enum PipeConsumerClass {
     #[serde(rename = "jump")]
     Jump,
     #[serde(rename = "new-window")]
-    NewWindow,
+    NewWindow {
+        /// EN: Source tab group ids to move as units (`--as-group`).
+        #[serde(rename = "asGroupIds", default, skip_serializing_if = "Vec::is_empty")]
+        as_group_ids: Vec<i64>,
+    },
     #[serde(rename = "tab-send")]
     TabSend {
         #[serde(rename = "deviceId")]
@@ -56,6 +60,9 @@ pub enum PipeConsumerClass {
         /// EN: Insert immediately before this tab id; `-1` = end of window/group.
         #[serde(rename = "beforeTabId")]
         before_tab_id: i64,
+        /// EN: Source tab group ids to move as units (`--as-group`).
+        #[serde(rename = "asGroupIds", default, skip_serializing_if = "Vec::is_empty")]
+        as_group_ids: Vec<i64>,
     },
     #[serde(rename = "bookmark-remove")]
     BookmarkRemove,
@@ -215,6 +222,25 @@ fn parse_open(parts: &[String]) -> Option<PipeConsumerClass> {
     })
 }
 
+fn parse_new_window(parts: &[String]) -> Option<PipeConsumerClass> {
+    if parts.is_empty() || !resolves_to_canonical(&parts[0], "new-window") {
+        return None;
+    }
+    let mut as_group_ids: Vec<i64> = Vec::new();
+    let mut i = 1usize;
+    while i < parts.len() {
+        let token = parts[i].as_str();
+        if token == "--as-group" {
+            let id = parts.get(i + 1)?.parse::<i64>().ok().filter(|n| *n >= 0)?;
+            as_group_ids.push(id);
+            i += 2;
+            continue;
+        }
+        return None;
+    }
+    Some(PipeConsumerClass::NewWindow { as_group_ids })
+}
+
 fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
     if parts.is_empty() || normalize_token(&parts[0]) != "move" {
         return None;
@@ -224,6 +250,7 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
     let mut group_id = -1_i64;
     let mut before_tab_id = -1_i64;
     let mut ungroup = false;
+    let mut as_group_ids: Vec<i64> = Vec::new();
     let mut i = 1usize;
     while i < parts.len() {
         let token = parts[i].as_str();
@@ -242,6 +269,12 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
             i += 2;
             continue;
         }
+        if token == "--as-group" {
+            let id = parts.get(i + 1)?.parse::<i64>().ok().filter(|n| *n >= 0)?;
+            as_group_ids.push(id);
+            i += 2;
+            continue;
+        }
         if token == "--ungroup" {
             ungroup = true;
             i += 1;
@@ -255,11 +288,15 @@ fn parse_move(parts: &[String]) -> Option<PipeConsumerClass> {
     if ungroup && group_id >= 0 {
         return None;
     }
+    if (ungroup || group_id >= 0) && !as_group_ids.is_empty() {
+        return None;
+    }
     Some(PipeConsumerClass::Move {
         window_id,
         group_id,
         ungroup,
         before_tab_id,
+        as_group_ids,
     })
 }
 
@@ -397,7 +434,7 @@ pub fn classify_pipe_consumer(segment: &str) -> Option<PipeConsumerClass> {
     if let Some(c) = parse_move(&parts) {
         return Some(c);
     }
-    if let Some(c) = classify_bare_canonical(&parts, "new-window", PipeConsumerClass::NewWindow) {
+    if let Some(c) = parse_new_window(&parts) {
         return Some(c);
     }
     if let Some(c) = classify_bare_canonical(&parts, "back", PipeConsumerClass::Back) {
@@ -530,6 +567,7 @@ mod tests {
                 group_id: -1,
                 ungroup: false,
                 before_tab_id: -1,
+                as_group_ids: vec![],
             })
         );
         assert_eq!(
@@ -539,6 +577,7 @@ mod tests {
                 group_id: -1,
                 ungroup: true,
                 before_tab_id: -1,
+                as_group_ids: vec![],
             })
         );
         assert_eq!(
@@ -548,6 +587,29 @@ mod tests {
                 group_id: -1,
                 ungroup: false,
                 before_tab_id: 42,
+                as_group_ids: vec![],
+            })
+        );
+        assert_eq!(
+            classify_pipe_consumer("move --window 1 --as-group 10 --as-group 11"),
+            Some(PipeConsumerClass::Move {
+                window_id: 1,
+                group_id: -1,
+                ungroup: false,
+                before_tab_id: -1,
+                as_group_ids: vec![10, 11],
+            })
+        );
+        assert_eq!(
+            classify_pipe_consumer("new-window"),
+            Some(PipeConsumerClass::NewWindow {
+                as_group_ids: vec![],
+            })
+        );
+        assert_eq!(
+            classify_pipe_consumer("new-window --as-group 10 --as-group 11"),
+            Some(PipeConsumerClass::NewWindow {
+                as_group_ids: vec![10, 11],
             })
         );
         // EN: Firefox tabGroups ids can exceed i32::MAX.
@@ -560,9 +622,14 @@ mod tests {
                 group_id: 1_795_167_899_435_072,
                 ungroup: false,
                 before_tab_id: 1,
+                as_group_ids: vec![],
             })
         );
         assert_eq!(classify_pipe_consumer("move --ungroup --group 1 --window 2"), None);
+        assert_eq!(
+            classify_pipe_consumer("move --group 1 --window 2 --as-group 9"),
+            None
+        );
     }
 
     #[test]

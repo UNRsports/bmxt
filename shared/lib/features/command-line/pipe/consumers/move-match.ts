@@ -1,4 +1,4 @@
-/** EN: `move --window …` / `--group …` / `--ungroup` as pipe consumer — judgment via WASM. */
+/** EN: `move --window …` / `--group …` / `--ungroup` / `--as-group …` as pipe consumer — judgment via WASM. */
 
 import { classifyPipeConsumer } from "./classify.ts"
 
@@ -10,6 +10,8 @@ export type MovePipeFlags = {
   ungroup: boolean
   /** EN: `-1` means end of window/group (no `--before-tab`). */
   beforeTabId: number
+  /** EN: Source tab group ids to move as units (`--as-group`). */
+  asGroupIds: number[]
 }
 
 export function parseMovePipeSegment(segment: string): MovePipeFlags | null {
@@ -21,7 +23,8 @@ export function parseMovePipeSegment(segment: string): MovePipeFlags | null {
     windowId: classified.windowId,
     groupId: classified.groupId,
     ungroup: classified.ungroup,
-    beforeTabId: classified.beforeTabId
+    beforeTabId: classified.beforeTabId,
+    asGroupIds: classified.asGroupIds
   }
 }
 

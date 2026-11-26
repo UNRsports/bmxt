@@ -129,12 +129,12 @@ export const COMMANDS: readonly CmdMeta[] = [
   {
     name: "move",
     aliases: [] as const,
-    usagePrimary: "move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>"
+    usagePrimary: "move --window <id> [--before-tab <tabId>] [--as-group <gid>…] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>"
   },
   {
     name: "new-window",
     aliases: [] as const,
-    usagePrimary: "new-window <tabId…> | … | new-window"
+    usagePrimary: "new-window [--as-group <gid>…] <tabId…> | … | new-window [--as-group <gid>…]"
   },
   {
     name: "window",

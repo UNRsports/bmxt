@@ -4,7 +4,7 @@
  */
 
 export type HostEffect =
-  | { before_tab_id: number; group_id: number; kind: "tabs_move"; tab_ids: number[]; window_id: number }
+  | { before_tab_id: number; group_id: number; group_ids: number[]; kind: "tabs_move"; tab_ids: number[]; window_id: number }
   | { color: string; kind: "group_new"; tab_ids: number[]; title: string }
   | { device_id: string; device_scope: string; dispatch_line: string; kind: "search_list"; peer_dispatch_line: string }
   | { device_id: string; device_scope: string; folder_id: string; kind: "bookmark_list" }
@@ -18,6 +18,7 @@ export type HostEffect =
   | { group_id: number; kind: "group_rename"; title: string }
   | { group_id: number; kind: "group_ungroup" }
   | { group_id: number; kind: "open_url_into_group"; url: string; window_id: number }
+  | { group_ids: number[]; kind: "tabs_new_window"; tab_ids: number[] }
   | { ids: string; index: string; kind: "bookmark_move"; parent_id: string }
   | { ids: string; kind: "bookmark_remove" }
   | { kind: "bookmark_create_folder"; parent_id: string; title: string }
@@ -45,7 +46,6 @@ export type HostEffect =
   | { kind: "tab_go_forward"; tab_ids: number[] }
   | { kind: "tab_reload"; tab_ids: number[] }
   | { kind: "tabs_move_url"; url: string }
-  | { kind: "tabs_new_window"; tab_ids: number[] }
   | { kind: "tabs_nu" }
 
 export type DispatchMsg = { key: string; params?: Record<string, string> }

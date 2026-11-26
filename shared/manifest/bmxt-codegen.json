@@ -593,14 +593,14 @@
       "module": "move_cmd",
       "canonicalName": "move",
       "aliases": [],
-      "usagePrimary": "move --window <id> [--before-tab <tabId>] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>",
+      "usagePrimary": "move --window <id> [--before-tab <tabId>] [--as-group <gid>…] [tabId…] | move --group <gid> --window <wid> [--before-tab <tabId>] [tabId…] | … | move --window <id>",
       "subcommands": []
     },
     {
       "module": "new_window",
       "canonicalName": "new-window",
       "aliases": [],
-      "usagePrimary": "new-window <tabId…> | … | new-window",
+      "usagePrimary": "new-window [--as-group <gid>…] <tabId…> | … | new-window [--as-group <gid>…]",
       "subcommands": []
     },
     {
@@ -751,7 +751,8 @@
         "tab_ids": "vec_i32",
         "window_id": "i32",
         "group_id": "i32",
-        "before_tab_id": "i32"
+        "before_tab_id": "i32",
+        "group_ids": "vec_i32"
       },
       "tsHandlerFile": "tabs-move",
       "tsHandlerExport": "applyTabsMoveEffect"
@@ -761,7 +762,8 @@
       "rustVariant": "TabsNewWindow",
       "shape": "record",
       "fields": {
-        "tab_ids": "vec_i32"
+        "tab_ids": "vec_i32",
+        "group_ids": "vec_i32"
       },
       "tsHandlerFile": "tabs-new-window",
       "tsHandlerExport": "applyTabsNewWindowEffect"
