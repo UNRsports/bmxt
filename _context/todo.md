@@ -1002,6 +1002,83 @@ CLI
 
 **参照:** plan `cli_dom_nav_about` · §10 · §13–15 · `shared/lib/features/dom/` · `shared/lib/features/nav/nav-tab-bridge.ts` · `shared/lib/features/capability/` · `hosts/cli/` · skill `bmxt-add-command` · `_context/cli-peer/CONTRACT.md`
 
+### 18. CLI `nav`/`dom` ウィザードを ratatui picker 化し、picker を独立ディレクトリへ
+
+**前提:** §17（`nav_control` / `dom_list` RPC · CLI host 専用 wizard · 共有コアの `nav`/`dom` 表示仕様は変えない）· §10（端末 overlay 非描画）· §14–15（Interactive のみ）。plan `cli_nav_picker_wizard`。
+
+**目標:**
+
+1. `nav -enter` を `dom -wizard` と同様、**実施ピア選択 → 実施ページ（tab）選択**のウィザードにする
+2. 各選択は `tab -list | browse` と同じ **ratatui picker**（↑↓ `/` Enter / q）にする
+3. picker 機能自体を拡張の `shared/lib/features/picker/` に倣い、CLI Rust では **`hosts/cli/src/picker/` 独立ディレクトリ**で管理する
+
+**現状ギャップ**
+
+| 面 | 状態 |
+|----|------|
+| `tab -list \| browse` | ratatui `run_tab_picker`（Enter=activate・開きっぱなし · live refresh）が [`hosts/cli/src/tui.rs`](hosts/cli/src/tui.rs) に同居 |
+| `nav -enter` / `dom -wizard` | peer は `pick_peer_by_number`（stderr+stdin 番号）、tab/scope/flavor も番号選択 |
+| ディレクトリ | picker 実装が `tui.rs` 一枚 (~751 行)。拡張側のような独立 `picker/` がない |
+
+**製品方針（決定済み）**
+
+| 項目 | 内容 |
+|------|------|
+| 共有コア / 拡張 | **変更しない**（`NavArm` のまま。peer/tab 選択は CLI host 専用） |
+| `nav -enter` | Interactive: peer picker → tab one-shot picker → 既存 `nav_control` Start / key loop / Stop |
+| `dom -wizard` | 同じ peer/tab picker に統一。scope / flavor も同ディレクトリの短い one-shot list |
+| tab browse | Enter=activate・開きっぱなしの意味は維持（one-shot とは API 分離） |
+| `--device/--tab` oneshot for nav | **本節では入れない**（要求はウィザード UI） |
+| NonInteractive | 現状どおり wizard / キーループ拒否 |
+
+**アーキテクチャ（要約）**
+
+```
+hosts/cli/src/picker/          ← 拡張 features/picker 相当（独立ディレクトリ）
+  mod.rs / terminal.rs
+  tab.rs      run_tab_picker（browse）· pick_tab_once（wizard）
+  url.rs      run_url_picker
+  peer.rs     pick_peer（ratatui one-shot · 番号入力廃止）
+  oneshot.rs  汎用 short list（scope/flavor 等）
+
+nav -enter / dom -wizard  → picker::peer → picker::tab oneshot → RPC
+tab -list | browse        → picker::tab live（既存意味）
+```
+
+| Path（想定） | 役割 |
+|--------------|------|
+| `hosts/cli/src/picker/` | ratatui picker 実装の単一の置き場（`tui.rs` から移設） |
+| `hosts/cli/src/dom_nav_host.rs` | wizard オーケストレーションのみ（番号 UI を持たない） |
+| `hosts/cli/src/adapter.rs` | `tui::` → `picker::` 参照置換 · bare `--device` も `pick_peer` |
+| `hosts/cli/src/tui.rs` | デモ薄いラッパに縮小、または削除して `picker` へ寄せる |
+| `_context/cli-peer/CONTRACT.md` · README | picker ディレクトリ · nav/dom wizard UX |
+
+**実装チェック（段階）**
+
+- [ ] **18.0 契約:** 本節を `CONTRACT.md` / README に追記（CLI picker dir · nav/dom wizard = ratatui）
+- [ ] **18.1 移設:** `tui.rs` → `hosts/cli/src/picker/{mod,terminal,tab,url,peer,oneshot}.rs` · `main.rs` に `mod picker` · 呼び出しを `picker::` へ
+- [ ] **18.2 one-shot API:** `pick_peer` · `pick_tab_once`（Enter で閉じて返す · activate しない）· scope/flavor 用 short oneshot
+- [ ] **18.3 `nav` wizard:** `run_nav_enter_session` を peer→tab picker → key loop に変更
+- [ ] **18.4 `dom` wizard:** `run_dom_wizard` の peer/tab/scope/flavor を同 picker に統一
+- [ ] **18.5 検証:** `cargo check -p bmxt-cli` · `check:cli-command-io` · i18n（必要なら）· 手元スモーク
+
+**手元スモーク**
+
+- [ ] REPL: `nav -enter` → peer picker → tab picker → キーが peer overlay に反映 · q/Esc で終了
+- [ ] REPL: `dom -wizard` → 同 peer/tab picker → scope/flavor → DOM 行
+- [ ] REPL: `tab -list | browse` が移設後も activate / live refresh 動作
+- [ ] bare `--device`（history/bookmark/tab/search）が peer picker で選べる
+- [ ] `bmxt exec` で `nav -enter` / `dom -wizard` が明確に拒否
+
+**スコープ外（本節）**
+
+- `nav -enter --device/--tab` oneshot
+- 共有コアへの wizard 文法追加
+- 拡張側 picker / nav / dom 表示・ロジック変更
+- CLI 端末内へのページ overlay 描画
+
+**参照:** plan `cli_nav_picker_wizard` · §17 · `hosts/cli/src/tui.rs` · `hosts/cli/src/dom_nav_host.rs` · `shared/lib/features/picker/` · `_context/cli-peer/CONTRACT.md`
+
 ---
 
 ## Archive（ポインタのみ）
