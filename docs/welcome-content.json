@@ -3,7 +3,7 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
-    "version": "0.96.0",
+    "version": "0.96.1",
     "en": [
       "Improved search command processing",
       "Removed obsolete code",

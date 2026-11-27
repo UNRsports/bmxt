@@ -2418,11 +2418,15 @@ html[data-bmxt-unified-bg] .bmxt-picker-rail {
   flex-shrink: 0;
 }
 
+/* EN: Group membership cue — solid bar left of favicon, same accent as group header. */
 .bmxt-tab-picker-group-line {
-  flex: 0 0 auto;
-  font-weight: 600;
+  flex: 0 0 2px;
+  width: 2px;
+  height: 16px;
+  margin-right: 5px;
+  border-radius: 1px;
+  background-color: currentColor;
   user-select: none;
-  margin-right: 0.65em;
 }
 
 .bmxt-tab-picker-group-accent--grey {

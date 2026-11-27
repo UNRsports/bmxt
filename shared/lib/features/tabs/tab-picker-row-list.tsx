@@ -256,9 +256,8 @@ export function TabPickerRowList({
                 {row.groupColor ? (
                   <span
                     className={`bmxt-tab-picker-group-line bmxt-tab-picker-group-accent--${row.groupColor}`}
-                    aria-hidden>
-                    |
-                  </span>
+                    aria-hidden
+                  />
                 ) : null}
                 {faviconSrc ? <TabPickerTabFavicon src={faviconSrc} /> : null}
                 <span className="bmxt-tab-picker-tab-title-text">
