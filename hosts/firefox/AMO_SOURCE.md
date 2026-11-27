@@ -62,18 +62,30 @@ After Reload, open BMXt with the toolbar button or **Alt+Shift+C** (user gesture
 
 `browser_specific_settings.gecko.id` is fixed as **`bmxt@unrsports`** (see `hosts/manifest-base.ts`). Confirm before AMO listing if a different id is required.
 
-## Listing: clear the Experimental badge
+## Listing: Experimental badge, name, description, privacy policy
 
-The AMO **Experimental** badge is **not** set by the XPI or this repository. It is a Developer Hub listing flag (“This add-on is experimental”).
+These fields live in **Add-ons Developer Hub**, not in the XPI. Updating `docs/index.html` / GitHub Pages alone does **not** refresh the text AMO shows on `/privacy/` — AMO keeps its **own stored copy** (`has_privacy_policy: true` on the public API; the listing still showed float / experimental wording after the canonical policy moved on).
 
-To remove it (BMXt is under active development, not an experimental demo listing):
+### Clear the Experimental badge
 
-1. Open [Add-ons Developer Hub](https://addons.mozilla.org/developers/) → BMXt.
-2. **Edit Listing** / **Edit Information** → **Basic Information**.
-3. Uncheck **This add-on is experimental**.
-4. Save.
+1. Open [Add-ons Developer Hub](https://addons.mozilla.org/developers/) → BMXt → **Edit Listing** / **Edit Information**.
+2. **Basic Information** → uncheck **This add-on is experimental**.
+3. Save.
 
-Also update the listing **Name** (drop “Demo”) and **Description** so they match `store/description_*.txt` (under-development disclaimer, not “Packaged as a demo”).
+### Name and store description
+
+1. **Name** — drop “Demo” (target: `BMXt: Browser Manipulator X Terminal` / locales in `shared/public/_locales/`).
+2. **Description** — replace with `store/description_en.txt` / `store/description_ja.txt` (under-development disclaimer; no “Packaged as a demo”, no float prompt).
+3. Save. Slug `bmxt-demo-browser-terminal` may stay until you change the AMO URL slug separately.
+
+### Refresh the AMO privacy-policy copy
+
+Canonical HTML: **`docs/index.html`** → https://unrsports.github.io/bmxt/  
+AMO paste (English body): **`store/amo-privacy-en.txt`** (current-spec text; no float / experimental wording).
+
+1. Confirm GitHub Pages matches the under-development disclaimer and Family sync / CLI sections.
+2. Developer Hub → **Edit Listing** → **Privacy Policy**.
+3. Paste from **`store/amo-privacy-en.txt`** (EN field; JA separately if Hub requires) and **Save** so `/firefox/addon/…/privacy/` stops serving the old snapshot.
 
 ## Data collection (manifest)
 

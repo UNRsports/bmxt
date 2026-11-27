@@ -114,7 +114,7 @@
         <div>
           <h1>BMXt — Privacy Policy &amp; Disclaimer</h1>
           <p class="muted">Privacy policy &amp; disclaimer · プライバシーポリシーと免責事項</p>
-          <p class="muted">Last updated: November 26, 2026</p>
+          <p class="muted">Last updated: November 27, 2026</p>
         </div>
       </header>
 
@@ -221,10 +221,11 @@
           initiate.
         </p>
         <p>
-          The Extension also uses the <code>favicon</code> permission so tab and search picker rows, and
-          processing-result lines in the BMXt terminal log, can show site favicons derived from page URLs
-          Chrome already exposes to the Extension. Favicons are resolved and displayed locally; BMXt does not
-          upload favicon requests or tab metadata to UNRsports servers for this purpose.
+          On Chromium builds (for example Chrome), the Extension also uses the <code>favicon</code> permission
+          so tab and search picker rows, and processing-result lines in the BMXt terminal log, can show site
+          favicons derived from page URLs the browser already exposes to the Extension. Firefox builds omit
+          that permission. Favicons are resolved and displayed locally; BMXt does not upload favicon requests
+          or tab metadata to UNRsports servers for this purpose.
         </p>
         <h3>4.2 Tab groups</h3>
         <p>
@@ -277,9 +278,9 @@
             (<code>on</code> / <code>off</code>), and optional background images you import
             (<code>bmxt_ui_settings_v1</code>). Imported
             images are stored on your device as data URLs in this storage. Storage mode preference (internal
-            extension storage vs. an external folder you pick with the File System Access API;
-            <code>bmxt_ui_settings_storage_v1</code>). When external mode is on, <code>&gt; save setting</code>
-            writes a settings bundle to that folder on your device.
+            extension storage vs. an external folder you pick where the browser provides the File System Access
+            API—typically Chromium desktop; <code>bmxt_ui_settings_storage_v1</code>). When external mode is on,
+            <code>&gt; save setting</code> writes a settings bundle to that folder on your device.
           </li>
           <li>
             <strong>Tab picker page-active mode</strong> — whether highlight moves auto-activate tabs
@@ -736,9 +737,10 @@
           端末上で実現するためにのみ用います。
         </p>
         <p>
-          また <code>favicon</code> 権限により、タブ／search ピッカー行および BMXt ターミナルの処理結果行に
-          サイトのファビコンを表示します（Chrome が拡張機能に開示しているページ URL から解決）。ファビコンは
-          端末上で取得・表示され、当方のサーバーへタブメタデータやファビコン要求を送信する設計にはしていません。
+          Chromium 系ビルド（例: Chrome）では <code>favicon</code> 権限により、タブ／search ピッカー行および
+          BMXt ターミナルの処理結果行にサイトのファビコンを表示します（ブラウザが拡張機能に開示しているページ
+          URL から解決）。Firefox ビルドでは当該権限は含めません。ファビコンは端末上で取得・表示され、当方の
+          サーバーへタブメタデータやファビコン要求を送信する設計にはしていません。
         </p>
 
         <h3>4.2 タブグループ</h3>
@@ -790,9 +792,9 @@
             ターミナル／ピッカー外観（色・フォント・サイズ）、任意の <strong>prompt-fire</strong>
             （入力／削除エフェクトの <code>on</code> / <code>off</code>）、ユーザーが import
             した背景画像（<code>bmxt_ui_settings_v1</code>）。import した画像は data URL として端末内 storage に保存。
-            保存先モード（拡張機能内 storage か、File System Access API で選んだ外部フォルダか；
-            <code>bmxt_ui_settings_storage_v1</code>）。外部モード時は <code>&gt; save setting</code> で
-            設定バンドルをそのフォルダへ書き込みます。
+            保存先モード（拡張機能内 storage か、File System Access API が使える環境—主に Chromium
+            デスクトップ—で選んだ外部フォルダか；<code>bmxt_ui_settings_storage_v1</code>）。外部モード時は
+            <code>&gt; save setting</code> で設定バンドルをそのフォルダへ書き込みます。
           </li>
           <li>
             <strong>タブピッカーの page-active 設定</strong> — ハイライト移動時のタブ自動アクティブ化

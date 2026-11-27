@@ -1,0 +1,156 @@
+BMXt — Privacy Policy & Disclaimer (English)
+Last updated: November 27, 2026
+Canonical HTML: https://unrsports.github.io/bmxt/
+Paste this English body into AMO Developer Hub → Edit Listing → Privacy Policy.
+
+1. Introduction
+
+ This page describes how the BMXt browser extension (“BMXt”, “the Extension”) processes information when you install and use it, and includes a disclaimer on use of this under-development build. BMXt is published by UNRsports (“we”, “us”). This page is hosted on GitHub Pages for transparency and for use in store listings (for example, the Chrome Web Store and Firefox Add-ons / AMO).
+
+2. Scope
+
+ This policy applies to the Extension installed from official distribution channels we authorize (such as the Chrome Web Store and Firefox Add-ons) and to information processed within your browser as part of using BMXt. It does not cover third-party websites you visit, except where the Extension reads limited browser data through Chrome / WebExtensions APIs as described below.
+
+3. Summary
+
+     BMXt is a local productivity tool: a command-style UI for tabs, tab groups, browser windows, and related tasks you initiate (including optional page inspection, search across history or bookmarks or open pages, an optional keyboard nav overlay, optional UI locale, host-ui, and appearance settings via setting -list, optional translation assist when you run translate -on, and optional Family local sync when you run sync commands). Command interpretation runs locally via a bundled Rust/WebAssembly module; the UI and Chrome API effects run in TypeScript on your device.
+     We do not sell your personal information. We do not run advertising analytics inside the Extension as shipped from our official builds.
+     Data needed for the Extension to function is processed on your device, primarily using Chrome extension APIs and chrome.storage.local.
+     We do not operate our own backend servers that receive your browsing data or extension state from BMXt for the purposes described in this policy.
+     Terminal session logs and open picker UI live primarily in the BMXt UI page memory while a BMXt window is open; only capped fields (for example command history and UI settings) are written to chrome.storage.local. Text you type during nav typing for translation previews stays in session memory and is not saved to storage as typed content; only translation assist on/off and your chosen language pair are persisted locally. The Extension UI and service worker are not designed to call fetch() against arbitrary third-party HTTPS URLs. Packaged CSP connect-src is 'self' plus fixed loopback origins used only for optional local connection to a BMXt CLI process on the same PC (http://127.0.0.1:17653 · http://localhost:17653; Chrome Web Store delivery and browser updates are separate). Required host_permissions in the packaged manifest include https://*/* so the Extension can inject its packaged content script into ordinary https pages (including already-open tabs after install or update, without a page reload), and http://127.0.0.1:17653/* · http://localhost:17653/* so the Extension can complete a Family-authenticated connection setup with a local BMXt CLI process on the same PC only (not general http:// page scripting). In-page scripting (nav, dom, search -list --page, snapshot -save) remains https-only; opening, listing, or matching http:// URLs in tabs, history, and bookmarks does not require the https host grant. Privileged service-worker messages used for command execution and nav control are accepted only from the Extension’s own UI pages (bmxt.html), not from content scripts or other extensions. Meaningful page reads and overlays still run only when you issue a command or toggle a related UI host (including the nav overlay). You can later restrict site access under chrome://extensions.
+     When translation assist is on, text you type may be processed by Chrome’s built-in Translator API on your device (Japanese ↔ English). BMXt does not send that text to UNRsports servers for translation.
+     Optional Family local sync (sync) uses a user-initiated copy/paste (or file) connection setup and/or an optional localhost HTTP listener on a BMXt CLI process on the same PC, then a WebRTC DataChannel between peers you connect (host ICE candidates only; no public STUN/TURN). Peer-to-peer command traffic stays between those peers; BMXt does not operate a sync relay on UNRsports servers (see section 4.8).
+
+4. Information the Extension may access
+
+ Depending on how you use BMXt, the Extension may access the following categories of information through Chrome APIs:
+
+4.1 Tabs and browsing context
+
+ The Extension uses the tabs permission to query and manage open tabs—for example to list tabs in its picker UI, read tab titles and URLs as presented by the browser for those tabs, activate or move tabs, open or close tabs, and navigate within a tab when you issue supported commands. This processing occurs locally to carry out tab and window management features you initiate.
+
+ On Chromium builds (for example Chrome), the Extension also uses the favicon permission so tab and search picker rows, and processing-result lines in the BMXt terminal log, can show site favicons derived from page URLs the browser already exposes to the Extension. Firefox builds omit that permission. Favicons are resolved and displayed locally; BMXt does not upload favicon requests or tab metadata to UNRsports servers for this purpose.
+
+4.2 Tab groups
+
+ The Extension uses the tabGroups permission to read and update tab group metadata and to move groups between windows when you use grouping-related features.
+
+4.3 Browser windows
+
+ The Extension uses the windows permission to create, focus, enumerate, or close windows when you run commands that organize tabs and groups across windows.
+
+4.4 Local storage (extension storage)
+
+ The Extension uses chrome.storage.local to keep data on your device. It also declares the unlimitedStorage permission so user-imported UI background images and other local data can exceed Chrome’s default extension storage quota. Everything below remains on your device.
+
+Runtime source of truth for terminal sessions: while a BMXt popup window is open, session logs, open picker columns, pane focus, and tab-picker fold state live in the BMXt UI page memory (not as the authoritative store in chrome.storage.local). Closing the BMXt window or running exit on the last terminal session discards that in-memory state. Legacy keys such as bmxt_terminal_sessions_v1, bmxt_process_ui_v1, and bmxt_tab_picker_fold_v1 may still be removed for cleanup on process exit but are not the runtime source of truth for logs or picker layout.
+
+    Command history — recent commands you typed in the Extension UI (subject to limits enforced in the Extension; bmxt_cmd_history). Cleared when you use the reset-bmxt shortcut; otherwise kept across BMXt window close and process exit. Shared across BMXt window close.
+    Last focused normal window — a window identifier used to route focus-related behavior within the Extension.
+    BMXt window identifier / bounds — so the Extension can reopen or focus its UI window after a service worker restart, and remember the last outer size.
+    Custom window display names — labels you set in the tab picker edit flow.
+    UI settings — display locale, host-ui form factor (auto / desktop / mobile; Android defaults to mobile layout), terminal and picker appearance (colors, fonts, sizes), optional prompt-fire typing/delete FX preference (on / off), and optional background images you import (bmxt_ui_settings_v1). Imported images are stored on your device as data URLs in this storage. Storage mode preference (internal extension storage vs. an external folder you pick where the browser provides the File System Access API—typically Chromium desktop; bmxt_ui_settings_storage_v1). When external mode is on, > save setting writes a settings bundle to that folder on your device.
+    Tab picker page-active mode — whether highlight moves auto-activate tabs (--auto / --manual; bmxt_tabs_picker_settings_v1).
+    Search picker page-active mode — same preference for the search list picker (bmxt_search_picker_settings_v1).
+    DOM picker page-active mode — same preference for the DOM list picker (bmxt_dom_picker_settings_v1).
+    Token-candidate MRU — recent prompt token completions to improve the candidate menu order (bmxt_token_candidate_mru_v1).
+    Search metadata cache — an in-process memory cache in the service worker (not chrome.storage) storing titles and URLs from Chrome history and bookmarks to speed search -list --history and search -list --bookmark. After the first search command in a given service-worker lifetime, the worker may keep that cache warm when you visit pages or when bookmarks change. Does not store page body text from search -list --page (that scope reads open tabs live each time you run the command). Survives BMXt window close while the service worker stays alive; lost when the worker restarts or the browser restarts, and removed on uninstall. (Versions before 0.6.9 used a legacy SQLite key bmxt_search_cache_db_v1 that is no longer written.)
+    Saved page snapshots — Markdown files with YAML frontmatter created when you run snapshot -save (or from the tab picker). Stored in extension internal storage (bmxt_snapshots_v1), under your external settings bundle bmxt-ui-settings/snapshots/, or under BMXt/snapshots/ in an Obsidian vault folder you pick in setting -list (bmxt_snapshot_storage_v1). Searchable with search -list --snapshot. BMXt does not upload snapshots to UNRsports servers.
+    External folder handles — when you choose external UI-settings storage or an Obsidian vault folder via the File System Access API, the Extension may keep the directory handle in a local IndexedDB database (bmxt_settings_fs_handles) so it can reopen that folder on your device without uploading its contents.
+    Nav learned targets — after a successful nav activate, short identity keys (kind:key) may be stored per page origin (bmxt_nav_learned_targets_v1) so later / jumps can prefer familiar targets. Stale keys are dropped. Remains on device until cleared by uninstall or related resets.
+    Job audit log (optional) — when long-running picker or command work runs in the BMXt UI, completed job records may be kept in UI memory for the current session. The service worker does not persist this data. Legacy SQLite key bmxt_job_db_v1 from versions before 0.6.9 may remain until uninstall but is no longer written.
+    Last seen extension version — used only to show an in-UI release-notes notice after updates.
+    Last welcome page version shown — used only to control welcome-page display after install or update.
+    Translation assist settings — whether translate -on / translate -off is active and your saved language pair (--ja-en / --en-ja; bmxt_typing_translate_v1).
+    Tutorial progress — whether the first-run coach was started or skipped (bmxt_tutorial_progress_v1).
+    Family sync identity and roster — local device id, Family membership seed / invite material, member roster, and discovery cache used by optional sync commands (bmxt_sync_device_v1, bmxt_sync_family_v1, bmxt_sync_roster_v1, bmxt_sync_discovery_v1). Remains on your device until you clear related data or uninstall. See section 4.8.
+
+ When you close the BMXt window or run exit on the last terminal session, in-memory process-scoped UI state (session logs, open picker columns, tab-picker fold, and the optional job audit log in the UI) is discarded; legacy process keys may be cleaned from storage. Command history, UI settings, translation assist preferences, picker page-active settings (tabs / search / DOM), token-candidate MRU, nav learned targets, custom window display names, snapshot storage preferences, external folder handles, tutorial progress, Family sync identity/roster keys, and version-tracking keys remain until you clear them (for example the reset-bmxt shortcut for command history, or uninstalling the Extension). The search metadata cache is separate: it lives only in service-worker memory and is not a durable chrome.storage store.
+
+ If you use setting -list to export or import a settings zip, the file is written to or read from a location you choose through the browser’s download or file-picker APIs (typically a local blob download or file picker—not the downloads permission). BMXt does not upload that file to UNRsports servers.
+
+This storage remains on your device under Chrome’s extension storage rules.
+
+4.5 History, bookmarks, and page interaction (optional commands)
+
+ If you run supported commands, the Extension may use the history and bookmarks permissions to read titles and URLs from Chrome’s history and bookmark stores—for example search -list --all, search -list --history, search -list --bookmark, history -list, or bookmark -list. After the first search command in a given service-worker lifetime, the worker may also register listeners that update the in-memory search metadata cache (see section 4.4) when you visit pages or when bookmarks change.
+
+ The same permissions also cover user-initiated write / delete / backup commands that change browser data only on your device (or on a Family peer you choose—see section 4.8):
+
+    Bookmarks — bookmark -add, bookmark -folder, bookmark -remove, and bookmark -move create, remove, or move bookmarks and folders through Chrome’s bookmarks API. bookmark -backup / bookmark -restore export or re-import a versioned JSON tree inside a local ZIP (bmxt-browser-backup/) via the browser’s download or file-picker APIs (no downloads permission; not uploaded to UNRsports servers).
+    History — history -delete and history -delete-range delete selected browsing-history entries or a time range through Chrome’s history API. history -backup / history -restore write or read a local ZIP backup the same way (restore may list entries or optionally recreate them as bookmarks with --as-bookmarks; BMXt does not write entries back into Chrome’s history database).
+
+ For ordinary https pages (not chrome://, extension, Chrome Web Store, or plain http:// pages), the Extension may use the scripting permission together with requiredhttps://*/*host_permissions (declared in the packaged manifest at install; you may later change site access under chrome://extensions) to run small, packaged helper scripts when you issue a command or toggle a related UI host. Examples: search -list --page (reads visible text from open https tabs when you run the command, without persisting page content to extension storage), dom -list (page structure in --normal or viewport-sync --with mode, and scrolling to an element you pick in the list), snapshot -save (saves page text as Markdown with YAML frontmatter to a location you configure in setting -list), nav -enter (a keyboard nav overlay on the active tab for move, click, type, text selection, copy, save-image via a local browser download, reload, spatial jump, and related activate actions you control from the Extension UI). Opening, listing, or matching http:// URLs in tabs, history, and bookmarks remains allowed without that host grant. When translation assist is enabled, text you enter during nav typing in the Extension UI may also be processed as described in section 4.7. A lightweight content script is registered for https pages so those helpers can run without requiring a page reload after install or update. Callers use that content script and/or chrome.scripting.executeScript (page-text extract may prefer executeScript; nav prefers the content script first). That processing is intended to occur on your device; the Extension is not designed to add new persistent stores for those command results (beyond user-initiated snapshots you choose to save) or to upload page content to UNRsports servers as part of these commands.
+
+4.6 Planned capabilities (still local-only)
+
+ Future releases may add further user-initiated features that continue to run entirely on your device through Chrome APIs already covered above—for example toggling visibility of specific DOM elements on pages where you have granted appropriate script access. We do not intend these additions to introduce UNRsports-operated remote collection of that data for their core behavior. When shipped, we will update this policy, release notes, and store disclosures as needed. (Bookmark and history create / delete / backup commands described in section 4.5 are already shipped.)
+
+4.7 Translation assist (Chrome built-in Translator API)
+
+ If you run translate -on, the Extension enables optional translation assist within its UI. While assist is enabled, text you enter during nav typing mode in the Extension UI may be passed to Chrome’s built-in Translator API (Japanese ↔ English) for on-device translation and back-translation previews shown under the prompt. The Extension does not send that text to UNRsports servers for translation.
+
+ Translation runs in the Extension page context only (not in injected page scripts or the service worker). No additional manifest permission is declared for this feature; existing storage permission covers the on/off flag and saved language pair (translate -setting --ja-en / --en-ja). On first use, Chrome may download language models for the requested language pair to your device. That download and on-device processing are handled by Chrome (Google) under Chrome’s own terms. Translation assist requires a supported desktop Chrome version (138 or newer) and availability of the ja↔en pair on your device.
+
+4.8 Family local sync (optional WebRTC command bus)
+
+ If you run sync commands (for example sync -setup, sync -pair, sync -connect, sync -offer / sync -answer / sync -accept, sync -ping), or related cross-peer commands such as tab -list --peers, search -list --peers, bookmark -list --peers, history -list --peers, tab -send, or bookmark -send, the Extension may:
+
+     Create and store a local device identity and optional Family membership / roster / discovery cache in chrome.storage.local (keys listed in section 4.4). Family invite material is held as plaintext on participating devices; BMXt does not upload that material to UNRsports servers.
+     Use the system clipboard (or file tickets) when you choose COPY in the sync wizard (or related UI) so you can paste connection codes (bmxt1.… / bmxt-rtc1.…) into another BMXt profile you control. Clipboard / file remain full fallbacks when the localhost HTTP listener is unused or unavailable.
+     Optionally contact a localhost HTTP listener served by a BMXt CLI process on the same PC (http://127.0.0.1:17653 / http://localhost:17653; loopback bind only) to complete a Family-authenticated hello and offer/answer exchange when you open the BMXt prompt. That path uses the fixed loopback host_permissions and CSP connect-src entries above; fetch() is limited to those origins and is not a general internet or general http:// page grant. Responses that fail Family membership verification are ignored (unrelated localhost services are not accepted). Command traffic after connect still uses the WebRTC DataChannel described next—not the HTTP listener as a command relay.
+     Establish a WebRTC DataChannel between those peers using host ICE candidates only (no public STUN or TURN servers configured by BMXt). Ordinary third-party fetch() remains out of scope; packaged connect-src stays 'self' plus the fixed localhost-listener origins only.
+     Exchange command-bus payloads you initiate over that channel—for example ping, remote tab/search/bookmark/history list results, tab open/send, bookmark send (bookmark -send with --open / --save / --both, which may open tabs and/or run bookmarks_import on the peer), and picker ops on remote rows. Those payloads may include tab or bookmark titles, URLs, optional portable favicon URLs, and related metadata already available to each peer’s extension instance. Traffic is peer-to-peer between the profiles you connect; BMXt does not operate a UNRsports sync relay for this feature.
+
+ Family sync is optional and user-initiated. Closing the BMXt window ends in-memory peer sessions; stored identity / Family / roster keys remain on device as described in section 4.4 until cleared or uninstalled.
+
+5. Extension code
+
+ Official builds implement Chrome API effects and the React UI in TypeScript, and command interpretation (parse, registry, plans, and related prompt semantics) in Rust compiled to WebAssembly. Both run locally in the extension page and/or service worker. The WebAssembly module (bmxt_core_bg.wasm) is bundled in the extension package and loaded from the extension’s own origin ('self'). BMXt does not download WebAssembly from the network for this purpose. The packaged Content Security Policy includes script-src 'self' 'wasm-unsafe-eval' so the browser may compile and instantiate that local module; this is not a permission to fetch or run remote scripts. Packaged connect-src remains 'self' plus the fixed CLI localhost-listener loopback origins only (see section 4.8)—not a general internet grant. Search metadata caching uses in-process memory only (see section 4.4). (An earlier series removed bundled WASM in version 0.3.5 for package size; current releases again ship a local WASM command core.)
+
+6. Remote code
+
+ The Extension is not designed to download and execute arbitrary JavaScript from the network for its core behavior. Extension updates are delivered through the browser’s extension update mechanism (for example, via the Chrome Web Store or Firefox Add-ons when you install from there).
+
+ The packaged manifest’s Content Security Policy (including connect-src) is an extra guardrail alongside that design; local WXT development may allow localhost script and WebSocket endpoints in the same policy string. The production connect-src loopback entries for the CLI localhost listener are for connection setup only and are distinct from WXT’s development allowances.
+
+7. Data transmission and third parties
+
+ BMXt does not transmit your tab list, tab metadata, command history, session log, Family sync identity, or text you submit for translation assist to servers operated by UNRsports for collection or profiling as part of using the Extension.
+
+ When translation assist is enabled, Chrome’s built-in Translator API may process text you enter as described in section 4.7. BMXt does not receive copies of that processing on UNRsports servers. How Chrome handles on-device AI models, language-pack downloads, and any related telemetry is governed by Google’s policies for Chrome, not by the Extension’s own code.
+
+ When you enable Family local sync, peer-to-peer WebRTC DataChannel traffic may carry command-bus payloads between BMXt profiles you connect, as described in section 4.8. That traffic is not sent to UNRsports servers as a sync service. BMXt configures host ICE only (no public STUN/TURN of its own). Optional localhost hello / offer / answer exchanges stay on the same PC (loopback HTTP to a local BMXt CLI process) and are not sent to UNRsports servers.
+
+ When you use the Extension, your browser or operating system may still communicate with Google, Mozilla, or other services under their own terms (for example, Chrome Web Store or Firefox Add-ons installation and updates, or the browser itself). This policy does not replace Google’s or Mozilla’s policies for the browser or the store.
+
+ This privacy policy page is hosted on GitHub Pages. Viewing this page involves GitHub’s hosting infrastructure; please refer to GitHub’s privacy statement for how GitHub processes technical data related to that access.
+
+ On install or update (and when you run aboutbmxt), the Extension may open the hosted welcome page in a normal browser tab (https://unrsports.github.io/bmxt/welcome.html with query parameters for UI locale and extension version). That navigation uses GitHub Pages like any other tab you open; BMXt does not upload browsing data to UNRsports servers as part of showing welcome content.
+
+ On install or update, and when you run aboutbmxt -system, the Extension may probe locally whether browser APIs BMXt relies on (for example tabs, windows, tabGroups, bookmarks, history, scripting/host access, WebRTC, File System Access, and Translator) are available, then print OK/NG lines in the BMXt terminal. That check stays on your device; results are not uploaded to UNRsports servers.
+
+ When the BMXt prompt shows support links (empty session log, or with the in-window upgrade notice), clicking a label opens a normal browser tab to an allowlisted destination only: the official product site (https://bmxt.diozy.net/) or a fixed NotebookLM notebook URL under https://notebook.google.com/. BMXt does not fetch() those URLs from the extension process; the tab navigation is the same as any other user-opened page. Those destinations are governed by their own operators’ policies, not by this Extension’s local processing.
+
+8. Legal bases and use limitations
+
+ We process the information described above solely to provide the Extension’s stated functionality (managing tabs, groups, and windows; optional page inspection, search, nav overlay, UI locale, host-ui, and appearance settings; translation assist; and optional Family local sync through user-initiated commands) and to maintain minimal local UI state. We do not use this information for creditworthiness, lending decisions, or unrelated profiling.
+
+9. Children’s privacy
+
+ BMXt is not directed at children under 13, and we do not knowingly collect personal information from children through the Extension for marketing purposes.
+
+10. Changes to this policy
+
+ We may update this page (privacy policy and disclaimer) when the Extension’s behavior or legal requirements change. The “Last updated” date at the top of this page will be revised when we publish a new version. If the Extension materially changes how it handles data, we will reflect that here and, where required by applicable rules or store policies, in release notes or store disclosures.
+
+11. Contact
+
+ Questions about this policy or the Extension’s privacy practices may be raised via the project repository:
+
+https://github.com/UNRsports/bmxt
+ (for example, through GitHub Issues where applicable).
+
+12. Disclaimer
+
+ BMXt is under active development and may contain bugs. UNRsports (the developer) is not liable for any incidents, loss, or damage arising from your use of the Extension. You use BMXt at your own discretion and risk.
