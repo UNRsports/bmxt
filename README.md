@@ -1787,7 +1787,7 @@ pnpm run package:firefox
 # → .output/bmxt-<version>-firefox-sources.tar.gz   (AMO source review)
 ```
 
-Both hosts at once: **`pnpm run package`**. See **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)**.
+Both hosts at once: **`pnpm run package`**. See **[`hosts/firefox/AMO_SOURCE.md`](hosts/firefox/AMO_SOURCE.md)** (including how to clear the AMO **Experimental** listing flag in Developer Hub — it is not part of the XPI).
 
 <a id="license"></a>
 

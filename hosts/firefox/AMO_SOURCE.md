@@ -62,6 +62,19 @@ After Reload, open BMXt with the toolbar button or **Alt+Shift+C** (user gesture
 
 `browser_specific_settings.gecko.id` is fixed as **`bmxt@unrsports`** (see `hosts/manifest-base.ts`). Confirm before AMO listing if a different id is required.
 
+## Listing: clear the Experimental badge
+
+The AMO **Experimental** badge is **not** set by the XPI or this repository. It is a Developer Hub listing flag (“This add-on is experimental”).
+
+To remove it (BMXt is under active development, not an experimental demo listing):
+
+1. Open [Add-ons Developer Hub](https://addons.mozilla.org/developers/) → BMXt.
+2. **Edit Listing** / **Edit Information** → **Basic Information**.
+3. Uncheck **This add-on is experimental**.
+4. Save.
+
+Also update the listing **Name** (drop “Demo”) and **Description** so they match `store/description_*.txt` (under-development disclaimer, not “Packaged as a demo”).
+
 ## Data collection (manifest)
 
 `browser_specific_settings.gecko.data_collection_permissions.required` is **`["none"]`**: BMXt keeps prompt history / UI settings in `chrome.storage.local` and does not transmit data outside the extension.

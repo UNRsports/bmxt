@@ -27,7 +27,7 @@ See the privacy policy for details.
 https://github.com/UNRsports/bmxt/issues
 
 ◆Disclaimer
-This program is an experimental / trial build and may contain bugs. UNRsports (the developer) is not liable for any incidents, loss, or damage arising from your use of the extension. You use it at your own discretion and risk.
+This program is under active development and may contain bugs. UNRsports (the developer) is not liable for any incidents, loss, or damage arising from your use of the extension. You use it at your own discretion and risk.
 
 ◆Getting started
 Launch with the `launch-bmxt` shortcut (default Shift+Alt+C), then try `tutorial` or `tab -list | browse`.
