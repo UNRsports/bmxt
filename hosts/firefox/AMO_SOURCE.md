@@ -75,7 +75,7 @@ These fields live in **Add-ons Developer Hub**, not in the XPI. Updating `docs/i
 ### Name and store description
 
 1. **Name** — drop “Demo” (target: `BMXt: Browser Manipulator X Terminal` / locales in `shared/public/_locales/`).
-2. **Description** — replace with `store/description_en.txt` / `store/description_ja.txt` (under-development disclaimer; no “Packaged as a demo”, no float prompt).
+2. **Description** — short AMO blurb: `store/amo-listing-en.txt` / `store/amo-listing-ja.txt` (under-development; no demo / float). Longer CWS-style copy: `store/description_*.txt`.
 3. Save. Slug `bmxt-demo-browser-terminal` may stay until you change the AMO URL slug separately.
 
 ### Refresh the AMO privacy-policy copy

@@ -1,0 +1,18 @@
+**BMXt** is a keyboard-first command shell for Firefox.
+It opens in a dedicated popup window and lets you drive tabs, windows, and tab groups with typed commands—locally on your device, without sending browsing data to UNRsports servers for collection or profiling.
+
+**What you can do**
+- List, filter, select, and act on tabs / windows / tab groups from a prompt
+- Pipe list results into actions (for example close, reload, back) via `| browse` and related flows
+- Search history, bookmarks, open page text, and other browser data
+- Optional keyboard nav overlay on **https** pages
+- Optional local Family sync between profiles you connect on the same PC (plus optional BMXt CLI peer)
+- Customize UI via `setting`; keep history and settings in local extension storage
+
+**Design principles**
+- Runs on your device (no external LLMs or APIs are used at runtime)
+- Because this is under active development, bugs may occur. Please use it at your own discretion and responsibility.
+
+**Feedback:** [GitHub Issues](https://github.com/UNRsports/bmxt/issues)
+
+**Privacy:** [Privacy Policy](https://unrsports.github.io/bmxt/)

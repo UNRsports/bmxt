@@ -8,7 +8,7 @@ export const UI_LOCALE_SETTING_TOKENS = ["--japanese", "--english"] as const
 
 export type UiLocaleSettingToken = (typeof UI_LOCALE_SETTING_TOKENS)[number]
 
-export const DEFAULT_UI_LOCALE: UiLocale = "ja"
+export const DEFAULT_UI_LOCALE: UiLocale = "en"
 
 const LOCALE_BY_TOKEN = new Map<string, UiLocale>([
   ["--japanese", "ja"],
@@ -19,6 +19,8 @@ const TOKEN_BY_LOCALE: Record<UiLocale, UiLocaleSettingToken> = {
   ja: "--japanese",
   en: "--english"
 }
+
+const UI_LOCALE_ID_SET: ReadonlySet<string> = new Set(UI_LOCALE_IDS)
 
 /** EN: Per-locale string table (welcome / release-notes JSON entries use this shape). */
 export type BilingualUiLabel = Partial<Record<UiLocale, string>> & {
@@ -36,8 +38,8 @@ export function settingTokenForUiLocale(locale: UiLocale): UiLocaleSettingToken 
 }
 
 export function parseUiLocale(raw: unknown): UiLocale {
-  if (raw === "en") {
-    return "en"
+  if (typeof raw === "string" && UI_LOCALE_ID_SET.has(raw)) {
+    return raw as UiLocale
   }
   return DEFAULT_UI_LOCALE
 }
