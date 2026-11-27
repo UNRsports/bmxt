@@ -3,6 +3,32 @@
     "heroImage": "welcome/manual_howToUseBMXt.png",
     "heroImageMaxWidth": 840,
     "additionalImages": [],
+    "version": "0.9.7",
+    "en": [
+      "Improved search command processing",
+      "Removed obsolete code",
+      "Added a setting to show effects while typing text",
+      "Improved the setting command implementation",
+      "Implemented a system check feature",
+      "Implemented pickers for the bookmark and history commands",
+      "Generalized the picker and reviewed its operating scope",
+      "Miscellaneous detail fixes across the board"
+    ],
+    "ja": [
+      "searchコマンドの処理を改善",
+      "不要になったコードを削除",
+      "テキスト入力時にエフェクトが表示できる設定を追加",
+      "settingコマンドの実装を改善",
+      "システムチェック機能を実装",
+      "bookmarkおよびhistoryコマンドにpickerを実装",
+      "pickerの汎用化と動作範囲の見直し",
+      "その他、全体の細部修正"
+    ]
+  },
+  {
+    "heroImage": "welcome/manual_howToUseBMXt.png",
+    "heroImageMaxWidth": 840,
+    "additionalImages": [],
     "version": "0.9.6",
     "en": [
       "Improved search command processing",
