@@ -33,7 +33,7 @@ https://github.com/UNRsports/bmxt/issues
 `launch-bmxt` ショートカット（既定 Shift+Alt+C）で起動し、`tutorial` または `tab -list | browse` を試してください。
 
 ◆バージョン履歴
-0.9.7：
+0.96.0：
 ・searchコマンドの処理を改善
 ・不要になったコードを削除
 ・テキスト入力時にエフェクトが表示できる設定を追加

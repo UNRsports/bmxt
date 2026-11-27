@@ -24,7 +24,7 @@ dom,-setting,-page-active,none,,dom -setting -page-active --auto | --manual,不�
 dom,-setting,-page-active,--auto,none,,（同上）,第四 `--auto`（既定）。mode=auto。,
 dom,-setting,-page-active,--manual,none,,（同上）,第四 `--manual`。mode=manual。,
 search,,,,,search …,単独 `search` + Enter: msgs + promptPrefix `search `。第二候補に `help`。,
-search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [--device <id>|--peers] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `search -list … | browse`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map。0.9.0: `--device`/`--peers`。0.9.1: 検索結果表示（ハイライト／ジャンプ）を修正・調整。0.9.6/0.9.7: 処理改善
+search,-list,,rest,,search -list [--all|--history|--bookmark|--page|--snapshot] [--device <id>|--peers] [<pattern>] | search -exit -list,**プレーン:** Effect `search_list` → `search.hit`。`--device`/`--peers` は DataChannel RPC 横断。ピッカーは `search -list … | browse`。パイプ時 search.hit→bmxtRule（bookmark/history/page.open/markdown.file へ正規化可）。,語彙: inter-command map。0.9.0: `--device`/`--peers`。0.9.1: 検索結果表示（ハイライト／ジャンプ）を修正・調整。0.9.6/0.96.0: 処理改善
 search,-list,--all,rest,,（同上）,scope `--all`。,
 search,-list,--history,rest,,（同上）,scope `--history`。,
 search,-list,--bookmark,rest,,（同上）,scope `--bookmark`。,
@@ -40,7 +40,7 @@ new-window,,,,,new-window [--as-group <gid>…] <tabId…> | … | new-window [-
 help,,,,?,"help, ?",WASM `run` → msgs（title / built-in usages / section キー列）。ホストは expand-msgs のみ。,
 browse,,,,,`<list-command> | browse`,パイプ consumer。左辺 `-list` の `ListResult` から列／session 候補を開く（`openPickerFromListResult`）。裸 `browse` は usage のみ。プレフィックス `browse <list>` は廃止。,語彙: pipe consumer + ListResult。旧 prefix / `--picker` 廃止
 bookmark,,,,,bookmark …,単独 `bookmark` + Enter: msgs + promptPrefix。CRUD・Family 送信・バックアップ。,§9
-bookmark,-list,,rest,,bookmark -list [--folder <id>] [--device <id>|--peers],ローカル: UiAction `open_plain_list` list_id=bookmark（フォルダツリー）。`| browse` → bookmark picker。`--device`/`--peers`: Effect `search_list`（flat）。,ツリー管理ウィザード §7。0.9.6/0.9.7: bookmark picker
+bookmark,-list,,rest,,bookmark -list [--folder <id>] [--device <id>|--peers],ローカル: UiAction `open_plain_list` list_id=bookmark（フォルダツリー）。`| browse` → bookmark picker。`--device`/`--peers`: Effect `search_list`（flat）。,ツリー管理ウィザード §7。0.9.6/0.96.0: bookmark picker
 bookmark,-add,,rest,,bookmark -add <url> [--title …] [--parent <id>] [--force|--skip-dup],Effect `bookmark_create`（dup_mode）。`--parent` はフォルダ id（Tab 候補）。パイプ: `page.open | bookmark -add`。,
 bookmark,-folder,,rest,,bookmark -folder <title> [--parent <id>],Effect `bookmark_create_folder`。,
 bookmark,-remove,,rest,,bookmark -remove <id…> | … | bookmark -remove,Effect `bookmark_remove`。パイプ: bookmark / bookmark.folder（id）。,
@@ -49,7 +49,7 @@ bookmark,-send,,rest,,bookmark -send <deviceId> [--open|--save|--both] [--parent
 bookmark,-backup,,none,,bookmark -backup,UiAction `bookmark_backup`（ZIP 版付き JSON）。,
 bookmark,-restore,,rest,,bookmark -restore,UiAction `bookmark_restore`（bookmarks.create で再構築）。,
 history,,,,,history …,単独 `history` + Enter: msgs + promptPrefix。一覧・削除・バックアップ。,§9
-history,-list,,rest,,history -list [<pattern>] [--device <id>|--peers],ローカル: UiAction `open_plain_list` list_id=history（月→日→訪問）。`| browse` → history picker。`--device`/`--peers`: Effect `search_list`（flat）。,ツリー管理ウィザード §7。0.9.6/0.9.7: history picker
+history,-list,,rest,,history -list [<pattern>] [--device <id>|--peers],ローカル: UiAction `open_plain_list` list_id=history（月→日→訪問）。`| browse` → history picker。`--device`/`--peers`: Effect `search_list`（flat）。,ツリー管理ウィザード §7。0.9.6/0.96.0: history picker
 history,-delete,,rest,,history -delete <url…> | … | history -delete,Effect `history_delete_url`。,
 history,-delete-range,,rest,,history -delete-range --from <iso|ms> --to <iso|ms>,Effect `history_delete_range`。,
 history,-backup,,none,,history -backup,UiAction `history_backup`（ZIP）。DB 書き戻し不可。,
@@ -80,7 +80,7 @@ translate,-setting,--ja-en,none,,translate -setting --ja-en,ペア ja-en。UiAct
 translate,-setting,--en-ja,none,,translate -setting --en-ja,ペア en-ja。UiAction pair=en-ja。,
 setting,,,,,setting …,単独 `setting` + Enter: msgs + promptPrefix `setting `。第二候補に `help`。,
 setting,-list,,none,,setting -list,プレーン `setting.field`（読み取り専用・案内付き。locale / appearance / **host-ui** / storage 等）。ピッカーは `setting -list | browse`。,0.8.2: host-ui（auto|desktop|mobile）
-setting,-set,,rest,,setting -set <key> <value>,UiAction `setting_set`。即永続化（locale / edit-picker / ime-candidate-help / prompt-fire / search-legend / host-ui / fg / bg-color / size / font / search-*-highlight / picker-* / bg-image clear）。列ピッカーは同形行を `submitConstructedLine`。,§7 CUI wizard。0.9.6/0.9.7: prompt-fire・コマンド実装改善。0.9.7: DEFAULT_UI_LOCALE=en
+setting,-set,,rest,,setting -set <key> <value>,UiAction `setting_set`。即永続化（locale / edit-picker / ime-candidate-help / prompt-fire / search-legend / host-ui / fg / bg-color / size / font / search-*-highlight / picker-* / bg-image clear）。列ピッカーは同形行を `submitConstructedLine`。,§7 CUI wizard。0.9.6/0.96.0: prompt-fire・コマンド実装改善。0.96.0: DEFAULT_UI_LOCALE=en
 setting,-export,,none,,setting -export,UiAction `setting_export`。設定 zip 書き出し。,§7
 setting,-import,,none,,setting -import,UiAction `setting_import`。zip ファイルピッカー→即保存。,§7
 setting,-bg-import,,rest,,setting -bg-import [--picker],UiAction `setting_bg_import`。背景画像ファイルピッカー（`--picker` はピッカー列レイヤ）。,§7
@@ -96,7 +96,7 @@ setting,-cancel,,none,,setting -cancel,UiAction `setting_cancel`。互換: 設�
 setting,-exit,-list,none,,setting -exit -list,UiAction `setting_exit_list`。,
 snapshot,,,,,snapshot …,単独 `snapshot` + Enter: msgs + promptPrefix `snapshot `。,
 snapshot,-save,,rest,,snapshot -save [<tabId>],UiAction `snapshot_save`。,
-aboutbmxt,,,,,aboutbmxt | aboutbmxt -system,Effect: open_welcome_page / probe_capabilities。install/update 後プロンプトで能力レポート。,0.9.6/0.9.7: `-system` システムチェック
+aboutbmxt,,,,,aboutbmxt | aboutbmxt -system,Effect: open_welcome_page / probe_capabilities。install/update 後プロンプトで能力レポート。,0.9.6/0.96.0: `-system` システムチェック
 tutorial,,,,,tutorial | tutorial -start | tutorial -skip,UiAction set_mode feature_id=tutorial（start/skip）。初回自動開始＋コーチパネル。,0.8.7
 tutorial,-start,,none,,tutorial -start,既定レッスン（tab -list | browse）を開始。,0.8.7
 tutorial,-skip,,none,,tutorial -skip,スキップ（dismissedFirstRun）。,0.8.7
@@ -128,13 +128,13 @@ tab,-send,,rest,,tab -send <deviceId> <url…> [--group <title>] [--close] | …
 （内部）,ui-detail-behavior,,,,lib/features/bmxt-window/ + related,"UIの細部動作を見直し。",0.9.4
 （内部）,command-processing-spec,,,,crates/bmxt-core（pipe_consumer 等）+ lib/features/bmxt-core/ + command-line/,"内部のコマンド処理仕様を見直し（Rust/TS 役割分担の徹底等）。",0.9.4
 （内部）,ui-command-collab-spec,,,,lib/features/bmxt-window/ + lib/features/bmxt-core/ + lib/features/sync/ + related,"UIの細部動作と内部のコマンドや連携処理の仕様を見直し。",0.9.5
-（内部）,search-processing,,,,lib/features/search/ + related,"searchコマンドの処理を改善。",0.9.6/0.9.7
-（内部）,prompt-fire,,,,lib/features/prompt-effects/ + setting promptFire,"テキスト入力時にエフェクトが表示できる設定（prompt-fire）を追加。",0.9.6/0.9.7
-（内部）,setting-cmd-improve,,,,lib/features/setting/,"settingコマンドの実装を改善（ワンショット／下書き無し方針等）。",0.9.6/0.9.7
-（内部）,system-check,,,,lib/features/capability/ + aboutbmxt -system,"システムチェック機能を実装（API 能力レポート）。",0.9.6/0.9.7
-（内部）,bookmark-history-picker,,,,lib/features/bookmark/ + lib/features/history/ + side-picker/,"bookmarkおよびhistoryコマンドにpickerを実装。",0.9.6/0.9.7
-（内部）,picker-generalize,,,,lib/features/side-picker/ + related,"pickerの汎用化と動作範囲の見直し。",0.9.6/0.9.7
-（内部）,default-ui-locale-en,,,,lib/features/setting/locale.ts,"未設定時の UI 既定ロケールを ja から en に変更（DEFAULT_UI_LOCALE）。既存保存の ja は維持。",0.9.7
+（内部）,search-processing,,,,lib/features/search/ + related,"searchコマンドの処理を改善。",0.9.6/0.96.0
+（内部）,prompt-fire,,,,lib/features/prompt-effects/ + setting promptFire,"テキスト入力時にエフェクトが表示できる設定（prompt-fire）を追加。",0.9.6/0.96.0
+（内部）,setting-cmd-improve,,,,lib/features/setting/,"settingコマンドの実装を改善（ワンショット／下書き無し方針等）。",0.9.6/0.96.0
+（内部）,system-check,,,,lib/features/capability/ + aboutbmxt -system,"システムチェック機能を実装（API 能力レポート）。",0.9.6/0.96.0
+（内部）,bookmark-history-picker,,,,lib/features/bookmark/ + lib/features/history/ + side-picker/,"bookmarkおよびhistoryコマンドにpickerを実装。",0.9.6/0.96.0
+（内部）,picker-generalize,,,,lib/features/side-picker/ + related,"pickerの汎用化と動作範囲の見直し。",0.9.6/0.96.0
+（内部）,default-ui-locale-en,,,,lib/features/setting/locale.ts,"未設定時の UI 既定ロケールを ja から en に変更（DEFAULT_UI_LOCALE）。既存保存の ja は維持。",0.96.0
 
 （内部）,prompt-semantics-sot,,,,crates/bmxt-core + lib/features/bmxt-core/dispatch.ts,"プロンプト意味の正本=Rust。Msgs.promptPrefix、require_second_token、不完全 -setting。ホスト: expand-msgs / enrich-host-msg-params / setContinuationPrompt。詳細: todo.md §14・README Prompt semantics。",Phase A–D 完了。0.9.4: 役割分担見直しと連動
 （内部）,utf16-utf8-caret,,,,lib/features/bmxt-core/utf16-utf8-offset.ts + wasm-host.ts + crates/bmxt-core complete,"JS キャレットは UTF-16、WASM `complete(line, cursor)` は UTF-8 バイト。ホストが相互変換して渡す。未変換だと CJK でプロンプト表示が消える。",0.8.3

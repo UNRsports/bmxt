@@ -33,7 +33,7 @@ This program is under active development and may contain bugs. UNRsports (the de
 Launch with the `launch-bmxt` shortcut (default Shift+Alt+C), then try `tutorial` or `tab -list | browse`.
 
 ◆Version history
-0.9.7:
+0.96.0:
 - Improved search command processing
 - Removed obsolete code
 - Added a setting to show effects while typing text
