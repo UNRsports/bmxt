@@ -495,6 +495,11 @@ You can also start a save from the **tabs picker** action menu (`:snapshot`).
 | **Bundled with settings** (default) | **`chrome.storage.local`** (`bmxt_snapshots_v1`) when settings are internal; **`bmxt-ui-settings/snapshots/`** under the external settings bundle when external mode is on |
 | **Obsidian vault** | User-picked vault folder → **`BMXt/snapshots/`** inside the vault (independent of settings bundle path) |
 
+**Notes:**
+
+- **Uninstall:** With the default (bundled + internal settings), snapshots live only in **`chrome.storage.local`** and are **removed when the extension is uninstalled**. Snapshots written to an **external settings bundle** or an **Obsidian vault** remain on disk.
+- **No in-app management yet:** The command surface is **`snapshot -save`** only (no edit/delete). **`search -list --snapshot`** can find saved files but does not manage them. To edit or delete, use a filesystem destination — **Obsidian vault** or **settings external** (`bmxt-ui-settings/snapshots/`) — and manage the Markdown files outside BMXt.
+
 Saved snapshots are searchable with **`search -list --snapshot`** (included in **`--all`**).
 
 **Implementation:** **`lib/features/snapshot/`** (`snapshot-save-tab.ts`, `snapshot-markdown.ts`, `snapshot-storage.ts`, `snapshot-vault-store.ts`), effect **`search_snapshot`** for the search picker, config key **`bmxt_snapshot_storage_v1`**.
@@ -2911,6 +2916,11 @@ scriptable な **https** タブを **YAML frontmatter** 付き **Markdown snapsh
 |--------|------|
 | **設定と同梱**（既定） | 設定が内部のとき **`chrome.storage.local`**（`bmxt_snapshots_v1`）；外部モードのとき外部設定バンドル内 **`bmxt-ui-settings/snapshots/`** |
 | **Obsidian Vault** | ユーザー指定 Vault → Vault 内 **`BMXt/snapshots/`**（設定バンドルとは独立） |
+
+**注意:**
+
+- **アンインストール:** 既定（設定と同梱＋設定が内部）では snapshot は **`chrome.storage.local`** のみにあり、**拡張機能をアンインストールすると消える**。**設定の外部モード**や **Obsidian Vault** へ書いたものはディスク上に残る。
+- **アプリ内の管理機能は未実装:** コマンドは **`snapshot -save`** のみ（編集・削除なし）。**`search -list --snapshot`** は検索のみで管理はしない。編集・削除したい場合は **Obsidian Vault** または **設定の外部モード**（`bmxt-ui-settings/snapshots/`）などファイルとして触れる保存先にし、BMXt 外で Markdown を管理する。
 
 保存済み snapshot は **`search -list --snapshot`**（**`--all`** に含む）で検索できます。
 
