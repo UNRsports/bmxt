@@ -4,7 +4,10 @@ import type { ListResult } from "../../command-line/list-output/types.ts"
 import type { TabPickerRow } from "../../tabs/picker-rows.ts"
 import type { DeviceListScope } from "../../sync/bus/device-list-scope.ts"
 import { portableRemoteFavIconUrl } from "../../tabs/tab-favicon-url.ts"
-import { normalizeTabGroupColor } from "../../tabs/tab-picker-overlay-constants.ts"
+import {
+  normalizeTabGroupColor,
+  type NewGroupPaletteColor
+} from "../../tabs/tab-picker-overlay-constants.ts"
 
 function numberField(value: unknown, fallback: number): number {
   if (typeof value === "number" && Number.isFinite(value)) {
@@ -49,6 +52,15 @@ export function tabPickerRowsFromListResult(listResult: ListResult): TabPickerRo
   const windowSynth = new Map<string, number>()
   /** EN: peer groupId → synthetic picker groupId (per device+window). */
   const groupSynth = new Map<string, number>()
+  /**
+   * EN: Synthetic windowId+groupId → group accent (from preceding tabs.group rows).
+   * JA: 直前の tabs.group 行から得た色。ListResult 経路では tab 行に color が無い。
+   */
+  const groupColorBySynthKey = new Map<string, NewGroupPaletteColor>()
+
+  function groupColorMapKey(windowId: number, groupId: number): string {
+    return `${windowId}:${groupId}`
+  }
 
   function synthWindow(deviceId: string, peerWindowId: number, remote: boolean): number {
     if (!remote) {
@@ -114,15 +126,19 @@ export function tabPickerRowsFromListResult(listResult: ListResult): TabPickerRo
       const windowId = synthWindow(deviceId ?? "local", peerWindowId, remote)
       const groupId = synthGroup(deviceId ?? "local", peerWindowId, peerGroupId, remote)
       const rawTitle = stringField(record.fields.title)
+      const color = normalizeTabGroupColor(
+        typeof record.fields.color === "string" ? record.fields.color : undefined
+      )
+      if (groupId !== null) {
+        groupColorBySynthKey.set(groupColorMapKey(windowId, groupId), color)
+      }
       rows.push({
         kind: "group",
         windowId,
         groupId,
         label: stringField(record.display?.label, stringField(record.fields.label)),
         title: rawTitle,
-        color: normalizeTabGroupColor(
-          typeof record.fields.color === "string" ? record.fields.color : undefined
-        ),
+        color,
         deviceId,
         remote,
         peerWindowId: remote ? peerWindowId : null,
@@ -151,12 +167,16 @@ export function tabPickerRowsFromListResult(listResult: ListResult): TabPickerRo
             typeof record.fields.favIconUrl === "string" ? record.fields.favIconUrl : null
           )
         : null
+      const groupColor =
+        groupId !== null
+          ? (groupColorBySynthKey.get(groupColorMapKey(windowId, groupId)) ?? null)
+          : null
       rows.push({
         kind: "tab",
         tabId,
         windowId,
         groupId,
-        groupColor: null,
+        groupColor,
         title: stringField(record.display?.label, stringField(record.fields.title)),
         url: stringField(record.fields.url),
         faviconSrc: remoteFavIconSrc,
